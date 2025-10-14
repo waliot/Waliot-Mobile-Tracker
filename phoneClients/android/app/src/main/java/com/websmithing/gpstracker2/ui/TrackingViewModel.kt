@@ -3,6 +3,7 @@ package com.websmithing.gpstracker2.ui
 
 import android.content.Context
 import android.content.Intent
+import android.location.Location
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,12 +14,13 @@ import com.websmithing.gpstracker2.data.repository.UploadStatus
 import com.websmithing.gpstracker2.service.TrackingService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import android.location.Location
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.util.*
+import java.util.UUID
 import javax.inject.Inject
 
 /**
@@ -53,7 +55,7 @@ class TrackingViewModel @Inject constructor(
      */
     private val _userName = MutableLiveData<String>()
     val userName: LiveData<String> = _userName
-    
+
     /**
      * Stores the current tracking interval in minutes (1, 5, or 15)
      */
@@ -65,6 +67,9 @@ class TrackingViewModel @Inject constructor(
      */
     private val _websiteUrl = MutableLiveData<String>()
     val websiteUrl: LiveData<String> = _websiteUrl
+
+    private val _language = MutableLiveData<String>()
+    val language: LiveData<String> = _language
 
     /**
      * Temporary messages to display to the user via Snackbar
@@ -109,13 +114,14 @@ class TrackingViewModel @Inject constructor(
             _userName.value = settingsRepository.getCurrentUsername()
             _trackingInterval.value = settingsRepository.getCurrentTrackingInterval()
             _websiteUrl.value = settingsRepository.getCurrentWebsiteUrl()
+            _language.value = settingsRepository.getCurrentLanguage()
             Timber.d("ViewModel initialized. Tracking: ${isTracking.value}")
 
             // Check if first time loading and generate App ID if needed
             if (settingsRepository.isFirstTimeLoading()) {
-                 Timber.d("First time loading detected, generating App ID.")
-                 settingsRepository.generateAndSaveAppId()
-                 settingsRepository.setFirstTimeLoading(false) // Mark as no longer first time
+                Timber.d("First time loading detected, generating App ID.")
+                settingsRepository.generateAndSaveAppId()
+                settingsRepository.setFirstTimeLoading(false) // Mark as no longer first time
             }
         }
     }
@@ -123,7 +129,7 @@ class TrackingViewModel @Inject constructor(
     // --- Actions from UI ---
     /**
      * Starts location tracking after permissions are granted
-     * 
+     *
      * This should only be called by the Activity after confirming all required
      * permissions have been granted by the user.
      */
@@ -134,34 +140,34 @@ class TrackingViewModel @Inject constructor(
 
     /**
      * Stops location tracking
-     * 
+     *
      * Can be called by the Activity when the user requests to stop tracking
      * or directly by the ViewModel in response to errors.
      */
     fun stopTracking() {
-         Timber.d("stopTracking called in ViewModel")
-         updateTrackingState(false)
+        Timber.d("stopTracking called in ViewModel")
+        updateTrackingState(false)
     }
 
     /**
      * Forces tracking to stop in case of permission denial or errors
-     * 
+     *
      * Called by the Activity if the user denies required permissions during
      * an attempt to start tracking.
      */
-     fun forceStopTracking() {
-         Timber.d("forceStopTracking called in ViewModel")
-         if (_isTracking.value == true) {
-             updateTrackingState(false)
-         }
-     }
+    fun forceStopTracking() {
+        Timber.d("forceStopTracking called in ViewModel")
+        if (_isTracking.value == true) {
+            updateTrackingState(false)
+        }
+    }
 
     /**
      * Updates the tracking interval setting
-     * 
+     *
      * If tracking is currently active, this will restart the tracking service
      * to apply the new interval immediately.
-     * 
+     *
      * @param newInterval The new tracking interval in minutes (1, 5, or 15)
      */
     fun onIntervalChanged(newInterval: Int) {
@@ -190,23 +196,23 @@ class TrackingViewModel @Inject constructor(
 
     /**
      * Updates the username setting
-     * 
+     *
      * @param newName The new username for tracking identification
      */
     fun onUserNameChanged(newName: String) {
-         val trimmedName = newName.trim()
-         if (trimmedName != _userName.value && trimmedName.isNotEmpty()) {
-             _userName.value = trimmedName
-             viewModelScope.launch {
-                 settingsRepository.saveUsername(trimmedName)
-                 Timber.d("Username saved: $trimmedName")
-             }
-         }
+        val trimmedName = newName.trim()
+        if (trimmedName != _userName.value && trimmedName.isNotEmpty()) {
+            _userName.value = trimmedName
+            viewModelScope.launch {
+                settingsRepository.saveUsername(trimmedName)
+                Timber.d("Username saved: $trimmedName")
+            }
+        }
     }
 
     /**
      * Updates the website URL setting
-     * 
+     *
      * @param newUrl The new URL where tracking data will be sent
      */
     fun onWebsiteUrlChanged(newUrl: String) {
@@ -218,7 +224,16 @@ class TrackingViewModel @Inject constructor(
                 Timber.d("Website URL saved: $trimmedUrl")
             }
         }
-   }
+    }
+
+    fun onLanguageChanged(language: String) {
+        if (language != _language.value) {
+            viewModelScope.launch {
+                settingsRepository.saveLanguage(language)
+                _language.value = language
+            }
+        }
+    }
 
     /**
      * Marks a snackbar message as shown to prevent reappearance
@@ -231,10 +246,10 @@ class TrackingViewModel @Inject constructor(
 
     /**
      * Updates the tracking state and handles service lifecycle
-     * 
+     *
      * This method persists the tracking state to settings, manages the tracking session ID,
      * and starts or stops the TrackingService as appropriate.
-     * 
+     *
      * @param shouldTrack Whether tracking should be active
      * @return The coroutine Job handling the update operations
      */

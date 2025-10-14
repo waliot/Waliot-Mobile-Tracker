@@ -6,39 +6,52 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Location
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.TypedValue
+import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import timber.log.Timber
 import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import androidx.core.widget.addTextChangedListener
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.launch 
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.websmithing.gpstracker2.data.repository.UploadStatus 
-import com.websmithing.gpstracker2.ui.TrackingViewModel 
+import com.websmithing.gpstracker2.data.repository.SettingsRepository
+import com.websmithing.gpstracker2.data.repository.UploadStatus
+import com.websmithing.gpstracker2.di.SettingsRepositoryEntryPoint
+import com.websmithing.gpstracker2.ui.TrackingViewModel
+import com.websmithing.gpstracker2.util.LocaleHelper
 import dagger.hilt.android.AndroidEntryPoint
-import java.text.DecimalFormat 
-import java.text.SimpleDateFormat 
-import java.util.*
-import android.location.Location 
-import android.widget.TextView 
+import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.launch
+import timber.log.Timber
+import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
+import javax.inject.Inject
 
 /**
  * Main activity for the GPS Tracker application.
@@ -56,62 +69,71 @@ import android.widget.TextView
 @AndroidEntryPoint
 class GpsTrackerActivity : AppCompatActivity() {
 
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
     // --- UI Elements ---
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var navigationView: NavigationView
+    private lateinit var drawerToggle: ActionBarDrawerToggle
+
     /**
      * Text field for entering the username to identify this device's tracking data
      */
     private lateinit var txtUserName: EditText
-    
+
     /**
      * Text field for entering the website URL where tracking data will be sent
      */
     private lateinit var txtWebsite: EditText
-    
+
     /**
      * Radio group for selecting the tracking interval (1, 5, or 15 minutes)
      */
     private lateinit var intervalRadioGroup: RadioGroup
-    
+
+    private lateinit var languageRadioGroup: RadioGroup
+
     /**
      * Button that toggles tracking on/off
      */
     private lateinit var trackingButton: Button
-    
+
     /**
      * TextView for displaying the current speed
      */
     private lateinit var tvSpeed: TextView
-    
+
     /**
      * TextView for displaying the current latitude and longitude
      */
     private lateinit var tvLatLon: TextView
-    
+
     /**
      * TextView for displaying the current altitude
      */
     private lateinit var tvAltitude: TextView
-    
+
     /**
      * TextView for displaying the accuracy of the location reading
      */
     private lateinit var tvAccuracy: TextView
-    
+
     /**
      * TextView for displaying the current bearing (direction)
      */
     private lateinit var tvBearing: TextView
-    
+
     /**
      * TextView for displaying the total distance traveled
      */
     private lateinit var tvDistance: TextView
-    
+
     /**
      * TextView for displaying the timestamp of the last update and its status
      */
     private lateinit var tvLastUpdate: TextView
-    
+
     /**
      * TextView for displaying the current GPS signal strength
      */
@@ -128,12 +150,12 @@ class GpsTrackerActivity : AppCompatActivity() {
      * Formatter for displaying latitude and longitude with 5 decimal places
      */
     private val coordinateFormatter = DecimalFormat("0.00000")
-    
+
     /**
      * Formatter for displaying distance with 1 decimal place
      */
     private val distanceFormatter = DecimalFormat("0.0")
-    
+
     /**
      * Formatter for displaying time in HH:mm:ss format
      */
@@ -167,7 +189,7 @@ class GpsTrackerActivity : AppCompatActivity() {
      * Handles the result of requesting the background location permission
      * and starts tracking if granted.
      */
-     private val requestBackgroundPermissionLauncher =
+    private val requestBackgroundPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 Timber.i("Background location permission granted.")
@@ -180,6 +202,23 @@ class GpsTrackerActivity : AppCompatActivity() {
         }
 
     // --- Activity Lifecycle ---
+
+    override fun attachBaseContext(newBase: Context) {
+        // 1. Get the EntryPoint accessor from the application context
+        val entryPoint = EntryPointAccessors.fromApplication(
+            newBase.applicationContext,
+            SettingsRepositoryEntryPoint::class.java
+        )
+
+        // 2. Use the EntryPoint to get the repository instance
+        val repo = entryPoint.getSettingsRepository()
+
+        // 3. Use your LocaleHelper to create the new context
+        val newCtx = LocaleHelper.onAttach(newBase, repo)
+
+        super.attachBaseContext(newCtx)
+    }
+
     /**
      * Called when the activity is first created.
      *
@@ -193,24 +232,98 @@ class GpsTrackerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gps_tracker)
 
-        setupToolbar()
+        setupToolbarAndDrawer()
         bindViews()
         setupListeners()
         observeViewModel()
 
         checkFirstTimeLoading()
         checkIfGooglePlayEnabled()
+
+        adjustNavHeader()
+        adjustMainContentPadding()
     }
 
     // --- Setup Methods ---
+
+    override fun onPostCreate(savedInstanceState: Bundle?) {
+        super.onPostCreate(savedInstanceState)
+        // Sync the toggle state after onRestoreInstanceState has occurred.
+        drawerToggle.syncState()
+    }
+
+    private fun adjustNavHeader() {
+        // Find the NavigationView
+        val navigationView: NavigationView = findViewById(R.id.nav_view)
+
+        // Get the header view from the NavigationView (it's at index 0)
+        val headerView: View = navigationView.getHeaderView(0)
+
+        // Calculate the height of the ActionBar
+        val tv = TypedValue()
+        var actionBarHeight = 0
+        if (theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
+            actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
+        }
+
+        // Set the top padding of the header view to the calculated height
+        if (actionBarHeight > 0) {
+            headerView.setPadding(
+                headerView.paddingLeft,
+                headerView.paddingTop + actionBarHeight, // Add the height to existing padding
+                headerView.paddingRight,
+                headerView.paddingBottom
+            )
+        }
+    }
+
+    private fun adjustMainContentPadding() {
+        // Find the main content layout
+        val mainContent: ConstraintLayout = findViewById(R.id.main_content_layout)
+
+        // Calculate the height of the ActionBar
+        val tv = TypedValue()
+        var actionBarHeight = 0
+        if (theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
+            actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
+        }
+
+        // Set the top padding of the content view to the calculated height
+        if (actionBarHeight > 0) {
+            mainContent.setPadding(
+                mainContent.paddingLeft,
+                mainContent.paddingTop + actionBarHeight, // Add the height
+                mainContent.paddingRight,
+                mainContent.paddingBottom
+            )
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Pass the event to ActionBarDrawerToggle, if it returns
+        // true, then it has handled the app icon touch event
+        if (drawerToggle.onOptionsItemSelected(item)) {
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     /**
-     * Configures the app's toolbar with the app logo
+     * Configures the app's toolbar and the navigation drawer
      */
-    private fun setupToolbar() {
+    private fun setupToolbarAndDrawer() {
+        drawerLayout = findViewById(R.id.drawer_layout)
+        drawerToggle = ActionBarDrawerToggle(
+            this,
+            drawerLayout,
+            R.string.drawer_open,
+            R.string.drawer_close
+        )
+        drawerLayout.addDrawerListener(drawerToggle)
+
         supportActionBar?.apply {
-            setDisplayShowHomeEnabled(true)
-            setLogo(R.mipmap.ic_launcher)
-            setDisplayUseLogoEnabled(true)
+            setDisplayHomeAsUpEnabled(true)
+            setHomeButtonEnabled(true)
         }
     }
 
@@ -218,10 +331,15 @@ class GpsTrackerActivity : AppCompatActivity() {
      * Binds all view references and sets initial display values
      */
     private fun bindViews() {
+        // Navigation Drawer Header Views
+        navigationView = findViewById(R.id.nav_view)
+        val headerView = navigationView.getHeaderView(0)
+        txtWebsite = headerView.findViewById(R.id.txtWebsite)
+        intervalRadioGroup = headerView.findViewById(R.id.intervalRadioGroup)
+        languageRadioGroup = headerView.findViewById(R.id.languageRadioGroup)
+
         // Settings & Control
-        txtWebsite = findViewById(R.id.txtWebsite)
         txtUserName = findViewById(R.id.txtUserName)
-        intervalRadioGroup = findViewById(R.id.intervalRadioGroup)
         trackingButton = findViewById(R.id.trackingButton)
         txtUserName.imeOptions = EditorInfo.IME_ACTION_DONE
 
@@ -260,14 +378,14 @@ class GpsTrackerActivity : AppCompatActivity() {
         txtUserName.addTextChangedListener { editable ->
             val name = editable.toString()
             if (name.isNotBlank() && !hasSpaces(name)) {
-                 viewModel.onUserNameChanged(name)
-                 txtUserName.error = null
+                viewModel.onUserNameChanged(name)
+                txtUserName.error = null
             } else {
-                 if (name.isNotBlank() && hasSpaces(name)) {
-                      txtUserName.error = getString(R.string.username_error_spaces)
-                 } else if (name.isBlank()) {
-                      txtUserName.error = getString(R.string.username_error_empty)
-                 }
+                if (name.isNotBlank() && hasSpaces(name)) {
+                    txtUserName.error = getString(R.string.username_error_spaces)
+                } else if (name.isBlank()) {
+                    txtUserName.error = getString(R.string.username_error_empty)
+                }
             }
         }
 
@@ -277,11 +395,26 @@ class GpsTrackerActivity : AppCompatActivity() {
                 viewModel.onWebsiteUrlChanged(url)
                 txtWebsite.error = null
             } else {
-                 if (url.isBlank()) {
-                      txtWebsite.error = getString(R.string.website_error_empty)
-                 } else if (hasSpaces(url)) {
-                      txtWebsite.error = getString(R.string.website_error_spaces)
-                 }
+                if (url.isBlank()) {
+                    txtWebsite.error = getString(R.string.website_error_empty)
+                } else if (hasSpaces(url)) {
+                    txtWebsite.error = getString(R.string.website_error_spaces)
+                }
+            }
+        }
+
+        languageRadioGroup.setOnCheckedChangeListener { _, checkedId ->
+            val selectedLanguage = when (checkedId) {
+                R.id.rbEnglish -> "en"
+                R.id.rbRussian -> "ru"
+                else -> return@setOnCheckedChangeListener
+            }
+
+            // Only act if the language actually changed
+            if (viewModel.language.value != selectedLanguage) {
+                viewModel.onLanguageChanged(selectedLanguage)
+                // Restart the activity to apply the new language
+                recreate()
             }
         }
     }
@@ -296,9 +429,9 @@ class GpsTrackerActivity : AppCompatActivity() {
             setTrackingButtonState(isTracking)
             // Reset display fields when tracking stops
             if (!isTracking) {
-                 updateLocationDisplay(null)
-                 updateDistanceDisplay(0f)
-                 updateUploadStatusDisplay(UploadStatus.Idle, null)
+                updateLocationDisplay(null)
+                updateDistanceDisplay(0f)
+                updateUploadStatusDisplay(UploadStatus.Idle, null)
             }
         }
 
@@ -311,6 +444,17 @@ class GpsTrackerActivity : AppCompatActivity() {
         viewModel.websiteUrl.observe(this) { url ->
             if (txtWebsite.text.toString() != url) {
                 txtWebsite.setText(url)
+            }
+        }
+
+        viewModel.language.observe(this) { language ->
+            val checkedId = when (language) {
+                "en" -> R.id.rbEnglish
+                "ru" -> R.id.rbRussian
+                else -> -1
+            }
+            if (languageRadioGroup.checkedRadioButtonId != checkedId) {
+                languageRadioGroup.check(checkedId)
             }
         }
 
@@ -352,7 +496,7 @@ class GpsTrackerActivity : AppCompatActivity() {
                 else -> R.id.i1
             }
             if (intervalRadioGroup.checkedRadioButtonId != checkId) {
-                 intervalRadioGroup.check(checkId)
+                intervalRadioGroup.check(checkId)
             }
         }
 
@@ -373,6 +517,11 @@ class GpsTrackerActivity : AppCompatActivity() {
      * Validates inputs before starting tracking, and stops tracking if already active
      */
     private fun handleTrackingButtonClick() {
+        // Close the drawer if it's open before proceeding
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
         if (!validateInputs()) return
 
         if (viewModel.isTracking.value == false) {
@@ -389,39 +538,39 @@ class GpsTrackerActivity : AppCompatActivity() {
      *
      * @return True if all inputs are valid, false otherwise
      */
-     private fun validateInputs(): Boolean {
-         val name = txtUserName.text.toString().trim()
-         val website = txtWebsite.text.toString().trim()
+    private fun validateInputs(): Boolean {
+        val name = txtUserName.text.toString().trim()
+        val website = txtWebsite.text.toString().trim()
 
-         val isNameValid = name.isNotBlank() && !hasSpaces(name)
-         val isWebsiteValid = website.isNotBlank() && !hasSpaces(website)
+        val isNameValid = name.isNotBlank() && !hasSpaces(name)
+        val isWebsiteValid = website.isNotBlank() && !hasSpaces(website)
 
-         if (!isNameValid) {
-             if (name.isBlank()) {
-                 txtUserName.error = getString(R.string.username_error_empty)
-             } else if (hasSpaces(name)) {
-                 txtUserName.error = getString(R.string.username_error_spaces)
-             }
-         } else {
-              txtUserName.error = null
-         }
+        if (!isNameValid) {
+            if (name.isBlank()) {
+                txtUserName.error = getString(R.string.username_error_empty)
+            } else if (hasSpaces(name)) {
+                txtUserName.error = getString(R.string.username_error_spaces)
+            }
+        } else {
+            txtUserName.error = null
+        }
 
-         if (!isWebsiteValid) {
-             if (website.isBlank()) {
-                  txtWebsite.error = getString(R.string.website_error_empty)
-             } else if (hasSpaces(website)) {
-                  txtWebsite.error = getString(R.string.website_error_spaces)
-             }
-         } else {
-              txtWebsite.error = null
-         }
+        if (!isWebsiteValid) {
+            if (website.isBlank()) {
+                txtWebsite.error = getString(R.string.website_error_empty)
+            } else if (hasSpaces(website)) {
+                txtWebsite.error = getString(R.string.website_error_spaces)
+            }
+        } else {
+            txtWebsite.error = null
+        }
 
-         if (!isNameValid || !isWebsiteValid) {
-              Toast.makeText(this, R.string.textfields_empty_or_spaces, Toast.LENGTH_LONG).show()
-         }
+        if (!isNameValid || !isWebsiteValid) {
+            Toast.makeText(this, R.string.textfields_empty_or_spaces, Toast.LENGTH_LONG).show()
+        }
 
-         return isNameValid && isWebsiteValid
-     }
+        return isNameValid && isWebsiteValid
+    }
 
     // --- Permission Logic ---
 
@@ -436,15 +585,16 @@ class GpsTrackerActivity : AppCompatActivity() {
                 Timber.d("Foreground location permissions already granted.")
                 checkAndRequestBackgroundLocationPermission()
             }
+
             shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) ||
-            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) -> {
+                    shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) -> {
                 Timber.d("Showing rationale for foreground location permission.")
                 showPermissionRationaleDialog(
                     getString(R.string.permission_rationale_foreground_location_title),
                     getString(R.string.permission_rationale_foreground_location_message)
                 ) { requestForegroundLocationPermissions() }
             }
-        
+
             else -> {
                 Timber.d("Requesting foreground location permissions.")
                 requestForegroundLocationPermissions()
@@ -457,7 +607,7 @@ class GpsTrackerActivity : AppCompatActivity() {
      *
      * Shows appropriate rationale dialogs if the user has previously denied the permission
      */
-     private fun checkAndRequestBackgroundLocationPermission() {
+    private fun checkAndRequestBackgroundLocationPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || hasBackgroundLocationPermission()) {
             Timber.d("Background permission granted or not required.")
             viewModel.startTracking()
@@ -491,12 +641,14 @@ class GpsTrackerActivity : AppCompatActivity() {
      *
      * @return True if background location permission is granted or if running on Android < Q
      */
-     private fun hasBackgroundLocationPermission(): Boolean {
+    private fun hasBackgroundLocationPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
-        } else { true }
+        } else {
+            true
+        }
     }
 
     /**
@@ -517,81 +669,83 @@ class GpsTrackerActivity : AppCompatActivity() {
     /**
      * Requests background location permission on Android Q (10) and above
      */
-     private fun requestBackgroundLocationPermission() {
-         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    private fun requestBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             requestBackgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-         }
-     }
- 
-     // --- UI Update Helpers ---
- 
+        }
+    }
+
+    // --- UI Update Helpers ---
+
     /**
      * Updates the location-related display fields with data from the provided location
      *
      * @param location The location to display, or null to reset to default values
      */
-     private fun updateLocationDisplay(location: Location?) {
-         if (location != null) {
-             tvLatLon.text = getString(R.string.lat_lon_format,
-                 coordinateFormatter.format(location.latitude),
-                 coordinateFormatter.format(location.longitude))
-             tvSpeed.text = getString(R.string.speed_format_kmh, location.speed * 3.6) // m/s to km/h
-             tvAltitude.text = getString(R.string.altitude_format, location.altitude)
-             tvAccuracy.text = getString(R.string.accuracy_format, location.accuracy)
-             tvBearing.text = getString(R.string.bearing_format, location.bearing)
-             tvSignalStrength.text = getString(R.string.signal_strength_format, getSignalStrengthDescription(location.accuracy))
-         } else {
-             // Set default text when location is null (e.g., tracking stopped)
-             tvLatLon.text = getString(R.string.lat_lon_default)
-             tvSpeed.text = getString(R.string.speed_default)
-             tvAltitude.text = getString(R.string.altitude_default)
-             tvAccuracy.text = getString(R.string.accuracy_default)
-             tvBearing.text = getString(R.string.bearing_default)
-             tvSignalStrength.text = getString(R.string.signal_strength_default)
-         }
-     }
- 
+    private fun updateLocationDisplay(location: Location?) {
+        if (location != null) {
+            tvLatLon.text = getString(
+                R.string.lat_lon_format,
+                coordinateFormatter.format(location.latitude),
+                coordinateFormatter.format(location.longitude)
+            )
+            tvSpeed.text = getString(R.string.speed_format_kmh, location.speed * 3.6) // m/s to km/h
+            tvAltitude.text = getString(R.string.altitude_format, location.altitude)
+            tvAccuracy.text = getString(R.string.accuracy_format, location.accuracy)
+            tvBearing.text = getString(R.string.bearing_format, location.bearing)
+            tvSignalStrength.text = getString(R.string.signal_strength_format, getSignalStrengthDescription(location.accuracy))
+        } else {
+            // Set default text when location is null (e.g., tracking stopped)
+            tvLatLon.text = getString(R.string.lat_lon_default)
+            tvSpeed.text = getString(R.string.speed_default)
+            tvAltitude.text = getString(R.string.altitude_default)
+            tvAccuracy.text = getString(R.string.accuracy_default)
+            tvBearing.text = getString(R.string.bearing_default)
+            tvSignalStrength.text = getString(R.string.signal_strength_default)
+        }
+    }
+
     /**
      * Updates the distance display with the provided distance in meters
      *
      * @param distanceMeters The distance to display in meters
      */
-     private fun updateDistanceDisplay(distanceMeters: Float) {
-         val distanceKm = distanceMeters / 1000f
-         tvDistance.text = getString(R.string.distance_format_km, distanceFormatter.format(distanceKm))
-     }
- 
+    private fun updateDistanceDisplay(distanceMeters: Float) {
+        val distanceKm = distanceMeters / 1000f
+        tvDistance.text = getString(R.string.distance_format_km, distanceFormatter.format(distanceKm))
+    }
+
     /**
      * Updates the upload status display with the provided status and timestamp
      *
      * @param status The upload status to display
      * @param lastLocationTime The timestamp of the last location, or null if not available
      */
-     private fun updateUploadStatusDisplay(status: UploadStatus, lastLocationTime: Long?) {
-         val timeString = if (lastLocationTime != null) timeFormatter.format(Date(lastLocationTime)) else "--:--:--"
-         val statusText = when (status) {
-             is UploadStatus.Idle -> getString(R.string.upload_status_idle)
-             is UploadStatus.Success -> getString(R.string.upload_status_success, timeString)
-             is UploadStatus.Failure -> getString(R.string.upload_status_failure, timeString, status.errorMessage ?: "Unknown error")
-         }
-         tvLastUpdate.text = statusText
-     }
- 
+    private fun updateUploadStatusDisplay(status: UploadStatus, lastLocationTime: Long?) {
+        val timeString = if (lastLocationTime != null) timeFormatter.format(Date(lastLocationTime)) else "--:--:--"
+        val statusText = when (status) {
+            is UploadStatus.Idle -> getString(R.string.upload_status_idle)
+            is UploadStatus.Success -> getString(R.string.upload_status_success, timeString)
+            is UploadStatus.Failure -> getString(R.string.upload_status_failure, timeString, status.errorMessage ?: "Unknown error")
+        }
+        tvLastUpdate.text = statusText
+    }
+
     /**
      * Gets a human-readable description of signal strength based on accuracy
      *
      * @param accuracy The accuracy of the location in meters
      * @return A string describing the signal strength
      */
-     private fun getSignalStrengthDescription(accuracy: Float): String {
-         return when {
-             accuracy <= 0 -> getString(R.string.signal_unknown) // Accuracy shouldn't be <= 0
-             accuracy <= 10 -> getString(R.string.signal_excellent) // meters
-             accuracy <= 25 -> getString(R.string.signal_good)
-             accuracy <= 50 -> getString(R.string.signal_fair)
-             else -> getString(R.string.signal_poor)
-         }
-     }
+    private fun getSignalStrengthDescription(accuracy: Float): String {
+        return when {
+            accuracy <= 0 -> getString(R.string.signal_unknown) // Accuracy shouldn't be <= 0
+            accuracy <= 10 -> getString(R.string.signal_excellent) // meters
+            accuracy <= 25 -> getString(R.string.signal_good)
+            accuracy <= 50 -> getString(R.string.signal_fair)
+            else -> getString(R.string.signal_poor)
+        }
+    }
 
     // --- UI Feedback for Permissions ---
 
@@ -617,14 +771,14 @@ class GpsTrackerActivity : AppCompatActivity() {
      * This is needed because Android requires a separate permission request for background location,
      * and the user needs to be informed about this.
      */
-     private fun showBackgroundPermissionPreRequestDialog() {
-         AlertDialog.Builder(this)
+    private fun showBackgroundPermissionPreRequestDialog() {
+        AlertDialog.Builder(this)
             .setTitle(getString(R.string.permission_rationale_background_location_title))
             .setMessage(getString(R.string.permission_rationale_background_location_pre_request))
             .setPositiveButton(R.string.permission_button_continue) { _, _ -> requestBackgroundLocationPermission() }
             .setNegativeButton(R.string.permission_button_cancel) { dialog, _ -> dialog.dismiss() }
             .show()
-     }
+    }
 
     /**
      * Shows a snackbar when permission is denied with a link to app settings
@@ -651,12 +805,12 @@ class GpsTrackerActivity : AppCompatActivity() {
      */
     private fun setTrackingButtonState(isTracking: Boolean) {
         if (isTracking) {
-            trackingButton.setBackgroundResource(R.drawable.red_tracking_button)
+            trackingButton.setBackgroundResource(R.drawable.stop_tracking_button)
             trackingButton.setTextColor(Color.WHITE)
             trackingButton.setText(R.string.tracking_is_on)
         } else {
-            trackingButton.setBackgroundResource(R.drawable.green_tracking_button)
-            trackingButton.setTextColor(Color.BLACK)
+            trackingButton.setBackgroundResource(R.drawable.start_tracking_button)
+            trackingButton.setTextColor(Color.WHITE)
             trackingButton.setText(R.string.tracking_is_off)
         }
     }
@@ -708,9 +862,9 @@ class GpsTrackerActivity : AppCompatActivity() {
         } else {
             Timber.e("Google Play Services check failed with code: $resultCode")
             if (googleApiAvailability.isUserResolvableError(resultCode)) {
-                 googleApiAvailability.getErrorDialog(this, resultCode, 9000)?.show()
+                googleApiAvailability.getErrorDialog(this, resultCode, 9000)?.show()
             } else {
-                 Toast.makeText(applicationContext, R.string.google_play_services_unavailable, Toast.LENGTH_LONG).show()
+                Toast.makeText(applicationContext, R.string.google_play_services_unavailable, Toast.LENGTH_LONG).show()
             }
             return false
         }
@@ -721,6 +875,7 @@ class GpsTrackerActivity : AppCompatActivity() {
      */
     companion object {
         private const val TAG = "GpsTrackerActivity"
+
         // Constants needed for SharedPreferences checkFirstTimeLoading
         private const val PREFS_NAME = "com.websmithing.gpstracker.prefs"
         private const val KEY_FIRST_TIME_LOADING = "firstTimeLoadingApp"

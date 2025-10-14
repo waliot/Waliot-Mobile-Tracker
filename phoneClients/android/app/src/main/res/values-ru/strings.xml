@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WALIOT.Tracker</string>
+    <string name="default_upload_website">device.waliot.com:30017</string>
+
+    <string name="tracking_is_off">Начать отслеживание</string>
+    <string name="tracking_is_on">Остановить отслеживание</string>
+    <string name="user_needs_to_restart_tracking">Пожалуйста, перезапустите отслеживание, чтобы изменить интервал времени.</string>
+    <string name="reachability_error">Не удаётся подключиться к указанному серверу. Проверьте правильность адреса.</string>
+    <string name="textfields_empty_or_spaces">Проверьте выделенные поля. Поля не могут быть пустыми или содержать пробелы.</string>
+    <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play.</string>
+    <string name="location_unavailable">Перейдите в Настройки > Приложения и включите Определение местоположения.</string>
+
+    <!-- Input Validation -->
+    <string name="username_error_spaces">Номер трекера не может содержать пробелы.</string>
+    <string name="username_error_empty">Номер трекера не может быть пустым.</string>
+    <string name="website_error_empty">Адрес сервера не может быть пустым.</string>
+    <string name="website_error_spaces">Адрес сервера не может содержать пробелы.</string>
+
+    <!-- Permissions -->
+    <string name="permission_rationale_foreground_location_title">Требуется разрешение на определение местоположения</string>
+    <string name="permission_rationale_foreground_location_message">Приложению требуется доступ к местоположению для отслеживания.</string>
+    <string name="permission_rationale_background_location_title">Требуется разрешение на фоновое определение местоположения</string>
+    <string name="permission_rationale_background_location_message">Чтобы отслеживать местоположение даже при закрытом приложении, предоставьте разрешение «Разрешить всегда».</string>
+    <string name="permission_rationale_background_location_pre_request">Это приложение собирает данные о местоположении для отслеживания даже при закрытом приложении. Для этого требуется разрешение «Разрешить всегда». Пожалуйста, предоставьте его на следующем экране.</string>
+    <string name="permission_denied_foreground_location">Разрешение на определение местоположения в активном режиме отклонено. Отслеживание не может быть запущено.</string>
+    <string name="permission_denied_background_location">Разрешение на фоновое определение местоположения отклонено. Отслеживание может остановиться при закрытии приложения.</string>
+    <string name="permission_button_grant">Разрешить</string>
+    <string name="permission_button_deny">Отклонить</string>
+    <string name="permission_button_settings">Настройки</string>
+    <string name="permission_button_continue">Продолжить</string>
+    <string name="permission_button_cancel">Отмена</string>
+
+    <!-- Other UI Messages -->
+    <string name="interval_changed_restarting_worker">Интервал обновлён. Перезапуск фоновой задачи отслеживания.</string>
+    <string name="upload_failed_error">Не удалось отправить данные о местоположении. Проверьте подключение или настройки.</string>
+    <string name="user_name">номер трекера</string>
+    <string name="upload_website">адрес сервера</string>
+    <string name="upload_frequency">Обновлять каждые (минуты):</string>
+    <string name="one_minute">1</string>
+    <string name="five_minutes">5</string>
+    <string name="fifteen_minutes">15</string>
+
+    <!-- New UI Display Strings -->
+    <string name="lat_lon_format">Широта: %1$s Долгота: %2$s</string>
+    <string name="speed_format_kmh">Скорость: %.1f км/ч</string>
+    <string name="altitude_format">Высота: %.0f м</string>
+    <string name="accuracy_format">Точность: %.0f м</string>
+    <string name="bearing_format">Направление: %.0f°</string>
+    <string name="distance_format_km">Расстояние: %s км</string>
+    <string name="signal_strength_format">Сигнал GPS: %s</string>
+
+    <string name="lat_lon_default">Широта: -- Долгота: --</string>
+    <string name="speed_default">Скорость: -- км/ч</string>
+    <string name="altitude_default">Высота: -- м</string>
+    <string name="accuracy_default">Точность: -- м</string>
+    <string name="bearing_default">Направление: --°</string>
+    <string name="distance_default">Расстояние: -- км</string>
+    <string name="signal_strength_default">Сигнал GPS: --</string>
+
+    <string name="upload_status_idle">Последнее обновление: ожидание</string>
+    <string name="upload_status_success">Последнее обновление: %1$s (успешно)</string>
+    <string name="upload_status_failure">Последнее обновление: %1$s (ошибка: %2$s)</string>
+
+    <string name="signal_unknown">Неизвестно</string>
+    <string name="signal_excellent">Отлично</string>
+    <string name="signal_good">Хорошо</string>
+    <string name="signal_fair">Удовлетворительно</string>
+    <string name="signal_poor">Плохо</string>
+
+    <string name="notification_text">Идёт отслеживание местоположения…</string>
+
+    <string name="drawer_open">Открыть</string>
+    <string name="drawer_close">Закрыть</string>
+
+    <string name="language">Язык:</string>
+    <string name="lang_en">Английский</string>
+    <string name="lang_ru">Русский</string>
+</resources>

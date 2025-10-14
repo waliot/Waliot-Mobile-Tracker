@@ -155,7 +155,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:background="@drawable/red_tracking_button"
+        android:background="@drawable/stop_tracking_button"
         android:text="@string/tracking_is_off"
         android:textColor="@android:color/white"
         app:layout_constraintBottom_toBottomOf="parent"
