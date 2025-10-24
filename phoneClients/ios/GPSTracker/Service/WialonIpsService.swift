@@ -18,7 +18,7 @@ final class WialonIpsService: APIServiceProtocol {
     private let settings: SettingsRepositoryProtocol
 
     private let defaultHost = "device.waliot.com"
-    private let defaultPort: UInt16 = 30017
+    private let defaultPort: UInt16 = 30032
     private let protocolVersion = "2.0"
     private let noValue = "NA"
     private let defaultPassword = "NA"

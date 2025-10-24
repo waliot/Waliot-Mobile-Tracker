@@ -100,7 +100,7 @@ class TrackingViewModel: ObservableObject {
     @Published var username: String = ""
     
     /// Server URL for uploading location data
-    @Published var serverUrl: String = "device.waliot.com:30017"
+    @Published var serverUrl: String = "device.waliot.com:30032"
     
     /// Time interval between location updates in minutes
     @Published var trackingInterval: Int = 1
@@ -282,8 +282,12 @@ class TrackingViewModel: ObservableObject {
     /// Requests location permissions from the user
     ///
     /// This method prompts the user to grant location access permissions.
-    func requestLocationPermissions() {
-        locationService.requestPermissions()
+    func requestLocationPermissions(always: Bool) {
+        if (always) {
+            locationService.requestAlwaysPermissions()
+        } else {
+            locationService.requestWhenInUsePermissions()
+        }
     }
     
     // MARK: - Private Methods

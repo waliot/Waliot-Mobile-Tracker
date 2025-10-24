@@ -46,7 +46,7 @@ class SettingsRepository: SettingsRepositoryProtocol {
     /// Default values for settings
     private enum Defaults {
         static let username = ""
-        static let serverUrl = "device.waliot.com:30017"
+        static let serverUrl = "device.waliot.com:30032"
         static let trackingInterval = 1 // minutes
         static let distanceFilter = 10 // meters
         static let trackInBackground = true

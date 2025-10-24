@@ -43,7 +43,7 @@ class MockSettingsRepository: SettingsRepositoryProtocol {
     /// Mock settings storage
     private var settings: [String: Any] = [
         "username": "9876543210",
-        "server_url": "device.waliot.com:30017",
+        "server_url": "device.waliot.com:30032",
         "tracking_interval": 1,
         "distance_filter": 10,
         "track_in_background": true,
@@ -59,7 +59,7 @@ class MockSettingsRepository: SettingsRepositoryProtocol {
     /// Returns the mock server URL
     /// - Returns: A predefined server URL for testing
     func getServerUrl() -> String {
-        return settings["server_url"] as? String ?? "device.waliot.com:30017"
+        return settings["server_url"] as? String ?? "device.waliot.com:30032"
     }
     
     /// Returns the mock tracking interval
@@ -153,11 +153,16 @@ class MockLocationService: LocationServiceProtocol {
         authorizationSubject.send(authStatus)
     }
     
-    /// Simulates requesting location permissions
-    ///
-    /// In a real app, this would trigger system permission dialogs.
-    /// In this mock, it simply updates the status after a short delay.
-    func requestPermissions() {
+    func requestWhenInUsePermissions() {
+        // Simulate permission request with delayed response
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            self.authStatus = .authorizedAlways
+            self.authorizationSubject.send(self.authStatus)
+        }
+    }
+    
+    func requestAlwaysPermissions() {
         // Simulate permission request with delayed response
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self else { return }

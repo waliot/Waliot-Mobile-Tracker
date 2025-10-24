@@ -29,10 +29,10 @@
 
 "settings.lang.header" = "Язык";
 
-"settings.user.header" = "Идентификация";
+"settings.user.header" = "Идентификация (опционально)";
 "settings.user.username" = "Номер трекера";
 
-"settings.server.header" = "Конфигурация сервера";
+"settings.server.header" = "Конфигурация сервера (опционально)";
 "settings.server.url" = "Адрес сервера";
 
 "settings.tracking.header" = "Параметры трекинга";
@@ -51,3 +51,24 @@
 
 "units.minutes" = "%d мин";
 "units.meters"  = "%d м";
+
+"stats.title" = "Статистика";
+"stats.done" = "Готово";
+
+"stats.distanceAndDuration" = "Расстояние и длительность";
+"stats.totalDistance" = "Общее расстояние";
+"stats.totalDuration" = "Общая длительность";
+
+"stats.speed" = "Скорость";
+"stats.current" = "Текущая";
+"stats.average" = "Средняя";
+"stats.maximum" = "Максимальная";
+
+"stats.data" = "Данные";
+"stats.data.collected" = "Точек зафиксировано";
+"stats.data.uploaded" = "Точек отправлено";
+
+"stats.charts.title" = "Графики";
+"stats.charts.line" = "Линейные";
+"stats.charts.bar" = "Столбчатые";
+"stats.charts.legend" = "Скорость (км/ч) / Время";

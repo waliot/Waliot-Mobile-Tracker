@@ -50,7 +50,7 @@ class APIService: APIServiceProtocol {
     /// This URL can be configured in the app settings
     private var baseURL: URL {
         // In a real implementation, this would be configurable
-        return URL(string: "device.waliot.com:30017")!
+        return URL(string: "device.waliot.com:30032")!
     }
     
     /// Initializes the API service

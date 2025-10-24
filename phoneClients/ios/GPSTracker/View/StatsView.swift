@@ -46,14 +46,16 @@ struct StatsView: View {
                     dataSection
                     
                     // Speed over time chart
-                    if !viewModel.speedData.isEmpty {
-                        chartSection
-                    }
+//                    if #available(iOS 16.0, *) {
+//                        if !viewModel.speedData.isEmpty {
+//                            chartSection
+//                        }
+//                    }
                 }
                 .padding()
             }
-            .navigationTitle("Tracking Statistics")
-            .navigationBarItems(trailing: Button("Done") {
+            .navigationTitle(Text("stats.title"))
+            .navigationBarItems(trailing: Button("stats.done") {
                 dismiss()
             })
         }
@@ -62,19 +64,19 @@ struct StatsView: View {
     /// Section displaying distance and duration information
     private var distanceSection: some View {
         VStack {
-            Text("Distance & Duration")
+            Text("stats.distanceAndDuration")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             HStack {
                 StatCard(
-                    title: "Total Distance",
+                    title: String(localized: "stats.totalDistance"),
                     value: String(format: "%.2f km", viewModel.totalDistance / 1000),
                     icon: "map"
                 )
                 
                 StatCard(
-                    title: "Duration",
+                    title: String(localized: "stats.totalDuration"),
                     value: formatDuration(viewModel.sessionDuration),
                     icon: "clock"
                 )
@@ -88,25 +90,25 @@ struct StatsView: View {
     /// Section displaying speed metrics
     private var speedSection: some View {
         VStack {
-            Text("Speed")
+            Text("stats.speed")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             HStack {
                 StatCard(
-                    title: "Current",
+                    title: String(localized: "stats.current"),
                     value: String(format: "%.1f km/h", viewModel.currentSpeed * 3.6),
                     icon: "speedometer"
                 )
                 
                 StatCard(
-                    title: "Average",
+                    title: String(localized: "stats.average"),
                     value: String(format: "%.1f km/h", viewModel.averageSpeed * 3.6),
                     icon: "function"
                 )
                 
                 StatCard(
-                    title: "Maximum",
+                    title: String(localized: "stats.maximum"),
                     value: String(format: "%.1f km/h", viewModel.maxSpeed * 3.6),
                     icon: "arrow.up"
                 )
@@ -120,19 +122,19 @@ struct StatsView: View {
     /// Section displaying data collection information
     private var dataSection: some View {
         VStack {
-            Text("Data Collection")
+            Text("stats.data")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             HStack {
                 StatCard(
-                    title: "Points Collected",
+                    title: String(localized: "stats.data.collected"),
                     value: "\(viewModel.locationCount)",
                     icon: "location"
                 )
                 
                 StatCard(
-                    title: "Points Uploaded",
+                    title: String(localized: "stats.data.uploaded"),
                     value: "\(viewModel.uploadedCount)",
                     icon: "arrow.up.to.line"
                 )
@@ -146,55 +148,44 @@ struct StatsView: View {
     /// Section displaying speed charts
     private var chartSection: some View {
         VStack {
-            Text("Speed Over Time")
+            Text("stats.charts.title")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             Picker("Chart Type", selection: $selectedTab) {
-                Text("Line").tag(0)
-                Text("Bar").tag(1)
+                Text("stats.charts.line").tag(0)
+                Text("stats.charts.bar").tag(1)
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.bottom)
             
-            if #available(iOS 16.0, *) {
-                // Use Swift Charts for iOS 16+
-                if selectedTab == 0 {
-                    Chart(viewModel.speedData) { dataPoint in
-                        LineMark(
-                            x: .value("Time", dataPoint.timestamp),
-                            y: .value("Speed", dataPoint.speed * 3.6)
-                        )
-                        .foregroundStyle(.blue)
-                    }
-                    .frame(height: 250)
-                    .chartYAxis {
-                        AxisMarks(position: .leading)
-                    }
-                } else {
-                    Chart(viewModel.speedData) { dataPoint in
-                        BarMark(
-                            x: .value("Time", dataPoint.timestamp),
-                            y: .value("Speed", dataPoint.speed * 3.6)
-                        )
-                        .foregroundStyle(.blue)
-                    }
-                    .frame(height: 250)
-                    .chartYAxis {
-                        AxisMarks(position: .leading)
-                    }
+            if selectedTab == 0 {
+                Chart(viewModel.speedData) { dataPoint in
+                    LineMark(
+                        x: .value("Time", dataPoint.timestamp),
+                        y: .value("Speed", dataPoint.speed * 3.6)
+                    )
+                    .foregroundStyle(.blue)
+                }
+                .frame(height: 250)
+                .chartYAxis {
+                    AxisMarks(position: .leading)
                 }
             } else {
-                // Fallback for older iOS versions
-                Text("Charts available on iOS 16 and above")
-                    .foregroundColor(.gray)
-                    .frame(height: 250)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(.systemGray5))
-                    .cornerRadius(8)
+                Chart(viewModel.speedData) { dataPoint in
+                    BarMark(
+                        x: .value("Time", dataPoint.timestamp),
+                        y: .value("Speed", dataPoint.speed * 3.6)
+                    )
+                    .foregroundStyle(.blue)
+                }
+                .frame(height: 250)
+                .chartYAxis {
+                    AxisMarks(position: .leading)
+                }
             }
             
-            Text("Speed (km/h) vs Time")
+            Text("stats.charts.legend")
                 .font(.caption)
                 .foregroundColor(.gray)
         }

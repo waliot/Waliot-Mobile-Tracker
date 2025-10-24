@@ -35,7 +35,7 @@ struct SettingsView: View {
     @State private var username: String = ""
     
     /// Server URL for uploading location data
-    @State private var serverUrl: String = "device.waliot.com:30017"
+    @State private var serverUrl: String = "device.waliot.com:30032"
     
     /// Tracking frequency in minutes
     @State private var trackingInterval: Double = 1
@@ -112,21 +112,12 @@ struct SettingsView: View {
                             Text(viewModel.locationAuthorizationStatus.description)
                                 .foregroundColor(locationStatusColor)
                         }
-                        
-                        if viewModel.locationAuthorizationStatus == .denied ||
-                           viewModel.locationAuthorizationStatus == .restricted {
-                            Button("settings.permissions.open") {
-                                openAppSettings()
-                            }
-                            .foregroundColor(.blue)
-                            .padding(.top, 4)
-                        } else if viewModel.locationAuthorizationStatus == .notDetermined {
-                            Button("settings.permissions.request") {
-                                viewModel.requestLocationPermissions()
-                            }
-                            .foregroundColor(.blue)
-                            .padding(.top, 4)
+        
+                        Button("settings.permissions.open") {
+                            viewModel.requestLocationPermissions(always: true)
                         }
+                        .foregroundColor(.blue)
+                        .padding(.top, 4)
                     }
                 }
                 

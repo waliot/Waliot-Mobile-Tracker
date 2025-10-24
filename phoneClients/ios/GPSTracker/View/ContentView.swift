@@ -79,7 +79,7 @@ struct ContentView: View {
         }
         .onAppear {
             // Request location permissions when the view appears
-            viewModel.requestLocationPermissions()
+            viewModel.requestLocationPermissions(always: false)
             
             // Set up location updates to update the map
             viewModel.onLocationUpdate = { location in
