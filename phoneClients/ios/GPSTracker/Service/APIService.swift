@@ -40,7 +40,7 @@ protocol APIServiceProtocol {
 /// The service validates server responses and handles various error conditions.
 class APIService: APIServiceProtocol {
     /// Logger for diagnostic information
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.websmithing.gpstracker2", category: "APIService")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "APIService")
     
     /// URL session for network requests
     private let session: URLSession
@@ -50,7 +50,7 @@ class APIService: APIServiceProtocol {
     /// This URL can be configured in the app settings
     private var baseURL: URL {
         // In a real implementation, this would be configurable
-        return URL(string: "https://www.websmithing.com/gpstracker2/api/location")!
+        return URL(string: "device.waliot.com:30032")!
     }
     
     /// Initializes the API service
@@ -97,13 +97,13 @@ class APIService: APIServiceProtocol {
                     } catch {
                         // If decoding fails, create a simple response
                         let responseString = String(data: data, encoding: .utf8) ?? "No response body"
-                        log("Could not decode response: \(responseString). Error: \(error.localizedDescription)", level: .error, logger: logger)
+                        self.logger.error("Could not decode response: \(responseString). Error: \(error.localizedDescription)")
                         return APIResponse(status: "success", message: responseString)
                     }
                 }
                 .catch { error in
                     // Log the error
-                    log("API request failed: \(error.localizedDescription)", level: .error, logger: logger)
+                    self.logger.error("API request failed: \(error.localizedDescription)")
                     
                     // Transform network errors to APIError
                     let apiError: Error
@@ -114,7 +114,7 @@ class APIService: APIServiceProtocol {
                     }
                     
                     // Fail the publisher
-                    return Fail(error: apiError).eraseToAnyPublisher()
+                    return Fail<APIResponse, Error>(error: apiError).eraseToAnyPublisher()
                 }
                 .eraseToAnyPublisher()
         } catch {
@@ -143,16 +143,16 @@ enum APIError: Error, LocalizedError {
     case encodingError(Error)
     
     /// Human-readable error description
-    var errorDescription: String? {
+    var description: String? {
         switch self {
         case .invalidResponse:
-            return "The server returned an invalid response."
+            return NSLocalizedString("api.error.invalidResponse", comment: "")
         case .serverError(let statusCode):
-            return "Server error with status code: \(statusCode)"
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
-        case .encodingError(let error):
-            return "Failed to encode request: \(error.localizedDescription)"
+            return String(format: NSLocalizedString("api.error.serverError", comment: ""), statusCode)
+        case .networkError(let urlError):
+            return String(format: NSLocalizedString("api.error.networkError", comment: ""), urlError.localizedDescription)
+        case .encodingError(let err):
+            return String(format: NSLocalizedString("api.error.encodingError", comment: ""), (err as NSError).localizedDescription)
         }
     }
 }

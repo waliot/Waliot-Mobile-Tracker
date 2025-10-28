@@ -26,6 +26,8 @@ struct SettingsView: View {
     /// The view model that manages app state
     @EnvironmentObject private var viewModel: TrackingViewModel
     
+    @EnvironmentObject private var lang: LanguageManager
+    
     /// Environment object to dismiss this view
     @Environment(\.dismiss) private var dismiss
     
@@ -33,13 +35,13 @@ struct SettingsView: View {
     @State private var username: String = ""
     
     /// Server URL for uploading location data
-    @State private var serverUrl: String = ""
+    @State private var serverUrl: String = "device.waliot.com:30032"
     
-    /// Tracking frequency in seconds
-    @State private var trackingInterval: Double = 10
+    /// Tracking frequency in minutes
+    @State private var trackingInterval: Double = 1
     
     /// Minimum distance between location updates in meters
-    @State private var distanceFilter: Double = 5
+    @State private var distanceFilter: Double = 10
     
     /// Flag indicating if the app should continue tracking in background
     @State private var trackInBackground: Bool = true
@@ -49,79 +51,87 @@ struct SettingsView: View {
         NavigationView {
             Form {
                 // User identification section
-                Section(header: Text("User Identification")) {
-                    TextField("Username", text: $username)
+                Section(header: Text("settings.user.header")) {
+                    TextField("settings.user.username", text: $username)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        .keyboardType(.numberPad)
                 }
                 
                 // Server configuration section
-                Section(header: Text("Server Configuration")) {
-                    TextField("Server URL", text: $serverUrl)
+                Section(header: Text("settings.server.header")) {
+                    TextField("settings.server.url", text: $serverUrl)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                         .keyboardType(.URL)
                 }
                 
                 // Tracking settings section
-                Section(header: Text("Tracking Settings")) {
+                Section(header: Text("settings.tracking.header")) {
                     HStack {
-                        Text("Update Interval")
+                        Text("settings.tracking.updateInterval")
                         Spacer()
-                        Text("\(Int(trackingInterval)) seconds")
+                        Text(
+                            String.localizedStringWithFormat(
+                                String(localized: "units.minutes", locale: lang.locale),
+                                Int(trackingInterval)
+                            )
+                        )
                     }
-                    Slider(value: $trackingInterval, in: 1...60, step: 1)
+                    Slider(value: $trackingInterval, in: 1...30, step: 1)
                     
                     HStack {
-                        Text("Distance Filter")
+                        Text("settings.tracking.distanceFilter")
                         Spacer()
-                        Text("\(Int(distanceFilter)) meters")
+                        Text(
+                            String.localizedStringWithFormat(
+                                String(localized: "units.meters", locale: lang.locale),
+                                Int(distanceFilter)
+                            )
+                        )
                     }
-                    Slider(value: $distanceFilter, in: 0...100, step: 1)
+                    Slider(value: $distanceFilter, in: 10...100, step: 1)
                     
-                    Toggle("Track in Background", isOn: $trackInBackground)
+                    Toggle("settings.tracking.trackInBackground", isOn: $trackInBackground)
                 }
                 
+//                Section(header: Text("settings.lang.header")) {
+//                    Picker("", selection: $lang.code) {
+//                        Text("Русский").tag("ru")
+//                        Text("English").tag("en")
+//                    }
+//                    .pickerStyle(.segmented)
+//                }
+                
                 // Permissions section
-                Section(header: Text("Permissions")) {
+                Section(header: Text("settings.permissions.header")) {
                     VStack(alignment: .leading) {
-                        Text("Location: \(viewModel.locationAuthorizationStatus.description)")
-                            .foregroundColor(locationStatusColor)
-                        
-                        if viewModel.locationAuthorizationStatus == .denied ||
-                           viewModel.locationAuthorizationStatus == .restricted {
-                            Button("Open Settings") {
-                                openAppSettings()
-                            }
-                            .foregroundColor(.blue)
-                            .padding(.top, 4)
-                        } else if viewModel.locationAuthorizationStatus == .notDetermined {
-                            Button("Request Permission") {
-                                viewModel.requestLocationPermissions()
-                            }
-                            .foregroundColor(.blue)
-                            .padding(.top, 4)
+                        HStack {
+                            Text("settings.permissions.location.title")
+                            Spacer()
+                            Text(viewModel.locationAuthorizationStatus.description)
+                                .foregroundColor(locationStatusColor)
                         }
+        
+                        Button("settings.permissions.open") {
+                            viewModel.requestLocationPermissions(always: true)
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.top, 4)
                     }
                 }
                 
                 // App info section
-                Section(header: Text("About")) {
+                Section(header: Text("settings.about.header")) {
                     HStack {
-                        Text("Version")
+                        Text("settings.about.version")
                         Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
-                    }
-                    
-                    HStack {
-                        Text("Build")
-                        Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown")
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                     }
                 }
             }
-            .navigationTitle("Settings")
-            .navigationBarItems(trailing: Button("Done") {
+            .navigationTitle(Text("settings.title"))
+            .navigationBarItems(trailing: Button("settings.done") {
                 saveSettings()
                 dismiss()
             })
@@ -175,7 +185,8 @@ struct SettingsView: View {
         viewModel.trackingInterval = Int(trackingInterval)
         viewModel.distanceFilter = Int(distanceFilter)
         viewModel.trackInBackground = trackInBackground
-        
+        viewModel.saveSettings()
+
         // Apply settings to active tracking if currently tracking
         if viewModel.isTracking {
             viewModel.applySettings()

@@ -53,13 +53,13 @@ protocol PersistenceServiceProtocol {
 /// or creating specialized persistence services.
 class PersistenceService: PersistenceServiceProtocol {
     /// Logger for diagnostic information
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.websmithing.gpstracker2", category: "PersistenceService")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "PersistenceService")
     
     /// User defaults instance for storing settings
     private let userDefaults: UserDefaults
     
     /// Key prefix to avoid namespace collisions
-    private let keyPrefix = "com.websmithing.gpstracker2."
+    private let keyPrefix = "com.waliot.tracker."
     
     /// Initializes the persistence service
     ///

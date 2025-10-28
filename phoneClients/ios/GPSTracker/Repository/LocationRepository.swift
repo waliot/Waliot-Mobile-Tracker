@@ -23,7 +23,7 @@ import os
 /// - ``uploadLocation(parameters:)``
 class LocationRepository: LocationRepositoryProtocol {
     /// Logger for diagnostic information
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.websmithing.gpstracker2", category: "LocationRepository")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "LocationRepository")
     
     /// Service for obtaining location updates
     private let locationService: LocationServiceProtocol
@@ -69,11 +69,11 @@ class LocationRepository: LocationRepositoryProtocol {
         return apiService.uploadLocation(parameters: parameters)
             .handleEvents(
                 receiveOutput: { [weak self] response in
-                    self?.log("Upload successful: \(response.status)", logger: self?.logger)
+                    self?.logger.info("Upload successful: \(response.status)")
                 },
                 receiveCompletion: { [weak self] completion in
                     if case let .failure(error) = completion {
-                        self?.log("Upload failed: \(error.localizedDescription)", level: .error, logger: self?.logger)
+                        self?.logger.error("Upload failed: \(error.localizedDescription)")
                     }
                 }
             )

@@ -97,16 +97,16 @@ class TrackingViewModel: ObservableObject {
     // MARK: - Settings Properties
     
     /// Username for identifying this device on the server
-    @Published var username: String = "demo"
+    @Published var username: String = ""
     
     /// Server URL for uploading location data
-    @Published var serverUrl: String = "https://www.websmithing.com/gpstracker2/api/location"
+    @Published var serverUrl: String = "device.waliot.com:30032"
     
-    /// Time interval between location updates in seconds
-    @Published var trackingInterval: Int = 10
+    /// Time interval between location updates in minutes
+    @Published var trackingInterval: Int = 1
     
     /// Minimum distance between location updates in meters
-    @Published var distanceFilter: Int = 5
+    @Published var distanceFilter: Int = 10
     
     /// Whether to continue tracking in the background
     @Published var trackInBackground: Bool = true
@@ -117,7 +117,7 @@ class TrackingViewModel: ObservableObject {
     // MARK: - Private Properties
     
     /// Logger for diagnostic information
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.websmithing.gpstracker2", category: "TrackingViewModel")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "TrackingViewModel")
     
     /// Repository for location data management
     private let locationRepository: LocationRepositoryProtocol
@@ -142,7 +142,9 @@ class TrackingViewModel: ObservableObject {
     
     /// Unique identifier for this app installation
     private var appId: String = ""
-    
+
+    private var lastUploadAt: Date?
+
     // MARK: - Initialization
     
     /// Initializes the view model with required dependencies
@@ -253,7 +255,15 @@ class TrackingViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
+    func saveSettings() {
+        settingsRepository.saveUsername(username)
+        settingsRepository.saveServerUrl(serverUrl)
+        settingsRepository.saveTrackingInterval(trackingInterval)
+        settingsRepository.saveDistanceFilter(distanceFilter)
+        settingsRepository.saveTrackInBackground(trackInBackground)
+    }
+
     /// Applies current settings to active tracking
     ///
     /// Call this method after changing settings to apply them
@@ -272,8 +282,12 @@ class TrackingViewModel: ObservableObject {
     /// Requests location permissions from the user
     ///
     /// This method prompts the user to grant location access permissions.
-    func requestLocationPermissions() {
-        locationService.requestPermissions()
+    func requestLocationPermissions(always: Bool) {
+        if (always) {
+            locationService.requestAlwaysPermissions()
+        } else {
+            locationService.requestWhenInUsePermissions()
+        }
     }
     
     // MARK: - Private Methods
@@ -351,8 +365,17 @@ class TrackingViewModel: ObservableObject {
         onLocationUpdate?(location)
         
         // Upload location to server
-        uploadLocationToServer(location)
-        
+        let now = Date()
+        let minGap = TimeInterval(max(trackingInterval, 1) * 60)
+        let canUpload: Bool = {
+            guard let last = lastUploadAt else { return true }
+            return now.timeIntervalSince(last) >= minGap
+        }()
+        if canUpload, let toSend = currentLocation {
+            uploadLocationToServer(toSend)
+            lastUploadAt = now
+        }
+
         log("Processed location update: (\(location.coordinate.latitude), \(location.coordinate.longitude))", logger: logger)
     }
     
@@ -386,6 +409,7 @@ class TrackingViewModel: ObservableObject {
             direction: location.course,
             distance: totalDistance,
             gps_time: timeString,
+            gps_timestamp: location.timestamp,
             location_method: "gps",
             accuracy: location.horizontalAccuracy,
             altitude: location.altitude,
@@ -407,7 +431,7 @@ class TrackingViewModel: ObservableObject {
                     case .failure(let error):
                         // Update upload status with error
                         self.uploadStatus = .failure(error.localizedDescription, Date())
-                        self.log("Upload failed: \(error.localizedDescription)", level: .error, logger: self.logger)
+                        self.logger.error("Upload failed: \(error.localizedDescription)")
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -417,114 +441,9 @@ class TrackingViewModel: ObservableObject {
                     self.uploadStatus = .success(Date())
                     self.uploadedCount += 1
                     
-                    self.log("Upload successful: \(response.status)", logger: self.logger)
+                    self.logger.info("Upload successful: \(response.status)")
                 }
             )
             .store(in: &cancellables)
     }
-}
-
-// MARK: - Mock Dependencies
-
-/// Factory for creating mock/preview dependencies
-struct MockDependencies {
-    /// Creates a view model populated with sample data for previews
-    static var previewViewModel: TrackingViewModel {
-        let viewModel = TrackingViewModel(
-            locationRepository: MockLocationRepository(),
-            settingsRepository: MockSettingsRepository(),
-            locationService: MockLocationService()
-        )
-        
-        // Set up sample data
-        viewModel.isTracking = true
-        viewModel.currentLocation = CLLocation(
-            coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-            altitude: 10,
-            horizontalAccuracy: 5,
-            verticalAccuracy: 10,
-            course: 45,
-            speed: 3.5,
-            timestamp: Date()
-        )
-        viewModel.totalDistance = 1250
-        viewModel.sessionDuration = 600 // 10 minutes
-        viewModel.currentSpeed = 3.5
-        viewModel.averageSpeed = 2.8
-        viewModel.maxSpeed = 5.2
-        viewModel.locationCount = 42
-        viewModel.uploadedCount = 38
-        viewModel.uploadStatus = .success(Date().addingTimeInterval(-30))
-        
-        // Generate sample path points
-        var samplePoints: [LocationData] = []
-        var sampleSpeedData: [SpeedDataPoint] = []
-        
-        let startDate = Date().addingTimeInterval(-600) // 10 minutes ago
-        for i in 0..<20 {
-            let lat = 37.7749 + Double(i) * 0.001
-            let lon = -122.4194 + Double(i) * 0.001
-            let time = startDate.addingTimeInterval(Double(i) * 30)
-            let speed = 2.0 + sin(Double(i) * 0.5) * 3.0 // Varies between 2-5 m/s
-            
-            samplePoints.append(LocationData(
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                altitude: 10 + Double(i),
-                horizontalAccuracy: 5,
-                verticalAccuracy: 10,
-                speed: speed,
-                course: 45,
-                timestamp: time
-            ))
-            
-            sampleSpeedData.append(SpeedDataPoint(
-                speed: speed,
-                timestamp: time
-            ))
-        }
-        
-        viewModel.pathPoints = samplePoints
-        viewModel.speedData = sampleSpeedData
-        
-        return viewModel
-    }
-}
-
-/// Mock location repository for previews
-private class MockLocationRepository: LocationRepositoryProtocol {
-    func uploadLocation(parameters: LocationAPIRequestParameters) -> AnyPublisher<APIResponse, Error> {
-        // Simulate a successful response after a short delay
-        return Just(APIResponse(status: "success", message: "Location uploaded successfully"))
-            .setFailureType(to: Error.self)
-            .delay(for: .seconds(0.5), scheduler: RunLoop.main)
-            .eraseToAnyPublisher()
-    }
-}
-
-/// Mock settings repository for previews
-private class MockSettingsRepository: SettingsRepositoryProtocol {
-    func getUsername() -> String { "preview_user" }
-    func getServerUrl() -> String { "https://www.websmithing.com/gpstracker2/api/location" }
-    func getTrackingInterval() -> Int { 10 }
-    func getDistanceFilter() -> Int { 5 }
-    func getTrackInBackground() -> Bool { true }
-    func getAppId() -> String { "preview_app_id" }
-    
-    func saveUsername(_ username: String) {}
-    func saveServerUrl(_ url: String) {}
-    func saveTrackingInterval(_ interval: Int) {}
-    func saveDistanceFilter(_ distance: Int) {}
-    func saveTrackInBackground(_ enabled: Bool) {}
-    func saveAppId(_ appId: String) {}
-}
-
-/// Mock location service for previews
-private class MockLocationService: LocationServiceProtocol {
-    let locationPublisher = PassthroughSubject<CLLocation, Never>().eraseToAnyPublisher()
-    let authorizationStatusPublisher = PassthroughSubject<CLAuthorizationStatus, Never>().eraseToAnyPublisher()
-    
-    func requestPermissions() {}
-    func startUpdatingLocation() {}
-    func stopUpdatingLocation() {}
-    func getCurrentAuthorizationStatus() -> CLAuthorizationStatus { .authorizedAlways }
 }

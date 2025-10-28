@@ -25,7 +25,7 @@ import UIKit // For appearance customization
 struct GPSTrackerApp: App {
     // Logger for the application lifecycle - Use static for access before init if needed elsewhere
     /// Application-wide logger for monitoring and debugging
-    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.websmithing.gpstracker2", category: "GPSTrackerApp")
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "GPSTrackerApp")
     
     /// Initializes the application and configures dark mode appearance
     ///
@@ -61,7 +61,7 @@ struct GPSTrackerApp: App {
     private static let locationService: LocationServiceProtocol = LocationService()
     
     /// Service for communication with the remote tracking server
-    private static let apiService: APIServiceProtocol = APIService()
+    private static let apiService: APIServiceProtocol = WialonIpsService(settingsRepository: settingsRepository)
     
     /// Repository for location data processing and transmission
     private static let locationRepository: LocationRepositoryProtocol = LocationRepository(
@@ -79,6 +79,8 @@ struct GPSTrackerApp: App {
         locationService: Self.locationService
     )
 
+    @StateObject private var lang = LanguageManager()
+    
     /// The root scene of the application
     ///
     /// Creates the main window group and injects dependencies into the environment
@@ -98,5 +100,7 @@ struct GPSTrackerApp: App {
     private func makeContentView() -> some View {
         ContentView()
             .environmentObject(viewModel)
+            .environmentObject(lang)
+            .environment(\.locale, lang.locale)
     }
 }

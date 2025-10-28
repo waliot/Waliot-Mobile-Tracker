@@ -1,0 +1,74 @@
+"app.name" = "WALIOT.Трекер";
+
+"map.location" = "Местоположение:";
+
+"status.title" = "Состояние:";
+"status.tracking" = "Отслеживание";
+"status.idle" = "Ожидание";
+
+"upload.title" = "Выгрузка:";
+"upload.status.idle" = "Нет активности";
+"upload.status.uploading" = "Отправка...";
+"upload.status.success.prefix" = "Успешно";
+"upload.status.failure.prefix" = "Ошибка";
+
+"location.status.authorizedAlways" = "Разрешено всегда";
+"location.status.authorizedWhenInUse" = "Разрешено при использовании";
+"location.status.denied" = "Запрещено";
+"location.status.restricted" = "Ограничено";
+"location.status.notDetermined" = "Не запрошено";
+"location.status.unknown" = "Неизвестно";
+
+"api.error.invalidResponse" = "Сервер вернул некорректный ответ";
+"api.error.serverError"     = "Ошибка сервера (код: %d)";
+"api.error.networkError"    = "Сетевая ошибка: %@";
+"api.error.encodingError"   = "Не удалось сформировать запрос: %@";
+
+"settings.title" = "Настройки";
+"settings.done" = "Готово";
+
+"settings.lang.header" = "Язык";
+
+"settings.user.header" = "Идентификация (опционально)";
+"settings.user.username" = "Номер трекера";
+
+"settings.server.header" = "Конфигурация сервера (опционально)";
+"settings.server.url" = "Адрес сервера";
+
+"settings.tracking.header" = "Параметры трекинга";
+"settings.tracking.updateInterval" = "Интервал обновления";
+"settings.tracking.distanceFilter" = "Фильтр расстояния";
+"settings.tracking.trackInBackground" = "Отслеживать в фоне";
+
+"settings.permissions.header" = "Разрешения";
+"settings.permissions.location.title" = "Местоположение";
+"settings.permissions.open" = "Открыть настройки";
+"settings.permissions.request" = "Запросить разрешение";
+
+"settings.about.header" = "О приложении";
+"settings.about.version" = "Версия";
+"settings.about.build" = "Сборка";
+
+"units.minutes" = "%d мин";
+"units.meters"  = "%d м";
+
+"stats.title" = "Статистика";
+"stats.done" = "Готово";
+
+"stats.distanceAndDuration" = "Расстояние и длительность";
+"stats.totalDistance" = "Общее расстояние";
+"stats.totalDuration" = "Общая длительность";
+
+"stats.speed" = "Скорость";
+"stats.current" = "Текущая";
+"stats.average" = "Средняя";
+"stats.maximum" = "Максимальная";
+
+"stats.data" = "Данные";
+"stats.data.collected" = "Точек зафиксировано";
+"stats.data.uploaded" = "Точек отправлено";
+
+"stats.charts.title" = "Графики";
+"stats.charts.line" = "Линейные";
+"stats.charts.bar" = "Столбчатые";
+"stats.charts.legend" = "Скорость (км/ч) / Время";

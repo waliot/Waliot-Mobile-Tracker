@@ -28,7 +28,7 @@ import os
 /// - ``getDistanceFilter()``
 class SettingsRepository: SettingsRepositoryProtocol {
     /// Logger for diagnostic information
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.websmithing.gpstracker2", category: "SettingsRepository")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "SettingsRepository")
     
     /// Service for data persistence
     private let persistenceService: PersistenceServiceProtocol
@@ -45,10 +45,10 @@ class SettingsRepository: SettingsRepositoryProtocol {
     
     /// Default values for settings
     private enum Defaults {
-        static let username = "default_user"
-        static let serverUrl = "https://www.websmithing.com/gpstracker2/api/location"
-        static let trackingInterval = 10 // seconds
-        static let distanceFilter = 5 // meters
+        static let username = ""
+        static let serverUrl = "device.waliot.com:30032"
+        static let trackingInterval = 1 // minutes
+        static let distanceFilter = 10 // meters
         static let trackInBackground = true
     }
     
@@ -104,7 +104,7 @@ class SettingsRepository: SettingsRepositoryProtocol {
     /// - Parameter interval: The tracking interval in seconds
     func saveTrackingInterval(_ interval: Int) {
         persistenceService.setValue(interval, forKey: SettingKeys.trackingInterval)
-        log("Saved tracking interval: \(interval) seconds", logger: logger)
+        log("Saved tracking interval: \(interval) minutes", logger: logger)
     }
     
     /// Retrieves the minimum distance between updates in meters

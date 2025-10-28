@@ -171,7 +171,7 @@ class WialonIpsLocationRepositoryImpl @Inject constructor(
             Timber.tag(TAG).i("REPO-CRITICAL: Got server from settings: $serverAddress")
             if (serverAddress.isBlank()) {
                 Timber.tag(TAG).e("Server address is blank. Using Waliot by default...")
-                serverAddress = "device.waliot.com:30017"
+                serverAddress = "device.waliot.com:30032"
             }
 
             val parts = serverAddress.split(":")
@@ -360,7 +360,7 @@ class WialonIpsLocationRepositoryImpl @Inject constructor(
         private const val KEY_PREVIOUS_LONGITUDE = "previousLongitude"
 
         private const val DEFAULT_HOST = "device.waliot.com"
-        private const val DEFAULT_PORT = 30017
+        private const val DEFAULT_PORT = 30032
         private const val PROTOCOL_VERSION = "2.0"
         private const val NO_VALUE = "NA"
         private const val DEFAULT_PASSWORD = NO_VALUE

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WALIOT.Tracker</string>
-    <string name="default_upload_website">device.waliot.com:30017</string>
+    <string name="default_upload_website">device.waliot.com:30032</string>
 
     <string name="tracking_is_off">Start Tracking</string>
     <string name="tracking_is_on">Stop Tracking</string>

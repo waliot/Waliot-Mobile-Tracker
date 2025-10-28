@@ -24,7 +24,9 @@ import CoreLocation
 /// ### Movement Data
 /// - ``speed``
 /// - ``course``
-struct LocationData {
+struct LocationData: Identifiable {
+    var id: String { "\(coordinate.latitude),\(coordinate.longitude),\(timestamp.timeIntervalSince1970)" }
+    
     /// The geographical coordinates (latitude and longitude)
     let coordinate: CLLocationCoordinate2D
     
@@ -83,13 +85,15 @@ enum UploadStatus: Equatable {
     var description: String {
         switch self {
         case .idle:
-            return "Idle"
+            return String(localized: "upload.status.idle")
         case .uploading:
-            return "Uploading..."
-        case .success:
-            return "Last upload successful"
-        case .failure(let error, _):
-            return "Upload failed: \(error)"
+            return String(localized: "upload.status.uploading")
+        case .success(let date):
+            let dateStr = date.formatted(date: .numeric, time: .standard)
+            return String(localized: "upload.status.success.prefix") + " (\(dateStr))"
+        case .failure(let message, let date):
+            let dateStr = date.formatted(date: .numeric, time: .standard)
+            return String(localized: "upload.status.failure.prefix") + ": \(message) (\(dateStr))"
         }
     }
 }
@@ -169,6 +173,8 @@ struct LocationAPIRequestParameters: Codable {
     /// Formatted timestamp of when this location was recorded
     let gps_time: String
     
+    let gps_timestamp: Date
+    
     /// How the location was determined (e.g., "gps", "network")
     let location_method: String
     
@@ -195,6 +201,7 @@ struct LocationAPIRequestParameters: Codable {
         case direction
         case distance
         case gps_time
+        case gps_timestamp
         case location_method
         case accuracy
         case altitude
@@ -210,12 +217,12 @@ public extension CLAuthorizationStatus {
     /// Returns a string description of the authorization status
     var description: String {
         switch self {
-        case .notDetermined: return "Not Determined"
-        case .restricted: return "Restricted"
-        case .denied: return "Denied"
-        case .authorizedAlways: return "Authorized Always"
-        case .authorizedWhenInUse: return "Authorized When In Use"
-        @unknown default: return "Unknown"
+        case .authorizedAlways:      return String(localized: "location.status.authorizedAlways")
+        case .authorizedWhenInUse:   return String(localized: "location.status.authorizedWhenInUse")
+        case .denied:                return String(localized: "location.status.denied")
+        case .restricted:            return String(localized: "location.status.restricted")
+        case .notDetermined:         return String(localized: "location.status.notDetermined")
+        @unknown default:            return String(localized: "location.status.notDetermined")
         }
     }
 }

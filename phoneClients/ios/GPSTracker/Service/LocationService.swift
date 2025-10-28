@@ -38,11 +38,9 @@ protocol LocationServiceProtocol {
     /// Subscribe to this publisher to respond to permission changes
     var authorizationStatusPublisher: AnyPublisher<CLAuthorizationStatus, Never> { get }
 
-    /// Requests location permissions from the user
-    ///
-    /// This method prompts the user to grant location access permissions.
-    /// The app requests "Always" authorization for background tracking.
-    func requestPermissions()
+    func requestWhenInUsePermissions()
+    
+    func requestAlwaysPermissions()
 
     /// Starts the location update process
     ///
@@ -78,7 +76,7 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
     private let locationManager: CLLocationManager
     
     /// Logger for diagnostic information
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.websmithing.gpstracker2", category: "LocationService")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "LocationService")
 
     // MARK: - Publishers
     
@@ -122,18 +120,18 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
         UIDevice.current.isBatteryMonitoringEnabled = true
         log("Battery monitoring enabled.", logger: logger)
 
-        log("LocationService initialized. Current status: \(self.getCurrentAuthorizationStatus().statusDescription)", level: .info, logger: logger)
+        log("LocationService initialized. Current status: \(self.getCurrentAuthorizationStatus().description)", level: .info, logger: logger)
         // Publish initial status
         _authorizationStatusSubject.send(self.getCurrentAuthorizationStatus())
     }
 
-    /// Requests location permissions from the user
-    ///
-    /// Prompts the user to grant "Always" location access, which is required
-    /// for proper background tracking functionality.
-    func requestPermissions() {
+    func requestWhenInUsePermissions() {        
+        log("Requesting 'When In Use' location permissions.", level: .info, logger: logger)
+        locationManager.requestWhenInUseAuthorization()
+    }
+    
+    func requestAlwaysPermissions() {
         log("Requesting 'Always' location permissions.", level: .info, logger: logger)
-        // Request Always authorization for background tracking
         locationManager.requestAlwaysAuthorization()
     }
 
@@ -145,16 +143,17 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
     func startUpdatingLocation() {
         let status = getCurrentAuthorizationStatus()
         guard status == .authorizedAlways || status == .authorizedWhenInUse else {
-            log("Cannot start location updates. Authorization status: \(status.statusDescription)", level: .error, logger: logger)
+            log("Cannot start location updates. Authorization status: \(status.description)", level: .error, logger: logger)
             // Optionally request permissions again or handle error
             if status == .notDetermined {
-                requestPermissions()
+                requestAlwaysPermissions()
             }
             return
         }
 
         log("Starting location updates.", level: .info, logger: logger)
         locationManager.startUpdatingLocation()
+        locationManager.showsBackgroundLocationIndicator = true
     }
 
     /// Stops the location update process
@@ -163,6 +162,7 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
     func stopUpdatingLocation() {
         log("Stopping location updates.", level: .info, logger: logger)
         locationManager.stopUpdatingLocation()
+        locationManager.showsBackgroundLocationIndicator = false
     }
 
     /// Gets the current authorization status
@@ -206,7 +206,7 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
     /// - Parameter manager: The location manager reporting the status change
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let newStatus = manager.authorizationStatus
-        log("Location authorization status changed to: \(newStatus.statusDescription)", level: .info, logger: logger)
+        log("Location authorization status changed to: \(newStatus.description)", level: .info, logger: logger)
         // Publish the new status
         _authorizationStatusSubject.send(newStatus)
 
@@ -221,23 +221,6 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
             log("Authorization status is not determined.", level: .info, logger: logger)
         @unknown default:
             log("Unknown location authorization status encountered.", level: .fault, logger: logger)
-        }
-    }
-}
-
-// MARK: - Helper Extensions
-
-/// Extension providing human-readable descriptions of authorization status
-extension CLAuthorizationStatus {
-    /// Returns a string description of the authorization status
-    var statusDescription: String {
-        switch self {
-        case .notDetermined: return "Not Determined"
-        case .restricted: return "Restricted"
-        case .denied: return "Denied"
-        case .authorizedAlways: return "Authorized Always"
-        case .authorizedWhenInUse: return "Authorized When In Use"
-        @unknown default: return "Unknown"
         }
     }
 }

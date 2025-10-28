@@ -36,12 +36,12 @@ struct ContentView: View {
     
     /// The region displayed on the map
     @State private var mapRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194), // Default to San Francisco
+        center: CLLocationCoordinate2D(latitude: 45.040764, longitude: 39.031908),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
     
     /// The mode for user tracking on the map
-    @State private var userTrackingMode: MapUserTrackingMode = .follow
+    @State private var userTrackingMode: MapUserTrackingMode = .none
     
     /// The body of the view defining its content and layout
     var body: some View {
@@ -55,7 +55,7 @@ struct ContentView: View {
                 // Top status bar
                 statusBar
                     .padding()
-                    .background(Color.black.opacity(0.7))
+                    .background(Color.secondary.opacity(0.9))
                     .cornerRadius(10)
                     .padding()
                 
@@ -64,7 +64,7 @@ struct ContentView: View {
                 // Bottom control panel
                 controlPanel
                     .padding()
-                    .background(Color.black.opacity(0.7))
+                    .background(Color.secondary.opacity(0.9))
                     .cornerRadius(10)
                     .padding()
             }
@@ -79,7 +79,7 @@ struct ContentView: View {
         }
         .onAppear {
             // Request location permissions when the view appears
-            viewModel.requestLocationPermissions()
+            viewModel.requestLocationPermissions(always: false)
             
             // Set up location updates to update the map
             viewModel.onLocationUpdate = { location in
@@ -101,7 +101,7 @@ struct ContentView: View {
             annotationItems: viewModel.pathPoints) { point in
             MapAnnotation(coordinate: point.coordinate) {
                 Circle()
-                    .fill(Color.blue)
+                    .fill(Color.accent)
                     .frame(width: 6, height: 6)
             }
         }
@@ -111,20 +111,23 @@ struct ContentView: View {
     private var statusBar: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("GPS Tracker")
+                Text("app.name")
                     .font(.headline)
+                    .foregroundColor(Color.accent)
                 
                 if let location = viewModel.currentLocation {
-                    Text("Location: \(String(format: "%.6f", location.coordinate.latitude)), \(String(format: "%.6f", location.coordinate.longitude))")
+                    let lat = location.coordinate.latitude.formatted(.number.precision(.fractionLength(6)))
+                    let lon = location.coordinate.longitude.formatted(.number.precision(.fractionLength(6)))
+                    Text("\(String(localized: "map.location")) \(lat); \(lon)")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.white)
                 }
-                
-                Text("Status: \(viewModel.isTracking ? "Tracking" : "Idle")")
+
+                Text("\(String(localized: "status.title")) \(viewModel.isTracking ? String(localized: "status.tracking") : String(localized: "status.idle"))")
                     .font(.caption)
                     .foregroundColor(viewModel.isTracking ? .green : .gray)
-                
-                Text("Upload: \(viewModel.uploadStatus.description)")
+
+                Text("\(String(localized: "upload.title")) \(viewModel.uploadStatus.description)")
                     .font(.caption)
                     .foregroundColor(uploadStatusColor)
             }
@@ -151,7 +154,8 @@ struct ContentView: View {
                 Image(systemName: "gear")
                     .font(.title)
                     .padding()
-                    .background(Color.gray.opacity(0.5))
+                    .foregroundColor(.white)
+                    .background(Color.primary)
                     .clipShape(Circle())
             }
             
@@ -164,6 +168,7 @@ struct ContentView: View {
                 Image(systemName: viewModel.isTracking ? "stop.fill" : "play.fill")
                     .font(.largeTitle)
                     .padding()
+                    .foregroundColor(.white)
                     .background(viewModel.isTracking ? Color.red : Color.green)
                     .clipShape(Circle())
                     .shadow(radius: 5)
@@ -173,7 +178,7 @@ struct ContentView: View {
             
             // Center on user button
             Button(action: {
-                userTrackingMode = .follow
+                userTrackingMode = .none
                 if let location = viewModel.currentLocation?.coordinate {
                     mapRegion.center = location
                 }
@@ -181,7 +186,8 @@ struct ContentView: View {
                 Image(systemName: "location")
                     .font(.title)
                     .padding()
-                    .background(Color.gray.opacity(0.5))
+                    .foregroundColor(.white)
+                    .background(Color.primary)
                     .clipShape(Circle())
             }
         }

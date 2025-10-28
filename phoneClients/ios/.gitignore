@@ -1,0 +1,8 @@
+.idea/
+.vscode/
+
+project.xcworkspace/
+xcuserdata/
+
+.swiftpm/
+.build/

@@ -42,10 +42,10 @@ class MockLocationRepository: LocationRepositoryProtocol {
 class MockSettingsRepository: SettingsRepositoryProtocol {
     /// Mock settings storage
     private var settings: [String: Any] = [
-        "username": "demo_user",
-        "server_url": "https://www.websmithing.com/gpstracker2/api/location",
-        "tracking_interval": 10,
-        "distance_filter": 5,
+        "username": "9876543210",
+        "server_url": "device.waliot.com:30032",
+        "tracking_interval": 1,
+        "distance_filter": 10,
         "track_in_background": true,
         "app_id": "mock_app_id_12345"
     ]
@@ -53,25 +53,25 @@ class MockSettingsRepository: SettingsRepositoryProtocol {
     /// Returns the mock username
     /// - Returns: A predefined username for testing
     func getUsername() -> String {
-        return settings["username"] as? String ?? "demo_user"
+        return settings["username"] as? String ?? ""
     }
     
     /// Returns the mock server URL
     /// - Returns: A predefined server URL for testing
     func getServerUrl() -> String {
-        return settings["server_url"] as? String ?? "https://www.websmithing.com/gpstracker2/api/location"
+        return settings["server_url"] as? String ?? "device.waliot.com:30032"
     }
     
     /// Returns the mock tracking interval
     /// - Returns: A predefined tracking interval in seconds
     func getTrackingInterval() -> Int {
-        return settings["tracking_interval"] as? Int ?? 10
+        return settings["tracking_interval"] as? Int ?? 1
     }
     
     /// Returns the mock distance filter
     /// - Returns: A predefined distance filter in meters
     func getDistanceFilter() -> Int {
-        return settings["distance_filter"] as? Int ?? 5
+        return settings["distance_filter"] as? Int ?? 10
     }
     
     /// Returns the mock background tracking setting
@@ -153,11 +153,16 @@ class MockLocationService: LocationServiceProtocol {
         authorizationSubject.send(authStatus)
     }
     
-    /// Simulates requesting location permissions
-    ///
-    /// In a real app, this would trigger system permission dialogs.
-    /// In this mock, it simply updates the status after a short delay.
-    func requestPermissions() {
+    func requestWhenInUsePermissions() {
+        // Simulate permission request with delayed response
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            self.authStatus = .authorizedAlways
+            self.authorizationSubject.send(self.authStatus)
+        }
+    }
+    
+    func requestAlwaysPermissions() {
         // Simulate permission request with delayed response
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self else { return }
@@ -178,9 +183,8 @@ class MockLocationService: LocationServiceProtocol {
         timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             
-            // Generate a random location near San Francisco
-            let latitude = 37.7749 + Double.random(in: -0.01...0.01)
-            let longitude = -122.4194 + Double.random(in: -0.01...0.01)
+            let latitude = 45.040711 + Double.random(in: -0.01...0.01)
+            let longitude = 39.031912 + Double.random(in: -0.01...0.01)
             let altitude = 10.0 + Double.random(in: 0...50)
             let speed = Double.random(in: 0...5)
             let course = Double.random(in: 0...360)
@@ -247,7 +251,7 @@ struct MockDependencies {
         
         // Sample current location
         viewModel.currentLocation = CLLocation(
-            coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            coordinate: CLLocationCoordinate2D(latitude: 45.040764, longitude: 39.031908),
             altitude: 25.0,
             horizontalAccuracy: 8.0,
             verticalAccuracy: 12.0,
@@ -266,8 +270,8 @@ struct MockDependencies {
             let timestamp = startTime.addingTimeInterval(timeOffset)
             
             // Create a sinusoidal path for visual interest
-            let latitude = 37.77 + Double(i) * 0.0005 + sin(Double(i) * 0.2) * 0.001
-            let longitude = -122.42 + Double(i) * 0.0005 + cos(Double(i) * 0.2) * 0.001
+            let latitude = 45.040764 + Double(i) * 0.0005 + sin(Double(i) * 0.2) * 0.001
+            let longitude = 39.031908 + Double(i) * 0.0005 + cos(Double(i) * 0.2) * 0.001
             let speed = 2.0 + sin(Double(i) * 0.4) * 2.0
             
             let locationData = LocationData(
