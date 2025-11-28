@@ -15,11 +15,12 @@ import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.router.AppDestination
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun SplashPage(navController: NavHostController, modifier: Modifier = Modifier) {
     LaunchedEffect(true) {
-        delay(3000)
+        delay(3.seconds)
         navController.navigate(AppDestination.Home) {
             popUpTo(AppDestination.Splash) {
                 inclusive = true

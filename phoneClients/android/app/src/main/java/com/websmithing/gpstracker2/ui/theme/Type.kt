@@ -2,33 +2,61 @@ package com.websmithing.gpstracker2.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import com.websmithing.gpstracker2.R
+
+val LabGrotesqueFontFamily = FontFamily(
+    listOf(
+        Font(R.font.lab_grotesque),
+        Font(R.font.lab_grotesque_medium, weight = FontWeight.Medium),
+        Font(R.font.lab_grotesque_bold, weight = FontWeight.Bold),
+    )
+)
 
 // Set of Material typography styles to start with
 val Typography = Typography(
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
-    )
-    /* Other default text styles to override
+    displayMedium = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    displaySmall = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    headlineLarge = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    titleMedium = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    titleSmall = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    bodyMedium = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    bodySmall = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    labelLarge = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
+    ),
+    labelMedium = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    )
-    */
+        fontFamily = LabGrotesqueFontFamily,
+    ),
 )
