@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -22,7 +24,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
@@ -31,6 +32,7 @@ import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerSiz
 import com.websmithing.gpstracker2.ui.features.home.components.LocationPermissionFlow
 import com.websmithing.gpstracker2.ui.features.home.components.MapView
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButton
+import com.websmithing.gpstracker2.ui.features.home.components.TrackingInfoSheet
 import com.websmithing.gpstracker2.ui.toPosition
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
@@ -38,7 +40,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private const val defaultZoom = 15.0
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomePage(
     modifier: Modifier = Modifier,
@@ -53,6 +54,8 @@ fun HomePage(
             } ?: DpOffset.Zero
         }
     }
+
+    var showTrackingInfoSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(true) {
         viewModel.latestLocation.collect { location ->
@@ -70,7 +73,11 @@ fun HomePage(
     }
 
     LocationPermissionFlow(
-        onStartBackgroundService = { viewModel.startTracking() },
+        onStartBackgroundService = {
+            // TODO: remove
+            viewModel.forceStopTracking()
+            viewModel.startTracking()
+        },
         onStopBackgroundService = { viewModel.forceStopTracking() }
     )
 
@@ -104,12 +111,20 @@ fun HomePage(
             }
 
             LocationMarker(
-                onClick = {},
+                onClick = { showTrackingInfoSheet = true },
                 modifier = Modifier.offset(
                     x = markerPosition.x - LocationMarkerSize,
                     y = markerPosition.y + LocationMarkerSize
                 )
             )
         }
+    }
+
+    if (showTrackingInfoSheet) {
+        TrackingInfoSheet(
+            onDismissRequest = { showTrackingInfoSheet = false },
+            userName = viewModel.userName,
+            location = viewModel.latestLocation,
+        )
     }
 }

@@ -20,6 +20,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.websmithing.gpstracker2.R
 
+private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    arrayOf(
+        Manifest.permission.POST_NOTIFICATIONS,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    )
+} else {
+    arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    )
+}
+
 @Composable
 fun LocationPermissionFlow(
     onStartBackgroundService: () -> Unit,
@@ -28,7 +41,7 @@ fun LocationPermissionFlow(
     val context = LocalContext.current
     val isBackgroundLocationRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-    var foregroundRequested by remember { mutableStateOf(false) }
+    var permissionsRequest by remember { mutableStateOf(false) }
 
     var showForegroundDeniedDialog by remember { mutableStateOf(false) }
     var showForegroundRationaleDialog by remember { mutableStateOf(false) }
@@ -36,12 +49,13 @@ fun LocationPermissionFlow(
     var showPreBackgroundDialog by remember { mutableStateOf(false) }
     var showBackgroundDeniedDialog by remember { mutableStateOf(false) }
 
-    val foregroundLauncher =
+    val permissionsLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { result ->
 
-            val anyGranted = result.values.any { it }
+            val anyGranted = result[Manifest.permission.ACCESS_FINE_LOCATION] == true
+                    || result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
             if (anyGranted) {
                 if (isBackgroundLocationRequired) {
                     val backgroundAlreadyGranted =
@@ -96,14 +110,9 @@ fun LocationPermissionFlow(
     //--------------------------------------------------------------------
 
     LaunchedEffect(Unit) {
-        if (!foregroundRequested) {
-            foregroundRequested = true
-            foregroundLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
+        if (!permissionsRequest) {
+            permissionsRequest = true
+            permissionsLauncher.launch(permissions)
         }
     }
 
@@ -119,12 +128,7 @@ fun LocationPermissionFlow(
             confirmButton = {
                 TextButton(onClick = {
                     showForegroundRationaleDialog = false
-                    foregroundLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        )
-                    )
+                    permissionsLauncher.launch(permissions)
                 }) {
                     Text(context.getString(R.string.permission_button_grant))
                 }

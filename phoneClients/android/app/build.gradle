@@ -86,7 +86,7 @@ dependencies {
     // Integration with ViewModels
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0'
     // Integration with LiveData
-    implementation 'androidx.compose.runtime:runtime-livedata'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.9.5'
 
     // AndroidX Core and Kotlin extensions
     implementation 'androidx.core:core-ktx:1.17.0'
@@ -101,9 +101,6 @@ dependencies {
 
     // MapLibre
     implementation 'org.maplibre.compose:maplibre-compose:0.12.1'
-
-    // Accompanist libraries
-    implementation 'com.google.accompanist:accompanist-permissions:0.37.3'
 
     // Google Play Services Location
     implementation 'com.google.android.gms:play-services-location:21.3.0'

@@ -5,6 +5,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.websmithing.gpstracker2.R
 
 val LabGrotesqueFontFamily = FontFamily(
@@ -46,15 +47,21 @@ val Typography = Typography(
     ),
     bodyMedium = TextStyle(
         fontFamily = LabGrotesqueFontFamily,
+        fontSize = 14.sp
     ),
     bodySmall = TextStyle(
         fontFamily = LabGrotesqueFontFamily,
     ),
     labelLarge = TextStyle(
         fontFamily = LabGrotesqueFontFamily,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 18.sp
     ),
     labelMedium = TextStyle(
         fontFamily = LabGrotesqueFontFamily,
+        fontSize = 12.sp,
+        lineHeight = 15.sp
     ),
     labelSmall = TextStyle(
         fontFamily = LabGrotesqueFontFamily,

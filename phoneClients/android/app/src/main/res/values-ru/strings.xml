@@ -43,12 +43,15 @@
 
     <!-- New UI Display Strings -->
     <string name="lat_lon_format">Широта: %1$s Долгота: %2$s</string>
-    <string name="speed_format_kmh">Скорость: %.1f км/ч</string>
+    <string name="speed">Скорость</string>
+    <string name="speed_format_kmh">%.1f км/ч</string>
+    <string name="coordinates">Координаты</string>
     <string name="altitude_format">Высота: %.0f м</string>
     <string name="accuracy_format">Точность: %.0f м</string>
     <string name="bearing_format">Направление: %.0f°</string>
     <string name="distance_format_km">Расстояние: %s км</string>
     <string name="signal_strength_format">Сигнал GPS: %s</string>
+    <string name="no_data_placeholder">—</string>
 
     <string name="lat_lon_default">Широта: -- Долгота: --</string>
     <string name="speed_default">Скорость: -- км/ч</string>

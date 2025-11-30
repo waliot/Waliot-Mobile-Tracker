@@ -43,7 +43,9 @@
 
     <!-- New UI Display Strings -->
     <string name="lat_lon_format">Lat: %1$s Lon: %2$s</string>
-    <string name="speed_format_kmh">Speed: %.1f km/h</string>
+    <string name="speed">Speed</string>
+    <string name="speed_format_kmh">%.1f km/h</string>
+    <string name="coordinates">Coordinates</string>
     <string name="altitude_format">Altitude: %.0f m</string>
     <string name="accuracy_format">Accuracy: %.0f m</string>
     <string name="bearing_format">Bearing: %.0f°</string>
@@ -57,6 +59,7 @@
     <string name="bearing_default">Bearing: --°</string>
     <string name="distance_default">Distance: -- km</string>
     <string name="signal_strength_default">GPS Signal: --</string>
+    <string name="no_data_placeholder">—</string>
 
     <string name="upload_status_idle">Last Update: Idle</string>
     <string name="upload_status_success">Last Update: %1$s (Success)</string>

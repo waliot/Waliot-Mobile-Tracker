@@ -39,7 +39,7 @@ fun LocationMarker(
 
     CustomFloatingButton(
         color = when (state) {
-            LocationMarkerState.Active -> Color(0xFF0080E5)
+            LocationMarkerState.Active -> MaterialTheme.colorScheme.primary
             LocationMarkerState.Inactive -> MaterialTheme.extendedColors.fab
             LocationMarkerState.Error -> MaterialTheme.colorScheme.error
         },
