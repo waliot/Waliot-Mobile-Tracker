@@ -22,10 +22,13 @@ import com.websmithing.gpstracker2.R
 
 @Composable
 fun LocationPermissionFlow(
-    onStartBackgroundService: () -> Unit
+    onStartBackgroundService: () -> Unit,
+    onStopBackgroundService: () -> Unit
 ) {
     val context = LocalContext.current
-    val isBackgroundLocationAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+    val isBackgroundLocationRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+    var foregroundRequested by remember { mutableStateOf(false) }
 
     var showForegroundDeniedDialog by remember { mutableStateOf(false) }
     var showForegroundRationaleDialog by remember { mutableStateOf(false) }
@@ -38,22 +41,35 @@ fun LocationPermissionFlow(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { result ->
 
-            val allGranted = result.values.all { it }
-            val anyDenied = result.values.any { !it }
+            val anyGranted = result.values.any { it }
+            if (anyGranted) {
+                if (isBackgroundLocationRequired) {
+                    val backgroundAlreadyGranted =
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
-            if (allGranted) {
-                if (isBackgroundLocationAvailable) {
-                    showPreBackgroundDialog = true
+                    if (backgroundAlreadyGranted) {
+                        onStartBackgroundService()
+                    } else {
+                        showPreBackgroundDialog = true
+                    }
+
                 } else {
                     onStartBackgroundService()
                 }
             } else {
-                val shouldShow = result.entries.any { (permission, granted) ->
+                val anyShouldShow = result.entries.any { (permission, granted) ->
                     !granted && shouldShowRationale(context, permission)
                 }
 
-                if (shouldShow) showForegroundRationaleDialog = true
-                else showForegroundDeniedDialog = true
+                if (anyShouldShow) {
+                    showForegroundRationaleDialog = true
+                } else {
+                    onStopBackgroundService()
+                    showForegroundDeniedDialog = true
+                }
             }
         }
 
@@ -70,21 +86,25 @@ fun LocationPermissionFlow(
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION
                 )
 
-                if (shouldShow) {
-                    showBackgroundDeniedDialog = true
-                } else {
-                    showBackgroundDeniedDialog = true
-                }
+                onStopBackgroundService()
+                showBackgroundDeniedDialog = true
             }
         }
 
-    LaunchedEffect(true) {
-        foregroundLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
+    //--------------------------------------------------------------------
+    //                          INITIAL REQUEST
+    //--------------------------------------------------------------------
+
+    LaunchedEffect(Unit) {
+        if (!foregroundRequested) {
+            foregroundRequested = true
+            foregroundLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
             )
-        )
+        }
     }
 
     //---------------------------------------------------------
@@ -142,7 +162,9 @@ fun LocationPermissionFlow(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPreBackgroundDialog = false }) {
+                TextButton(onClick = {
+                    showPreBackgroundDialog = false
+                }) {
                     Text(context.getString(R.string.permission_button_cancel))
                 }
             }
@@ -186,9 +208,6 @@ private fun DeniedDialog(
     )
 }
 
-/**
- * Helper to check if we should show rationale.
- */
 private fun shouldShowRationale(context: android.content.Context, permission: String): Boolean {
     return androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
         context.findActivity(),
@@ -196,13 +215,10 @@ private fun shouldShowRationale(context: android.content.Context, permission: St
     )
 }
 
-/**
- * Extract Activity from Context.
- */
 private tailrec fun android.content.Context.findActivity(): android.app.Activity {
     return when (this) {
         is android.app.Activity -> this
         is android.content.ContextWrapper -> baseContext.findActivity()
-        else -> throw IllegalStateException("Context is not an Activity")
+        else -> error("Context is not an Activity")
     }
 }

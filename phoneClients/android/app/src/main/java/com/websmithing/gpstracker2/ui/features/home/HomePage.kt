@@ -69,7 +69,10 @@ fun HomePage(
         }
     }
 
-    LocationPermissionFlow { viewModel.startTracking() }
+    LocationPermissionFlow(
+        onStartBackgroundService = { viewModel.startTracking() },
+        onStopBackgroundService = { viewModel.forceStopTracking() }
+    )
 
     Scaffold(
         modifier = modifier,
