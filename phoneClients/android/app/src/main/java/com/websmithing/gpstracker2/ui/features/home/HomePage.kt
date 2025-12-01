@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +30,7 @@ import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarker
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerSize
+import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerState
 import com.websmithing.gpstracker2.ui.features.home.components.LocationPermissionFlow
 import com.websmithing.gpstracker2.ui.features.home.components.MapView
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButton
@@ -54,6 +56,7 @@ fun HomePage(
             } ?: DpOffset.Zero
         }
     }
+    val userName by viewModel.userName.observeAsState()
 
     var showTrackingInfoSheet by remember { mutableStateOf(false) }
 
@@ -112,6 +115,15 @@ fun HomePage(
 
             LocationMarker(
                 onClick = { showTrackingInfoSheet = true },
+                state = if (showTrackingInfoSheet) {
+                    if (userName == null || userName!!.isEmpty()) {
+                        LocationMarkerState.Error
+                    } else {
+                        LocationMarkerState.Active
+                    }
+                } else {
+                    LocationMarkerState.Inactive
+                },
                 modifier = Modifier.offset(
                     x = markerPosition.x - LocationMarkerSize,
                     y = markerPosition.y + LocationMarkerSize
@@ -125,6 +137,7 @@ fun HomePage(
             onDismissRequest = { showTrackingInfoSheet = false },
             userName = viewModel.userName,
             location = viewModel.latestLocation,
+            totalDistance = viewModel.totalDistance
         )
     }
 }

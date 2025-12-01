@@ -8,6 +8,8 @@ val fabColor = Color(0xFF2B343B)
 val okColor = Color(0xFF48A622)
 val surfaceColor = Color(0xFF21282E)
 val appBarColor = Color(0xFF252D33)
+val hoverColor = Color(0x403C4C59)
+val surfaceContainerColor = Color(0xFF39444D)
 
 val onSurfaceColor = Color.White
 val onSurfaceVariantColor = Color(0xFFA8B2B7)

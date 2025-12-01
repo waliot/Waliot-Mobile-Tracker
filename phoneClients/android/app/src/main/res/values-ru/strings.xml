@@ -46,12 +46,19 @@
     <string name="speed">Скорость</string>
     <string name="speed_format_kmh">%.1f км/ч</string>
     <string name="coordinates">Координаты</string>
-    <string name="altitude_format">Высота: %.0f м</string>
-    <string name="accuracy_format">Точность: %.0f м</string>
-    <string name="bearing_format">Направление: %.0f°</string>
-    <string name="distance_format_km">Расстояние: %s км</string>
+    <string name="altitude_format">%.0f м</string>
+    <string name="accuracy_format">%.0f м</string>
+    <string name="bearing_format">%.0f°</string>
+    <string name="distance_format_km">%s км</string>
     <string name="signal_strength_format">Сигнал GPS: %s</string>
+    <string name="signal_strength">Сигнал GPS</string>
     <string name="no_data_placeholder">—</string>
+    <string name="update_time">Обновление</string>
+    <string name="extra_data">Дополнительные данные</string>
+    <string name="accuracy">Точность</string>
+    <string name="distance">Расстояние</string>
+    <string name="altitude">Высота</string>
+    <string name="bearing">Направление</string>
 
     <string name="lat_lon_default">Широта: -- Долгота: --</string>
     <string name="speed_default">Скорость: -- км/ч</string>
@@ -60,6 +67,7 @@
     <string name="bearing_default">Направление: --°</string>
     <string name="distance_default">Расстояние: -- км</string>
     <string name="signal_strength_default">Сигнал GPS: --</string>
+    <string name="search_satellites">Поиск спутников…</string>
 
     <string name="upload_status_idle">Последнее обновление: ожидание</string>
     <string name="upload_status_success">Последнее обновление: %1$s (успешно)</string>

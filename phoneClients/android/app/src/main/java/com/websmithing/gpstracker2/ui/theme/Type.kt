@@ -47,7 +47,8 @@ val Typography = Typography(
     ),
     bodyMedium = TextStyle(
         fontFamily = LabGrotesqueFontFamily,
-        fontSize = 14.sp
+        fontSize = 14.sp,
+        lineHeight = 18.sp
     ),
     bodySmall = TextStyle(
         fontFamily = LabGrotesqueFontFamily,

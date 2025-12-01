@@ -1,11 +1,13 @@
 package com.websmithing.gpstracker2.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -27,9 +29,12 @@ fun CustomFloatingButton(
     onClick: () -> Unit,
     icon: @Composable () -> Unit
 ) {
+    val animatedContentColor: Color by animateColorAsState(targetValue = contentColor)
+    val animatedColor: Color by animateColorAsState(targetValue = color)
+
     Surface(
-        color = color,
-        contentColor = contentColor,
+        color = animatedColor,
+        contentColor = animatedContentColor,
         shape = shape,
         shadowElevation = elevation,
         onClick = onClick,

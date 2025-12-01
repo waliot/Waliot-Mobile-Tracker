@@ -14,6 +14,7 @@ data class ExtendedColors(
     val onFab: Color,
     val ok: Color,
     val appBar: Color,
+    val hover: Color,
 )
 
 val LocalExtendedColors = staticCompositionLocalOf { DarkExtendedColors }
@@ -22,15 +23,17 @@ private val DarkExtendedColors = ExtendedColors(
     fab = fabColor,
     onFab = onSurfaceVariantColor,
     ok = okColor,
-    appBar = appBarColor
+    appBar = appBarColor,
+    hover = hoverColor,
 )
 
 private val DarkColorScheme = darkColorScheme(
     primary = primaryColor,
     error = errorColor,
     surface = surfaceColor,
+    surfaceContainer = surfaceContainerColor,
     onSurface = onSurfaceColor,
-    onSurfaceVariant = onSurfaceVariantColor
+    onSurfaceVariant = onSurfaceVariantColor,
 )
 
 @Composable

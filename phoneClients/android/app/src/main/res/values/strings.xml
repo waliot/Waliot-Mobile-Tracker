@@ -46,20 +46,28 @@
     <string name="speed">Speed</string>
     <string name="speed_format_kmh">%.1f km/h</string>
     <string name="coordinates">Coordinates</string>
-    <string name="altitude_format">Altitude: %.0f m</string>
-    <string name="accuracy_format">Accuracy: %.0f m</string>
-    <string name="bearing_format">Bearing: %.0f°</string>
-    <string name="distance_format_km">Distance: %s km</string>
+    <string name="altitude_format">%.0f m</string>
+    <string name="accuracy_format">%.0f m</string>
+    <string name="bearing_format">%.0f°</string>
+    <string name="distance_format_km">%s km</string>
     <string name="signal_strength_format">GPS Signal: %s</string>
+    <string name="signal_strength">GPS Signal</string>
+    <string name="no_data_placeholder">—</string>
+    <string name="update_time">Update</string>
+    <string name="extra_data">Extra data</string>
+    <string name="accuracy">Accuracy</string>
+    <string name="distance">Distance</string>
+    <string name="altitude">Altitude</string>
+    <string name="bearing">Bearing</string>
 
     <string name="lat_lon_default">Lat: -- Lon: --</string>
     <string name="speed_default">Speed: -- km/h</string>
     <string name="altitude_default">Altitude: -- m</string>
-    <string name="accuracy_default">Accuracy: -- m</string>
+    <string name="accuracy_default">-- m</string>
     <string name="bearing_default">Bearing: --°</string>
     <string name="distance_default">Distance: -- km</string>
     <string name="signal_strength_default">GPS Signal: --</string>
-    <string name="no_data_placeholder">—</string>
+    <string name="search_satellites">Search satellites…</string>
 
     <string name="upload_status_idle">Last Update: Idle</string>
     <string name="upload_status_success">Last Update: %1$s (Success)</string>

@@ -1,14 +1,19 @@
 package com.websmithing.gpstracker2.ui.features.home.components
 
+import android.content.Context
 import android.location.Location
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -18,9 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,23 +40,29 @@ import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 import kotlinx.coroutines.flow.StateFlow
 import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Locale
 
-val coordinateFormatter = DecimalFormat("0.00000")
+private val coordinateFormatter = DecimalFormat("0.00000")
+private val distanceFormatter = DecimalFormat("0.0")
 
 @Composable
 fun TrackingInfoSheet(
     userName: LiveData<String>,
     location: StateFlow<Location?>,
+    totalDistance: StateFlow<Float>,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val userNameValue by userName.observeAsState()
     val locationValue by location.collectAsStateWithLifecycle()
+    val totalDistanceValue by totalDistance.collectAsStateWithLifecycle()
 
     Sheet(
         onDismissRequest = onDismissRequest,
         userName = userNameValue,
         location = locationValue,
+        totalDistance = totalDistanceValue,
         modifier = modifier
     )
 }
@@ -58,16 +72,18 @@ fun TrackingInfoSheet(
 private fun Sheet(
     userName: String?,
     location: Location?,
+    totalDistance: Float,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val timeFormatter = remember { SimpleDateFormat("HH:mm:ss, dd.MM.yy", Locale.getDefault()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         containerColor = MaterialTheme.extendedColors.appBar,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        shape = RoundedCornerShape(CornerSize(0.0.dp)),
+        shape = RectangleShape,
         dragHandle = { DragHandle() },
         scrimColor = Color.Transparent,
         modifier = modifier,
@@ -88,7 +104,7 @@ private fun Sheet(
                 item(span = { GridItemSpan(2) }) {
                     Text(
                         if (location == null)
-                            context.getString(R.string.no_data_placeholder)
+                            context.getString(R.string.search_satellites)
                         else "${
                             coordinateFormatter.format(location.latitude)
                         }, ${coordinateFormatter.format(location.longitude)}"
@@ -118,7 +134,7 @@ private fun Sheet(
             ) {
                 item {
                     Text(
-                        "Ур. GSM",
+                        context.getString(R.string.signal_strength),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -130,7 +146,83 @@ private fun Sheet(
                         else getSignalStrengthDescription(location.accuracy)
                     )
                 }
+
+                item {
+                    Text(
+                        context.getString(R.string.update_time),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                item(span = { GridItemSpan(2) }) {
+                    Text(
+                        if (location == null)
+                            context.getString(R.string.no_data_placeholder)
+                        else timeFormatter.format(location.time)
+                    )
+                }
             }
+
+            ExtraInfo(context, location, totalDistance)
+        }
+    }
+}
+
+@Composable
+private fun ExtraInfo(
+    context: Context,
+    location: Location?,
+    totalDistance: Float
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(vertical = 12.dp, horizontal = 16.dp)
+            .fillMaxWidth()
+    ) {
+        Text(
+            context.getString(R.string.extra_data),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            ChipItem(
+                label = context.getString(R.string.accuracy),
+                value = if (location == null)
+                    context.getString(R.string.no_data_placeholder)
+                else
+                    context.getString(R.string.accuracy_format, location.accuracy)
+            )
+
+            ChipItem(
+                label = context.getString(R.string.distance),
+                value = if (totalDistance == 0f)
+                    context.getString(R.string.no_data_placeholder)
+                else
+                    context.getString(
+                        R.string.distance_format_km,
+                        distanceFormatter.format(totalDistance / 1000f)
+                    )
+            )
+
+            ChipItem(
+                label = context.getString(R.string.altitude),
+                value = if (location == null)
+                    context.getString(R.string.no_data_placeholder)
+                else
+                    context.getString(R.string.altitude_format, location.altitude)
+            )
+
+            ChipItem(
+                label = context.getString(R.string.bearing),
+                value = if (location == null)
+                    context.getString(R.string.no_data_placeholder)
+                else
+                    context.getString(R.string.bearing_format, location.bearing)
+            )
         }
     }
 }
@@ -165,6 +257,37 @@ private fun Grid(modifier: Modifier = Modifier, content: LazyGridScope.() -> Uni
     )
 }
 
+@Composable
+private fun ChipItem(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+            shape = RoundedCornerShape(2.dp)
+        )
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 4.dp, vertical = 1.dp)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .background(MaterialTheme.extendedColors.hover)
+                .padding(horizontal = 4.dp, vertical = 1.dp)
+        )
+    }
+}
+
 /**
  * Gets a human-readable description of signal strength based on accuracy
  *
@@ -187,7 +310,7 @@ private fun getSignalStrengthDescription(accuracy: Float): String {
 @Composable
 private fun TrackingInfoSheetPreview() {
     WaliotTheme {
-        Sheet(onDismissRequest = {}, userName = null, location = null)
+        Sheet(onDismissRequest = {}, userName = null, location = null, totalDistance = 0f)
     }
 }
 
@@ -195,6 +318,11 @@ private fun TrackingInfoSheetPreview() {
 @Composable
 private fun TrackingInfoSheetEmpty() {
     WaliotTheme {
-        Sheet(onDismissRequest = {}, userName = "89181201004", location = Location(""))
+        Sheet(
+            onDismissRequest = {},
+            userName = "89181201004",
+            location = Location(""),
+            totalDistance = 7000f
+        )
     }
 }
