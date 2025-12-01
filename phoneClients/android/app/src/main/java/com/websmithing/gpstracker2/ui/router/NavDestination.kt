@@ -11,4 +11,7 @@ sealed class AppDestination : Destination {
 
     @Serializable
     data object Home : AppDestination()
+
+    @Serializable
+    data object Settings : AppDestination()
 }

@@ -1,6 +1,7 @@
 package com.websmithing.gpstracker2.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -35,6 +36,13 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = onSurfaceColor,
     onSurfaceVariant = onSurfaceVariantColor,
     onPrimary = onPrimaryColor
+)
+
+@Composable
+fun customTopAppBarColors() = TopAppBarDefaults.topAppBarColors(
+    containerColor = MaterialTheme.extendedColors.appBar,
+    scrolledContainerColor = MaterialTheme.extendedColors.appBar,
+    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
 )
 
 @Composable

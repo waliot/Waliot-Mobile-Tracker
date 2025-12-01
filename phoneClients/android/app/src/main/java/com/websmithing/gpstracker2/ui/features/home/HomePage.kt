@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
@@ -35,6 +36,7 @@ import com.websmithing.gpstracker2.ui.features.home.components.LocationPermissio
 import com.websmithing.gpstracker2.ui.features.home.components.MapView
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButton
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingInfoSheet
+import com.websmithing.gpstracker2.ui.router.AppDestination
 import com.websmithing.gpstracker2.ui.toPosition
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
@@ -45,6 +47,7 @@ private const val defaultZoom = 15.0
 @Composable
 fun HomePage(
     modifier: Modifier = Modifier,
+    navController: NavHostController,
     viewModel: TrackingViewModel = hiltViewModel(),
 ) {
     val cameraState = rememberCameraState()
@@ -100,7 +103,7 @@ fun HomePage(
             MapView(cameraState = cameraState)
 
             CustomFloatingButton(
-                onClick = {},
+                onClick = { navController.navigate(AppDestination.Settings) },
                 modifier = Modifier
                     .padding(16.dp)
                     .size(40.dp)
