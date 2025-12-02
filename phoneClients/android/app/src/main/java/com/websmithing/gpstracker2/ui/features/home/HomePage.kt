@@ -23,11 +23,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.TrackingViewModel
+import com.websmithing.gpstracker2.ui.activityHiltViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarker
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerSize
@@ -48,7 +48,7 @@ private const val defaultZoom = 15.0
 fun HomePage(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    viewModel: TrackingViewModel = hiltViewModel(),
+    viewModel: TrackingViewModel = activityHiltViewModel(),
 ) {
     val cameraState = rememberCameraState()
     val latestLocation by viewModel.latestLocation.collectAsStateWithLifecycle()

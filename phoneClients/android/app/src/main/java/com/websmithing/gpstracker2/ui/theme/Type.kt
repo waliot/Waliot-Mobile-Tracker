@@ -55,6 +55,7 @@ val Typography = Typography(
         fontFamily = LabGrotesqueFontFamily,
     ),
     labelLarge = TextStyle(
+        fontFamily = LabGrotesqueFontFamily,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
         lineHeight = 18.sp

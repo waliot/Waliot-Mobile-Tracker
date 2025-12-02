@@ -130,7 +130,7 @@ private fun Sheet(
             }
 
             Grid(
-                modifier = Modifier.background(Color(0xFF1D2328))
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLowest)
             ) {
                 item {
                     Text(
