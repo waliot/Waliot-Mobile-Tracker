@@ -84,10 +84,12 @@
     <string name="drawer_open">Открыть</string>
     <string name="drawer_close">Закрыть</string>
 
-    <string name="language">Язык:</string>
+    <string name="language">Язык</string>
     <string name="lang_en">Английский</string>
     <string name="lang_ru">Русский</string>
     <string name="splash_logo_text">трекер</string>
     <string name="settings">Настройки</string>
     <string name="close">Закрыть</string>
+    <string name="app_version_format">Версия приложения: %1$s</string>
+    <string name="save">Сохранить</string>
 </resources>

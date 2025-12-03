@@ -18,7 +18,7 @@ fun CustomBackButton(onBack: () -> Unit) {
         Icon(
             painterResource(R.drawable.ic_close_24),
             contentDescription = stringResource(R.string.close),
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(28.dp)
         )
     }
 }

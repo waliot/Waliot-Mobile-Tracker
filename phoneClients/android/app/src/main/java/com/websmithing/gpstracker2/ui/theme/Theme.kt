@@ -1,6 +1,8 @@
 package com.websmithing.gpstracker2.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.ZeroCornerSize
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -14,6 +16,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.dp
 
 @Immutable
 data class ExtendedColors(
@@ -22,6 +25,8 @@ data class ExtendedColors(
     val ok: Color,
     val appBar: Color,
     val hover: Color,
+    val tertiaryText: Color,
+    val quaternaryText: Color
 )
 
 val LocalExtendedColors = staticCompositionLocalOf { DarkExtendedColors }
@@ -32,6 +37,8 @@ private val DarkExtendedColors = ExtendedColors(
     ok = okColor,
     appBar = appBarColor,
     hover = hoverColor,
+    tertiaryText = tertiaryTextColor,
+    quaternaryText = quaternaryTextColor
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -89,6 +96,15 @@ fun customSegmentedButtonColors() = SegmentedButtonDefaults.colors(
     disabledInactiveBorderColor = Color.Transparent,
     inactiveBorderColor = Color.Transparent,
 )
+
+@Composable
+fun customButtonColors() = ButtonDefaults.buttonColors(
+    disabledContainerColor = MaterialTheme.extendedColors.hover,
+    disabledContentColor = MaterialTheme.extendedColors.quaternaryText,
+)
+
+@Composable
+fun customButtonShape() = RoundedCornerShape(4.dp)
 
 @Composable
 @ReadOnlyComposable

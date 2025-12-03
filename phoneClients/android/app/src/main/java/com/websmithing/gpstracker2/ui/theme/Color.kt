@@ -15,3 +15,5 @@ val surfaceContainerLowestColor = Color(0xFF1D2328)
 val onSurfaceColor = Color.White
 val onSurfaceVariantColor = Color(0xFFA8B2B7)
 val onPrimaryColor = Color.White
+val tertiaryTextColor = Color(0xFF6D7980)
+val quaternaryTextColor = Color(0xFF425158)
