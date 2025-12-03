@@ -1,21 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">WALIOT.Tracker</string>
-    <string name="default_upload_website">device.waliot.com:30032</string>
+    <string name="app_name">Waliot Tracker</string>
+    <string name="splash_subtitle">трекер</string>
+    <string name="notification_text">Идёт отслеживание местоположения…</string>
 
-    <string name="tracking_is_off">Начать отслеживание</string>
-    <string name="tracking_is_on">Остановить отслеживание</string>
-    <string name="user_needs_to_restart_tracking">Пожалуйста, перезапустите отслеживание, чтобы изменить интервал времени.</string>
-    <string name="reachability_error">Не удаётся подключиться к указанному серверу. Проверьте правильность адреса.</string>
-    <string name="textfields_empty_or_spaces">Проверьте выделенные поля. Поля не могут быть пустыми или содержать пробелы.</string>
     <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play.</string>
-    <string name="location_unavailable">Перейдите в Настройки > Приложения и включите Определение местоположения.</string>
 
-    <!-- Input Validation -->
-    <string name="username_error_spaces">Номер трекера не может содержать пробелы.</string>
-    <string name="username_error_empty">Номер трекера не может быть пустым.</string>
-    <string name="website_error_empty">Адрес сервера не может быть пустым.</string>
-    <string name="website_error_spaces">Адрес сервера не может содержать пробелы.</string>
+
+    <string name="settings_identifier">Идентификатор</string>
+    <string name="settings_server_url">Адрес сервера и порт</string>
+    <string name="settings_interval_minutes">Отправлять данные каждые, минут</string>
+    <string name="settings_interval_meters">Отправлять данные каждые, метров</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_lang_ru">Русский</string>
+    <string name="settings_lang_en">Английский</string>
+    <string name="settings_save">Сохранить</string>
+    <string name="settings_app_version">Версия приложения:</string>
+
+    <string name="upload_status_idle">ожидание</string>
+    <string name="upload_status_success">%1$s (успешно)</string>
+    <string name="upload_status_failure">%1$s (ошибка: %2$s)</string>
+
+    <string name="notify_success">Отслеживание включено</string>
+    <string name="notify_error">Перейдите в настройки приложения</string>
+
+    <string name="stats_id_specify">Укажите идентификатор</string>
+    <string name="stats_coordinates">Координаты</string>
+    <string name="stats_speed">Скорость</string>
+    <string name="stats_gsm_level">Ур. GSM</string>
+    <string name="stats_gps_signal">Сигнал GPS</string>
+    <string name="stats_updated_at">Обновление</string>
+    <string name="stats_additional_data">Дополнительные данные</string>
+    <string name="stats_accuracy">Точность</string>
+    <string name="stats_distance">Расстояние</string>
+    <string name="stats_data_buffer">Буффер данных</string>
+
+    <string name="signal_unknown">Неизвестно</string>
+    <string name="signal_excellent">Отлично</string>
+    <string name="signal_good">Хорошо</string>
+    <string name="signal_fair">Удовлетворительно</string>
+    <string name="signal_poor">Плохо</string>
 
     <!-- Permissions -->
     <string name="permission_rationale_foreground_location_title">Требуется разрешение на определение местоположения</string>
@@ -31,49 +55,5 @@
     <string name="permission_button_continue">Продолжить</string>
     <string name="permission_button_cancel">Отмена</string>
 
-    <!-- Other UI Messages -->
-    <string name="interval_changed_restarting_worker">Интервал обновлён. Перезапуск фоновой задачи отслеживания.</string>
-    <string name="upload_failed_error">Не удалось отправить данные о местоположении. Проверьте подключение или настройки.</string>
-    <string name="user_name">номер трекера</string>
-    <string name="upload_website">адрес сервера</string>
-    <string name="upload_frequency">Обновлять каждые (минуты):</string>
-    <string name="one_minute">1</string>
-    <string name="five_minutes">5</string>
-    <string name="fifteen_minutes">15</string>
 
-    <!-- New UI Display Strings -->
-    <string name="lat_lon_format">Широта: %1$s Долгота: %2$s</string>
-    <string name="speed_format_kmh">Скорость: %.1f км/ч</string>
-    <string name="altitude_format">Высота: %.0f м</string>
-    <string name="accuracy_format">Точность: %.0f м</string>
-    <string name="bearing_format">Направление: %.0f°</string>
-    <string name="distance_format_km">Расстояние: %s км</string>
-    <string name="signal_strength_format">Сигнал GPS: %s</string>
-
-    <string name="lat_lon_default">Широта: -- Долгота: --</string>
-    <string name="speed_default">Скорость: -- км/ч</string>
-    <string name="altitude_default">Высота: -- м</string>
-    <string name="accuracy_default">Точность: -- м</string>
-    <string name="bearing_default">Направление: --°</string>
-    <string name="distance_default">Расстояние: -- км</string>
-    <string name="signal_strength_default">Сигнал GPS: --</string>
-
-    <string name="upload_status_idle">Последнее обновление: ожидание</string>
-    <string name="upload_status_success">Последнее обновление: %1$s (успешно)</string>
-    <string name="upload_status_failure">Последнее обновление: %1$s (ошибка: %2$s)</string>
-
-    <string name="signal_unknown">Неизвестно</string>
-    <string name="signal_excellent">Отлично</string>
-    <string name="signal_good">Хорошо</string>
-    <string name="signal_fair">Удовлетворительно</string>
-    <string name="signal_poor">Плохо</string>
-
-    <string name="notification_text">Идёт отслеживание местоположения…</string>
-
-    <string name="drawer_open">Открыть</string>
-    <string name="drawer_close">Закрыть</string>
-
-    <string name="language">Язык:</string>
-    <string name="lang_en">Английский</string>
-    <string name="lang_ru">Русский</string>
 </resources>

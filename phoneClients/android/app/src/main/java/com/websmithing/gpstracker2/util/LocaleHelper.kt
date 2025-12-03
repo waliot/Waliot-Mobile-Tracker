@@ -17,7 +17,7 @@ object LocaleHelper {
         return setAppLocale(context, currentLanguage)
     }
 
-    private fun setAppLocale(context: Context, languageCode: String): Context {
+    fun setAppLocale(context: Context, languageCode: String): Context {
         val locale = Locale(languageCode)
         Locale.setDefault(locale)
 
