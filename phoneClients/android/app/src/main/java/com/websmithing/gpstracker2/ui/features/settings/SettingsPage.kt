@@ -39,6 +39,7 @@ import com.websmithing.gpstracker2.ui.components.CustomBackButton
 import com.websmithing.gpstracker2.ui.features.settings.components.SettingsForm
 import com.websmithing.gpstracker2.ui.features.settings.model.SettingsFormState
 import com.websmithing.gpstracker2.ui.hasSpaces
+import com.websmithing.gpstracker2.ui.modifiers.unfocus
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.customButtonColors
 import com.websmithing.gpstracker2.ui.theme.customButtonShape
@@ -165,7 +166,7 @@ private fun Page(
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
-        modifier = modifier
+        modifier = modifier.unfocus(LocalFocusManager.current)
     ) { paddingValues ->
         SettingsForm(
             state = state,

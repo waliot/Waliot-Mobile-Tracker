@@ -90,6 +90,6 @@
     <string name="splash_logo_text">трекер</string>
     <string name="settings">Настройки</string>
     <string name="close">Закрыть</string>
-    <string name="app_version_format">Версия приложения: %1$s</string>
+    <string name="app_version_format">Версия приложения:</string>
     <string name="save">Сохранить</string>
 </resources>

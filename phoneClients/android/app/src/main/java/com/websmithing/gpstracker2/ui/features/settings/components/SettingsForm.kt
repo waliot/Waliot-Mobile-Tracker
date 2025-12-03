@@ -30,7 +30,10 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.BuildConfig
@@ -181,7 +184,13 @@ private fun Logo(modifier: Modifier = Modifier) {
         )
 
         Text(
-            stringResource(R.string.app_version_format, BuildConfig.VERSION_NAME),
+            buildAnnotatedString {
+                append(stringResource(R.string.app_version_format))
+                append(" ")
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {
+                    append(BuildConfig.VERSION_NAME)
+                }
+            },
             color = MaterialTheme.extendedColors.tertiaryText,
             textAlign = TextAlign.Center
         )
