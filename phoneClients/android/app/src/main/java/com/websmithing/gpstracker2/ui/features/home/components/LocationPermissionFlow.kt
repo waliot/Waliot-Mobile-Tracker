@@ -35,8 +35,8 @@ private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAM
 
 @Composable
 fun LocationPermissionFlow(
-    onStartBackgroundService: () -> Unit,
-    onStopBackgroundService: () -> Unit
+    onAllow: () -> Unit,
+    onDeny: () -> Unit
 ) {
     val context = LocalContext.current
     val isBackgroundLocationRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
@@ -65,13 +65,13 @@ fun LocationPermissionFlow(
                         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
                     if (backgroundAlreadyGranted) {
-                        onStartBackgroundService()
+                        onAllow()
                     } else {
                         showPreBackgroundDialog = true
                     }
 
                 } else {
-                    onStartBackgroundService()
+                    onAllow()
                 }
             } else {
                 val anyShouldShow = result.entries.any { (permission, granted) ->
@@ -81,7 +81,7 @@ fun LocationPermissionFlow(
                 if (anyShouldShow) {
                     showForegroundRationaleDialog = true
                 } else {
-                    onStopBackgroundService()
+                    onDeny()
                     showForegroundDeniedDialog = true
                 }
             }
@@ -93,14 +93,14 @@ fun LocationPermissionFlow(
         ) { granted ->
 
             if (granted) {
-                onStartBackgroundService()
+                onAllow()
             } else {
                 val shouldShow = shouldShowRationale(
                     context,
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION
                 )
 
-                onStopBackgroundService()
+                onDeny()
                 showBackgroundDeniedDialog = true
             }
         }

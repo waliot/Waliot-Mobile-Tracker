@@ -23,7 +23,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.TrackingViewModel
@@ -32,10 +31,11 @@ import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarker
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerSize
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerState
-import com.websmithing.gpstracker2.ui.features.home.components.LocationPermissionFlow
 import com.websmithing.gpstracker2.ui.features.home.components.MapView
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButton
+import com.websmithing.gpstracker2.ui.features.home.components.TrackingButtonState
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingInfoSheet
+import com.websmithing.gpstracker2.ui.features.home.components.getUserLocation
 import com.websmithing.gpstracker2.ui.router.AppDestination
 import com.websmithing.gpstracker2.ui.toPosition
 import org.maplibre.compose.camera.CameraPosition
@@ -51,7 +51,7 @@ fun HomePage(
     viewModel: TrackingViewModel = activityHiltViewModel(),
 ) {
     val cameraState = rememberCameraState()
-    val latestLocation by viewModel.latestLocation.collectAsStateWithLifecycle()
+    val latestLocation = getUserLocation()
     val markerPosition by remember(cameraState.position, latestLocation) {
         derivedStateOf {
             latestLocation?.let { location ->
@@ -59,38 +59,48 @@ fun HomePage(
             } ?: DpOffset.Zero
         }
     }
+    val isTracking by viewModel.isTracking.observeAsState(false)
     val userName by viewModel.userName.observeAsState()
-
-    var showTrackingInfoSheet by remember { mutableStateOf(false) }
-
-    LaunchedEffect(true) {
-        viewModel.latestLocation.collect { location ->
-            val oldZoom = cameraState.position.zoom
-            location?.let {
-                cameraState.animateTo(
-                    CameraPosition(
-                        target = it.toPosition(),
-                        zoom = if (oldZoom == 1.0) defaultZoom else oldZoom,
-                    ),
-                    duration = 500.milliseconds,
-                )
-            }
+    val websiteUrl by viewModel.websiteUrl.observeAsState()
+    val canRunTracking by remember(userName, websiteUrl) {
+        derivedStateOf {
+            !websiteUrl.isNullOrEmpty() && !userName.isNullOrEmpty()
         }
     }
 
-    LocationPermissionFlow(
-        onStartBackgroundService = {
-            // TODO: remove
-            viewModel.forceStopTracking()
-            viewModel.startTracking()
-        },
-        onStopBackgroundService = { viewModel.forceStopTracking() }
-    )
+    var showTrackingInfoSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(latestLocation) {
+        val oldZoom = cameraState.position.zoom
+        latestLocation?.let {
+            cameraState.animateTo(
+                CameraPosition(
+                    target = it.toPosition(),
+                    zoom = if (oldZoom == 1.0) defaultZoom else oldZoom,
+                ),
+                duration = 500.milliseconds,
+            )
+        }
+    }
 
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            TrackingButton { }
+            TrackingButton(
+                state = if (!canRunTracking) {
+                    TrackingButtonState.Stop
+                } else if (isTracking) {
+                    TrackingButtonState.Pause
+                } else {
+                    TrackingButtonState.Play
+                }
+            ) {
+                if (isTracking) {
+                    viewModel.stopTracking()
+                } else {
+                    viewModel.startTracking()
+                }
+            }
         }
     ) { paddingValues ->
         @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
@@ -138,8 +148,8 @@ fun HomePage(
     if (showTrackingInfoSheet) {
         TrackingInfoSheet(
             onDismissRequest = { showTrackingInfoSheet = false },
-            userName = viewModel.userName,
-            location = viewModel.latestLocation,
+            userName = userName,
+            location = latestLocation,
             totalDistance = viewModel.totalDistance
         )
     }

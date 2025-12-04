@@ -73,7 +73,13 @@ fun SettingsPage(
         )
     }
     var state by remember { mutableStateOf(initialState) }
-    val isChanged by remember { derivedStateOf { state != initialState } }
+    val canSave by remember(state, initialState) {
+        derivedStateOf {
+            state != initialState
+                    && state.userName.isNotEmpty()
+                    && state.websiteUrl.isNotEmpty()
+        }
+    }
 
     fun saveAndValidate() {
         val name = state.userName.trim()
@@ -128,7 +134,7 @@ fun SettingsPage(
         onBack = { navController.navigateUp() },
         onSave = { saveAndValidate() },
         onChange = { state = it },
-        isChanged = isChanged,
+        canSave = canSave,
         state = state,
         modifier = modifier,
     )
@@ -140,7 +146,7 @@ private fun Page(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
     onSave: () -> Unit,
-    isChanged: Boolean,
+    canSave: Boolean,
     onChange: (SettingsFormState) -> Unit,
     state: SettingsFormState,
 ) {
@@ -161,7 +167,7 @@ private fun Page(
             ) {
                 SaveButton(
                     onClick = onSave,
-                    enabled = isChanged,
+                    enabled = canSave,
                 )
             }
         },
@@ -209,7 +215,7 @@ private fun PagePreview() {
                 websiteUrl = context.getString(R.string.default_upload_website),
                 languageCode = "ru"
             ),
-            isChanged = true,
+            canSave = true,
             onChange = {},
             onBack = {},
             onSave = {},

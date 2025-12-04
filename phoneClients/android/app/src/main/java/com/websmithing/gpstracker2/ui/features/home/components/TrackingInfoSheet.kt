@@ -22,7 +22,6 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +31,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.components.DragHandle
@@ -48,20 +46,18 @@ private val distanceFormatter = DecimalFormat("0.0")
 
 @Composable
 fun TrackingInfoSheet(
-    userName: LiveData<String>,
-    location: StateFlow<Location?>,
+    userName: String?,
+    location: Location?,
     totalDistance: StateFlow<Float>,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val userNameValue by userName.observeAsState()
-    val locationValue by location.collectAsStateWithLifecycle()
     val totalDistanceValue by totalDistance.collectAsStateWithLifecycle()
 
     Sheet(
         onDismissRequest = onDismissRequest,
-        userName = userNameValue,
-        location = locationValue,
+        userName = userName,
+        location = location,
         totalDistance = totalDistanceValue,
         modifier = modifier
     )

@@ -13,6 +13,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
+import com.websmithing.gpstracker2.ui.modifiers.debounced
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 
@@ -41,7 +42,9 @@ fun TrackingButton(
             TrackingButtonState.Stop -> MaterialTheme.extendedColors.onFab
         },
         elevation = 12.dp,
-        onClick = onClick,
+        onClick = debounced(onClick = {
+            onClick()
+        }),
         modifier = modifier.size(TrackingButtonSize)
     ) {
         when (state) {
