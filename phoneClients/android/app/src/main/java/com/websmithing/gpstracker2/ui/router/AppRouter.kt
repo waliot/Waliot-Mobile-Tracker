@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.websmithing.gpstracker2.ui.features.home.HomePage
 import com.websmithing.gpstracker2.ui.features.settings.SettingsPage
-import com.websmithing.gpstracker2.ui.features.splash.SplashPage
 
 @Composable
 fun AppRouter(
@@ -16,10 +15,9 @@ fun AppRouter(
 ) {
     NavHost(
         navController = navController,
-        startDestination = AppDestination.Splash,
+        startDestination = AppDestination.Home,
         modifier = modifier
     ) {
-        composable<AppDestination.Splash> { SplashPage(navController = navController) }
         composable<AppDestination.Home> { HomePage(navController = navController) }
         composable<AppDestination.Settings> { SettingsPage(navController = navController) }
     }
