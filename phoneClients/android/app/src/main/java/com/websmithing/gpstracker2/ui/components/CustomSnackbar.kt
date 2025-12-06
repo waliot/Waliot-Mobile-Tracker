@@ -1,5 +1,6 @@
 package com.websmithing.gpstracker2.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ fun CustomSnackbar(
     modifier: Modifier = Modifier,
     type: CustomSnackbarType,
     message: String,
+    onClick: () -> Unit
 ) {
     Snackbar(
         containerColor = when (type) {
@@ -33,7 +35,7 @@ fun CustomSnackbar(
         },
         contentColor = MaterialTheme.colorScheme.onPrimary,
         shape = RectangleShape,
-        modifier = modifier,
+        modifier = modifier.clickable(true, onClick = onClick),
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)

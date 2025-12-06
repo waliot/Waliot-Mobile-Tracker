@@ -240,7 +240,8 @@ fun HomePage(
             snackbar = { data ->
                 CustomSnackbar(
                     type = CustomSnackbarType.valueOf(data.visuals.actionLabel!!),
-                    message = data.visuals.message
+                    message = data.visuals.message,
+                    onClick = { data.dismiss() }
                 )
             }
         )
