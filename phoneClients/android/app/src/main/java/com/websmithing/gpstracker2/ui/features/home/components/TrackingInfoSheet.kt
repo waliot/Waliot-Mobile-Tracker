@@ -247,7 +247,7 @@ private fun ExtraInfo(
 fun UserNameBadge(modifier: Modifier = Modifier, value: String?) {
     val noUserName = value == null || value.isEmpty()
     Text(
-        if (noUserName) "Укажите идентификатор" else value,
+        if (noUserName) stringResource(R.string.provide_identifier) else value,
         style = MaterialTheme.typography.labelLarge,
         modifier = modifier
             .padding(vertical = 12.dp, horizontal = 16.dp)

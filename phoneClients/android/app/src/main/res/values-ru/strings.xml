@@ -77,4 +77,5 @@
     <string name="interval_updated">Интервал обновлён. Перезапуск службы отслеживания.</string>
     <string name="error_format">Ошибка: %1$s</string>
     <string name="unknown_error">Неизвестная ошибка</string>
+    <string name="provide_identifier">Укажите идентификатор</string>
 </resources>
