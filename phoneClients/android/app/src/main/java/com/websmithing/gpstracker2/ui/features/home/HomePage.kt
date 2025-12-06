@@ -202,14 +202,10 @@ fun HomePage(
 
             LocationMarker(
                 onClick = { showTrackingInfoSheet = true },
-                state = if (showTrackingInfoSheet) {
-                    if (userName == null || userName!!.isEmpty()) {
-                        LocationMarkerState.Error
-                    } else {
-                        LocationMarkerState.Active
-                    }
-                } else {
-                    LocationMarkerState.Inactive
+                state = when {
+                    !showTrackingInfoSheet -> LocationMarkerState.Inactive
+                    userName.isNullOrEmpty() -> LocationMarkerState.Error
+                    else -> LocationMarkerState.Active
                 },
                 modifier = Modifier.offset(
                     x = markerPosition.x - LocationMarkerSize,
