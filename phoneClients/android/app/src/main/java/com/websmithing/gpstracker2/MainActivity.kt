@@ -8,7 +8,6 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.lifecycleScope
 import com.websmithing.gpstracker2.di.SettingsRepositoryEntryPoint
 import com.websmithing.gpstracker2.ui.App
 import com.websmithing.gpstracker2.ui.checkFirstTimeLoading
@@ -16,9 +15,6 @@ import com.websmithing.gpstracker2.ui.checkIfGooglePlayEnabled
 import com.websmithing.gpstracker2.util.LocaleHelper
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Main activity for the GPS Tracker application.
@@ -35,8 +31,6 @@ import kotlin.time.Duration.Companion.seconds
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private var keepSplashScreen = true
-
     override fun attachBaseContext(newBase: Context) {
         // 1. Get the EntryPoint accessor from the application context
         val entryPoint = EntryPointAccessors.fromApplication(
@@ -54,13 +48,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen().setKeepOnScreenCondition { keepSplashScreen }
+        installSplashScreen()
         super.onCreate(savedInstanceState)
-
-        lifecycleScope.launch {
-            delay(3.seconds)
-            keepSplashScreen = false
-        }
 
         checkIfGooglePlayEnabled()
         checkFirstTimeLoading()

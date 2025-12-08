@@ -4,7 +4,7 @@
     <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar" />
 
     <style name="AppTheme.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo_mini</item>
         <item name="windowSplashScreenBackground">#0080E5</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
