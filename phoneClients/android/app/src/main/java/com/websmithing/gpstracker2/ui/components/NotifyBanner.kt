@@ -16,14 +16,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.theme.successContainer
-import com.websmithing.gpstracker2.ui.theme.warningContainer
+import com.websmithing.gpstracker2.ui.theme.NotificationSuccess
+import com.websmithing.gpstracker2.ui.theme.NotificationWarning
+import com.websmithing.gpstracker2.ui.theme.TextPrimary
 
 enum class NotifyStatus {
     Success,
-    Error
+    Warning
 }
 
+/**
+ * Displays a temporary notification banner with an icon and message, supporting success and warning states.
+ *
+ * @param notifyStatus Determines the banner’s visual style and text content
+ * @param visible Controls whether the banner is shown or hidden with animations
+ * @param onDismiss Callback invoked when the banner is dismissed automatically or by user interaction
+ */
 @Composable
 fun NotifyBanner(
     notifyStatus: NotifyStatus,
@@ -36,12 +44,12 @@ fun NotifyBanner(
 
     when (notifyStatus) {
         NotifyStatus.Success -> {
-            backgroundColor = successContainer
+            backgroundColor = NotificationSuccess
             text = stringResource(R.string.notify_success)
             iconRes = R.drawable.ic_notify_success
         }
-        NotifyStatus.Error -> {
-            backgroundColor = warningContainer
+        NotifyStatus.Warning -> {
+            backgroundColor = NotificationWarning
             text = stringResource(R.string.notify_error)
             iconRes = R.drawable.ic_notify_error
         }
@@ -81,7 +89,7 @@ fun NotifyBanner(
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = text,
-                color = Color.White,
+                color = TextPrimary,
                 fontSize = 16.sp
             )
         }

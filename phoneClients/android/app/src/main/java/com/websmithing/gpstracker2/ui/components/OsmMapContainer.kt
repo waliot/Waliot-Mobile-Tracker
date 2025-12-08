@@ -14,9 +14,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.theme.error
-import com.websmithing.gpstracker2.ui.theme.primary
-import com.websmithing.gpstracker2.ui.theme.secondary
+import com.websmithing.gpstracker2.ui.theme.AccentPrimary
+import com.websmithing.gpstracker2.ui.theme.AccentSecondary
+import com.websmithing.gpstracker2.ui.theme.SurfaceTertiary
 import com.websmithing.gpstracker2.util.PermissionChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,9 +41,9 @@ fun Color.toHexInt(): Int = (0xFF shl 24) or
         ((blue * 255).toInt())
 
 enum class MarkerColor(val colorInt: Int) {
-    GREY(secondary.toHexInt()),
-    BLUE(primary.toHexInt()),
-    RED(error.toHexInt())
+    GREY(SurfaceTertiary.toHexInt()),
+    BLUE(AccentPrimary.toHexInt()),
+    RED(AccentSecondary.toHexInt())
 }
 
 fun drawableToBitmap(drawable: android.graphics.drawable.Drawable, width: Int, height: Int): Bitmap {

@@ -15,25 +15,32 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.theme.neutralVariant
-import com.websmithing.gpstracker2.ui.theme.primary
-import com.websmithing.gpstracker2.ui.theme.secondary
+import com.websmithing.gpstracker2.ui.theme.AccentPrimary
+import com.websmithing.gpstracker2.ui.theme.OnPrimaryButton
+import com.websmithing.gpstracker2.ui.theme.SurfaceTertiary
+import com.websmithing.gpstracker2.ui.theme.TextPrimary
 
+/**
+ * Displays a styled save button with icon and label, supporting enabled/disabled states.
+ *
+ * @param onClick Callback triggered when the button is pressed
+ * @param modifier Optional modifier applied to the button container
+ * @param enabled Determines whether the button is interactive and controls its visual style
+ */
 @Composable
 fun SaveButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = false
 ) {
-    val backgroundColor = if (enabled) primary else secondary
-    val textColor = if (enabled) Color.White else neutralVariant
-    val iconTint = if (enabled) Color.White else neutralVariant
+    val backgroundColor = if (enabled) AccentPrimary else SurfaceTertiary
+    val textColor = if (enabled) TextPrimary else OnPrimaryButton
+    val iconTint = if (enabled) TextPrimary else OnPrimaryButton
 
     Box(
         modifier = modifier

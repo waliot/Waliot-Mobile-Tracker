@@ -12,6 +12,7 @@ import com.websmithing.gpstracker2.data.repository.LocationRepository
 import com.websmithing.gpstracker2.data.repository.SettingsRepository
 import com.websmithing.gpstracker2.data.repository.UploadStatus
 import com.websmithing.gpstracker2.service.TrackingService
+import com.websmithing.gpstracker2.util.LocaleHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -42,6 +43,7 @@ class TrackingViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val locationRepository: LocationRepository
 ) : ViewModel() {
+    private val localeHelper = LocaleHelper
 
     // --- LiveData for UI State ---
     /**
@@ -201,17 +203,6 @@ class TrackingViewModel @Inject constructor(
         _language.value = language
     }
 
-
-    fun refreshSettingsFromRepository() {
-        viewModelScope.launch {
-            _userName.value = settingsRepository.getCurrentUsername()
-            _websiteUrl.value = settingsRepository.getCurrentWebsiteUrl()
-            _trackingInterval.value = settingsRepository.getCurrentTrackingInterval()
-            _language.value = settingsRepository.getCurrentLanguage()
-            _isTracking.value = settingsRepository.getCurrentTrackingState()
-        }
-    }
-
     /**
      * A new function (rewrite)
      */
@@ -219,7 +210,10 @@ class TrackingViewModel @Inject constructor(
         viewModelScope.launch {
             _userName.value?.let { settingsRepository.saveUsername(it) }
             _websiteUrl.value?.let { settingsRepository.saveWebsiteUrl(it) }
-            _language.value?.let { settingsRepository.saveLanguage(it) }
+            _language.value?.let {
+                settingsRepository.saveLanguage(it)
+                localeHelper.setComposeLocale(context, it)
+            }
 
             val currentInterval = settingsRepository.getCurrentTrackingInterval()
             val newInterval = _trackingInterval.value ?: currentInterval

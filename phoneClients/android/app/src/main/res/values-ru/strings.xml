@@ -6,7 +6,7 @@
 
     <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play.</string>
 
-
+    <string name="settings">Настройки</string>
     <string name="settings_identifier">Идентификатор</string>
     <string name="settings_server_url">Адрес сервера и порт</string>
     <string name="settings_interval_minutes">Отправлять данные каждые, минут</string>
@@ -34,6 +34,8 @@
     <string name="stats_accuracy">Точность</string>
     <string name="stats_distance">Расстояние</string>
     <string name="stats_data_buffer">Буффер данных</string>
+    <string name="stats_km_per_hour">км/ч</string>
+    <string name="stats_km_distance">км</string>
 
     <string name="signal_unknown">Неизвестно</string>
     <string name="signal_excellent">Отлично</string>

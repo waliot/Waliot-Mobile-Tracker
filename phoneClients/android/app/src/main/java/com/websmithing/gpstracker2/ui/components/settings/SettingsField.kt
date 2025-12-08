@@ -17,10 +17,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.websmithing.gpstracker2.ui.theme.error
-import com.websmithing.gpstracker2.ui.theme.neutral
-import com.websmithing.gpstracker2.ui.theme.surfaceContainerHigh
+import com.websmithing.gpstracker2.ui.theme.AccentSecondary
+import com.websmithing.gpstracker2.ui.theme.IconTintSecondary
+import com.websmithing.gpstracker2.ui.theme.SurfaceRaised
+import com.websmithing.gpstracker2.ui.theme.TextPrimary
 
+/**
+ * Renders a labeled single-line text input field with optional error highlighting.
+ *
+ * @param title The descriptive label displayed above the text field
+ * @param value The current text value displayed inside the input
+ * @param onValueChange Callback invoked when the text value changes
+ * @param labelSpacing Vertical spacing between the label and the field
+ * @param fieldPadding Horizontal padding inside the text field
+ * @param isError Indicates whether the field should display an error border
+ */
 @Composable
 fun SettingsField(
     title: String,
@@ -34,19 +45,19 @@ fun SettingsField(
         text = title,
         fontSize = 12.sp,
         lineHeight = 15.sp,
-        color = neutral
+        color = IconTintSecondary
     )
 
     Spacer(modifier = Modifier.height(labelSpacing))
 
-    val borderColor = if (isError) error else Color.Transparent
+    val borderColor = if (isError) AccentSecondary else Color.Transparent
     val borderWidth = if (isError) 2.dp else 0.dp
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .border(borderWidth, borderColor, RoundedCornerShape(4.dp)) // border снаружи
-            .background(surfaceContainerHigh, RoundedCornerShape(4.dp)) // фон внутри
+            .border(borderWidth, borderColor, RoundedCornerShape(4.dp))
+            .background(SurfaceRaised, RoundedCornerShape(4.dp))
             .height(40.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -56,7 +67,7 @@ fun SettingsField(
                 onValueChange = onValueChange,
                 singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(
-                    color = Color.White,
+                    color = TextPrimary,
                     fontSize = 14.sp
                 ),
                 modifier = Modifier.fillMaxWidth()

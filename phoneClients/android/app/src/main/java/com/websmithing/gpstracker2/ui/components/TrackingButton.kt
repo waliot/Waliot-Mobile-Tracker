@@ -10,14 +10,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.theme.error
-import com.websmithing.gpstracker2.ui.theme.neutral
-import com.websmithing.gpstracker2.ui.theme.secondary
-import com.websmithing.gpstracker2.ui.theme.success
+import com.websmithing.gpstracker2.ui.theme.AccentSecondary
+import com.websmithing.gpstracker2.ui.theme.AccentSuccessAction
+import com.websmithing.gpstracker2.ui.theme.IconTintSecondary
+import com.websmithing.gpstracker2.ui.theme.SurfaceTertiary
+import com.websmithing.gpstracker2.ui.theme.TextPrimary
 
 enum class TrackingButtonState {
     Disabled,
@@ -25,6 +25,13 @@ enum class TrackingButtonState {
     Stopped
 }
 
+/**
+ * Displays a circular tracking control button whose appearance changes based on tracking state.
+ *
+ * @param modifier Optional modifier applied to the button container
+ * @param status Current tracking state determining background, icon, and tint
+ * @param onClick Callback triggered when the button is pressed
+ */
 @Composable
 fun TrackingButton(
     modifier: Modifier = Modifier,
@@ -33,19 +40,19 @@ fun TrackingButton(
 ) {
     val (bgColor, iconRes, iconTint) = when (status) {
         TrackingButtonState.Disabled -> Triple(
-            secondary,
+            SurfaceTertiary,
             R.drawable.ic_stop,
-            neutral
+            IconTintSecondary
         )
         TrackingButtonState.Tracking -> Triple(
-            error,
+            AccentSecondary,
             R.drawable.ic_pause,
-            Color.White
+            TextPrimary
         )
         TrackingButtonState.Stopped -> Triple(
-            success,
+            AccentSuccessAction,
             R.drawable.ic_start,
-            Color.White
+            TextPrimary
         )
     }
 

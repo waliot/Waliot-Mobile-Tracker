@@ -13,9 +13,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.theme.neutral
-import com.websmithing.gpstracker2.ui.theme.secondary
+import com.websmithing.gpstracker2.ui.theme.IconTintSecondary
+import com.websmithing.gpstracker2.ui.theme.SurfaceTertiary
 
+/**
+ * Displays a circular settings button with an icon, intended for use in toolbars or overlays.
+ *
+ * @param modifier Optional modifier applied to the button container
+ * @param onClick Callback triggered when the button is pressed
+ */
 @Composable
 fun SettingsButton(
     modifier: Modifier = Modifier,
@@ -25,14 +31,14 @@ fun SettingsButton(
         modifier = modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(secondary)
+            .background(SurfaceTertiary)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_settings),
             contentDescription = null,
-            tint = neutral,
+            tint = IconTintSecondary,
             modifier = Modifier.size(18.dp)
         )
     }

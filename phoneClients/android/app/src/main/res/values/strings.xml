@@ -5,7 +5,7 @@
 
     <string name="google_play_services_unavailable">Please go into Settings > Apps and enable Google Play Services.</string>
 
-
+    <string name="settings">Settings</string>
     <string name="settings_identifier">Identifier</string>
     <string name="settings_server_url">URL</string>
     <string name="settings_interval_minutes">Interval minutes</string>
@@ -30,6 +30,8 @@
     <string name="stats_accuracy">Accuracy</string>
     <string name="stats_distance">Distance</string>
     <string name="stats_data_buffer">Data buffer</string>
+    <string name="stats_km_per_hour">km/h</string>
+    <string name="stats_km_distance">km</string>
 
 
     <string name="upload_status_idle">Idle</string>

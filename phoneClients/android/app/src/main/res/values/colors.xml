@@ -12,4 +12,5 @@
     <color name="colorPrimaryDark">#1D2328</color>
     <color name="colorAccent">#0080E5</color>
     <color name="colorText">#FFFFFF</color>
+    <color name="splash_background">#0080E5</color>
 </resources>
