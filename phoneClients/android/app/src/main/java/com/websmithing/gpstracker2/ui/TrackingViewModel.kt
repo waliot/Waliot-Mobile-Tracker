@@ -231,7 +231,7 @@ class TrackingViewModel @Inject constructor(
      */
     fun onUserNameChanged(newName: String) {
         val trimmedName = newName.trim()
-        if (trimmedName != _userName.value && trimmedName.isNotEmpty()) {
+        if (trimmedName != _userName.value) {
             _userName.value = trimmedName
             viewModelScope.launch {
                 settingsRepository.saveUsername(trimmedName)

@@ -1,7 +1,6 @@
 package com.websmithing.gpstracker2.ui.features.settings
 
 import android.widget.Toast
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,7 +53,6 @@ fun SettingsPage(
     viewModel: TrackingViewModel = activityHiltViewModel(),
 ) {
     val context = LocalContext.current
-    val activity = LocalActivity.current
     val focusManager = LocalFocusManager.current
 
     val userName by viewModel.userName.observeAsState()
@@ -72,8 +70,6 @@ fun SettingsPage(
     val canSave by remember(state, initialState) {
         derivedStateOf {
             state != initialState
-                    && state.userName.isNotEmpty()
-                    && state.websiteUrl.isNotEmpty()
         }
     }
 
@@ -81,18 +77,16 @@ fun SettingsPage(
         val name = state.userName.trim()
         val website = state.websiteUrl.trim()
 
-        val isNameValid = name.isNotBlank() && !hasSpaces(name)
+        val isNameValid = !hasSpaces(name)
         val isWebsiteValid = website.isNotBlank() && !hasSpaces(website)
 
         if (!isNameValid) {
-            if (name.isBlank()) {
-                state = state.copy(userNameError = context.getString(R.string.username_error_empty))
-            } else if (hasSpaces(name)) {
+            if (hasSpaces(name)) {
                 state =
                     state.copy(userNameError = context.getString(R.string.username_error_spaces))
             }
         } else {
-            state = state.copy(websiteUrlError = null)
+            state = state.copy(userNameError = null)
         }
 
         if (!isWebsiteValid) {
