@@ -224,20 +224,10 @@ private fun ExtraInfo(
                     )
             )
 
+            // TODO
             ChipItem(
-                label = context.getString(R.string.altitude),
-                value = if (location == null)
-                    context.getString(R.string.no_data_placeholder)
-                else
-                    context.getString(R.string.altitude_format, location.altitude)
-            )
-
-            ChipItem(
-                label = context.getString(R.string.bearing),
-                value = if (location == null)
-                    context.getString(R.string.no_data_placeholder)
-                else
-                    context.getString(R.string.bearing_format, location.bearing)
+                label = stringResource(R.string.data_buffer),
+                value = context.getString(R.string.no_data_placeholder)
             )
         }
     }
