@@ -32,6 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
@@ -74,7 +75,7 @@ fun HomePage(
         derivedStateOf {
             latestLocation?.let { location ->
                 cameraState.projection?.screenLocationFromPosition(location.toPosition())
-            } ?: DpOffset.Zero
+            } ?: DpOffset.Unspecified
         }
     }
 
@@ -212,18 +213,20 @@ fun HomePage(
                 )
             }
 
-            LocationMarker(
-                onClick = { showTrackingInfoSheet = true },
-                state = when {
-                    !showTrackingInfoSheet -> LocationMarkerState.Inactive
-                    userName.isNullOrEmpty() -> LocationMarkerState.Error
-                    else -> LocationMarkerState.Active
-                },
-                modifier = Modifier.offset(
-                    x = markerPosition.x - LocationMarkerSize / 2,
-                    y = markerPosition.y - LocationMarkerSize / 2
+            if (markerPosition.isSpecified) {
+                LocationMarker(
+                    onClick = { showTrackingInfoSheet = true },
+                    state = when {
+                        !showTrackingInfoSheet -> LocationMarkerState.Inactive
+                        userName.isNullOrEmpty() -> LocationMarkerState.Error
+                        else -> LocationMarkerState.Active
+                    },
+                    modifier = Modifier.offset(
+                        x = markerPosition.x - LocationMarkerSize / 2,
+                        y = markerPosition.y - LocationMarkerSize / 2
+                    )
                 )
-            )
+            }
         }
     }
 
