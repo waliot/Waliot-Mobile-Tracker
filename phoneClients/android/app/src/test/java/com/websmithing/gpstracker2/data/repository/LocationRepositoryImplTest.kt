@@ -1,43 +1,46 @@
 // # android/app/src/test/java/com/websmithing/gpstracker2/data/repository/LocationRepositoryImplTest.kt
 package com.websmithing.gpstracker2.data.repository // Corrected package
 
-import android.Manifest
-import android.content.Context
-import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.location.Location
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 // import androidx.core.content.ContextCompat // Unused
-import com.google.android.gms.location.FusedLocationProviderClient
 // import com.google.android.gms.location.Priority // Unused
 // import com.google.android.gms.tasks.Task // Unused
-import com.websmithing.gpstracker2.network.ApiService
-import com.websmithing.gpstracker2.util.PermissionChecker
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runTest
-import okhttp3.OkHttpClient
-import okhttp3.ResponseBody.Companion.toResponseBody
-import org.junit.Assert.*
-import org.junit.After // Add After import
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
 // import org.junit.runner.RunWith // Remove runner import
-import org.mockito.ArgumentCaptor // Keep standard captor
 // import org.mockito.ArgumentMatchers // Unused
 // import org.mockito.Captor // Unused
 // import org.mockito.Mock // Unused
 // import org.mockito.Mockito // Unused
 // import org.mockito.MockitoAnnotations // Unused
 // import org.mockito.junit.MockitoJUnitRunner // Remove runner import
-import org.mockito.kotlin.* // Use mockito-kotlin imports again
+// import java.text.SimpleDateFormat // Unused
+import android.content.Context
+import android.content.SharedPreferences
+import android.location.Location
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.websmithing.gpstracker2.network.ApiService
+import com.websmithing.gpstracker2.util.PermissionChecker
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
+import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import retrofit2.Response
 import retrofit2.Retrofit
-import java.io.IOException
-// import java.text.SimpleDateFormat // Unused
-import java.util.*
 import kotlin.math.roundToInt
-import kotlin.test.assertFailsWith // Restore kotlin.test import
+import kotlin.test.assertFailsWith
+
 @ExperimentalCoroutinesApi // Restore annotation
 // @RunWith(MockitoJUnitRunner::class) // Remove runner annotation
 class LocationRepositoryImplTest {
@@ -124,7 +127,22 @@ class LocationRepositoryImplTest {
 
             // Mock the suspend API call setup
             val mockApiResponse: Response<String> = Response.success("OK")
-            whenever(apiService.updateLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+            whenever(
+                apiService.updateLocation(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any()
+                )
+            )
                 .thenReturn(mockApiResponse)
         }
     }
@@ -172,7 +190,7 @@ class LocationRepositoryImplTest {
 
         // Act
         val success = repository.uploadLocationData(
-            location, TEST_USERNAME, TEST_APP_ID, TEST_SESSION_ID, totalDistanceMiles, eventType
+            location, TEST_USERNAME, TEST_APP_ID, TEST_SESSION_ID, eventType
         )
 
         // Assert
@@ -182,7 +200,6 @@ class LocationRepositoryImplTest {
             longitude = eq(TEST_LON.toString()),
             speed = eq((TEST_SPEED * 2.2369).roundToInt()),
             direction = any(),
-            distance = eq(String.format(Locale.US, "%.1f", totalDistanceMiles)),
             date = any(),
             locationMethod = any(),
             username = eq(TEST_USERNAME),
@@ -220,11 +237,32 @@ class LocationRepositoryImplTest {
         val location = createMockLocation(TEST_LAT, TEST_LON)
         val errorBody = "Server Error".toResponseBody(null)
         val mockErrorResponse: Response<String> = Response.error(500, errorBody)
-        whenever(apiService.updateLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        whenever(
+            apiService.updateLocation(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        )
             .thenReturn(mockErrorResponse)
 
         // Act
-        val success = repository.uploadLocationData(location, TEST_USERNAME, TEST_APP_ID, TEST_SESSION_ID, 1.0f, "test")
+        val success = repository.uploadLocationData(
+            location,
+            TEST_USERNAME,
+            TEST_APP_ID,
+            TEST_SESSION_ID,
+            "test"
+        )
 
         // Assert
         assertFalse(success)
@@ -235,11 +273,32 @@ class LocationRepositoryImplTest {
         // Arrange
         val location = createMockLocation(TEST_LAT, TEST_LON)
         val mockApiResponse: Response<String> = Response.success("-1")
-        whenever(apiService.updateLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+         whenever(
+             apiService.updateLocation(
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any(),
+                 any()
+             )
+         )
             .thenReturn(mockApiResponse)
 
         // Act
-        val success = repository.uploadLocationData(location, TEST_USERNAME, TEST_APP_ID, TEST_SESSION_ID, 1.0f, "test")
+         val success = repository.uploadLocationData(
+             location,
+             TEST_USERNAME,
+             TEST_APP_ID,
+             TEST_SESSION_ID,
+             "test"
+         )
 
         // Assert
         assertFalse(success)
