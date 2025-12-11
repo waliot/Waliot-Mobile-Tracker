@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -19,10 +20,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,14 +29,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.BuildConfig
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.components.CustomExposedDropdownMenu
-import com.websmithing.gpstracker2.ui.components.DropdownMenuOption
 import com.websmithing.gpstracker2.ui.components.LabeledBox
 import com.websmithing.gpstracker2.ui.features.settings.model.SettingsFormState
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
@@ -55,10 +51,8 @@ fun SettingsForm(
     state: SettingsFormState,
     onChange: (SettingsFormState) -> Unit,
 ) {
-    var intervalsExpanded by remember { mutableStateOf(false) }
-
     Column(
-        verticalArrangement = Arrangement.spacedBy(13.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
@@ -67,10 +61,15 @@ fun SettingsForm(
         LabeledBox(label = stringResource(R.string.user_name)) {
             OutlinedTextField(
                 value = state.userName,
-                onValueChange = { onChange(state.copy(userName = it)) },
+                onValueChange = { value ->
+                    onChange(state.copy(userName = value.filter { it.isDigit() }))
+                },
                 isError = state.userNameError != null,
                 supportingText = { state.userNameError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
             )
@@ -89,31 +88,34 @@ fun SettingsForm(
         }
 
         LabeledBox(label = stringResource(R.string.upload_frequency)) {
-            CustomExposedDropdownMenu(
-                options = listOf(
-                    DropdownMenuOption(
-                        content = {
-                            Text(stringResource(R.string.one_minute))
-                        },
-                        value = "1",
-                    ),
-                    DropdownMenuOption(
-                        content = {
-                            Text(stringResource(R.string.five_minutes))
-                        },
-                        value = "5",
-                    ),
-                    DropdownMenuOption(
-                        content = {
-                            Text(stringResource(R.string.fifteen_minutes))
-                        },
-                        value = "15",
-                    )
+            OutlinedTextField(
+                value = state.intervalTime,
+                onValueChange = { value ->
+                    onChange(state.copy(intervalTime = value.filter { it.isDigit() }))
+                },
+                isError = state.intervalTimeError != null,
+                supportingText = { state.intervalTimeError?.let { Text(it) } },
+                colors = customOutlinedTextFieldColors(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
                 ),
-                expanded = intervalsExpanded,
-                onExpandedChange = { intervalsExpanded = it },
-                value = "${state.interval}",
-                onValueChange = { onChange(state.copy(interval = it.toInt())) },
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+        }
+
+        LabeledBox(label = stringResource(R.string.upload_distance)) {
+            OutlinedTextField(
+                value = state.intervalDistance,
+                onValueChange = { value ->
+                    onChange(state.copy(intervalTime = value.filter { it.isDigit() }))
+                },
+                isError = state.intervalDistanceError != null,
+                supportingText = { state.intervalDistanceError?.let { Text(it) } },
+                colors = customOutlinedTextFieldColors(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
             )

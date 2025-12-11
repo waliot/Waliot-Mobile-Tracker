@@ -9,10 +9,11 @@
     <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play.</string>
 
     <!-- Input Validation -->
-    <string name="username_error_spaces">Номер трекера не может содержать пробелы.</string>
+    <string name="username_error_spaces">Номер трекера может состоять только из цифр.</string>
     <string name="username_error_empty">Номер трекера не может быть пустым.</string>
     <string name="website_error_empty">Адрес сервера не может быть пустым.</string>
     <string name="website_error_spaces">Адрес сервера не может содержать пробелы.</string>
+    <string name="interval_error">Интервал должен быть больше 0</string>
 
     <!-- Permissions -->
     <string name="permission_rationale_foreground_location_title">Требуется разрешение на определение местоположения</string>
@@ -31,6 +32,7 @@
     <string name="user_name">Идентификатор</string>
     <string name="upload_website">Адрес сервера и порт</string>
     <string name="upload_frequency">Отправлять данные каждые, минут</string>
+    <string name="upload_distance">Отправлять данные каждые, метров</string>
     <string name="one_minute">1</string>
     <string name="five_minutes">5</string>
     <string name="fifteen_minutes">15</string>

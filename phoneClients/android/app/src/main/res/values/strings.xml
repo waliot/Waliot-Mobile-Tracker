@@ -9,10 +9,11 @@
     <string name="google_play_services_unavailable">Please go into Settings > Apps and enable Google Play Services.</string>
 
     <!-- Input Validation -->
-    <string name="username_error_spaces">Tracker number cannot contain spaces.</string>
+    <string name="username_error_spaces">The tracker number can only contain digits.</string>
     <string name="username_error_empty">Tracker number cannot be empty.</string>
     <string name="website_error_empty">Server address cannot be empty.</string>
     <string name="website_error_spaces">Server address cannot contain spaces.</string>
+    <string name="interval_error">The interval must be greater than 0</string>
 
     <!-- Permissions -->
     <string name="permission_rationale_foreground_location_title">Location Permission Needed</string>
@@ -32,6 +33,7 @@
     <string name="user_name">Identifier</string>
     <string name="upload_website">Server address and port</string>
     <string name="upload_frequency">Send data every minutes</string>
+    <string name="upload_distance">Send data every meters</string>
     <string name="one_minute">1</string>
     <string name="five_minutes">5</string>
     <string name="fifteen_minutes">15</string>

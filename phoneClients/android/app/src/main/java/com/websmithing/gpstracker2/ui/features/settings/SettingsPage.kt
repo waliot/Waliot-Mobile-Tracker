@@ -30,6 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.text.isDigitsOnly
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.TrackingViewModel
@@ -58,13 +59,14 @@ fun SettingsPage(
     val userName by viewModel.userName.observeAsState()
     val websiteUrl by viewModel.websiteUrl.observeAsState()
     val language by viewModel.language.observeAsState()
-    val interval by viewModel.trackingInterval.observeAsState()
+    val intervalTime by viewModel.trackingInterval.observeAsState()
 
     var initialState = SettingsFormState(
-        userName ?: "",
-        websiteUrl ?: context.getString(R.string.default_upload_website),
-        interval ?: 1,
-        language ?: "ru"
+        userName = userName ?: "",
+        websiteUrl = websiteUrl ?: context.getString(R.string.default_upload_website),
+        intervalTime = intervalTime?.toString() ?: "1",
+        intervalDistance = "100",
+        languageCode = language ?: "ru"
     )
     var state by remember { mutableStateOf(initialState) }
     val canSave by remember(state, initialState) {
@@ -73,20 +75,22 @@ fun SettingsPage(
         }
     }
 
-    fun saveAndValidate() {
+    fun saveAndValidate(): Boolean {
         val name = state.userName.trim()
         val website = state.websiteUrl.trim()
+        val intervalTime = state.intervalTime.trim().let { if (it.isEmpty()) 0 else it.toInt() }
+        val intervalDistance =
+            state.intervalDistance.trim().let { if (it.isEmpty()) 0 else it.toInt() }
 
-        val isNameValid = !hasSpaces(name)
+        val isNameValid = name.isEmpty() || name.isDigitsOnly()
         val isWebsiteValid = website.isNotBlank() && !hasSpaces(website)
+        val isIntervalTimeValid = intervalTime > 0
+        val isIntervalDistanceValid = intervalDistance > 0
 
-        if (!isNameValid) {
-            if (hasSpaces(name)) {
-                state =
-                    state.copy(userNameError = context.getString(R.string.username_error_spaces))
-            }
+        state = if (!isNameValid) {
+            state.copy(userNameError = context.getString(R.string.username_error_spaces))
         } else {
-            state = state.copy(userNameError = null)
+            state.copy(userNameError = null)
         }
 
         if (!isWebsiteValid) {
@@ -101,11 +105,26 @@ fun SettingsPage(
             state = state.copy(websiteUrlError = null)
         }
 
-        if (isNameValid && isWebsiteValid) {
+        state = if (!isIntervalTimeValid) {
+            state.copy(intervalTimeError = context.getString(R.string.interval_error))
+        } else {
+            state.copy(intervalTimeError = null)
+        }
+
+        state = if (!isIntervalDistanceValid) {
+            state.copy(intervalDistanceError = context.getString(R.string.interval_error))
+        } else {
+            state.copy(intervalDistanceError = null)
+        }
+
+        focusManager.clearFocus(true)
+
+        if (isNameValid && isWebsiteValid && isIntervalDistanceValid && isIntervalTimeValid) {
             val userNameChanged = initialState.userName != state.userName
             val languageChanged = initialState.languageCode != state.languageCode
             val websiteUrlChanged = initialState.websiteUrl != state.websiteUrl
-            val intervalChanged = initialState.interval != state.interval
+            val intervalTimeChanged = initialState.intervalTime != state.intervalTime
+            val intervalDistanceChanged = initialState.intervalDistance != state.intervalDistance
 
             if (userNameChanged) {
                 viewModel.onUserNameChanged(state.userName.trim())
@@ -113,24 +132,31 @@ fun SettingsPage(
             if (websiteUrlChanged) {
                 viewModel.onWebsiteUrlChanged(state.websiteUrl.trim())
             }
-            if (intervalChanged) {
-                viewModel.onIntervalChanged(state.interval)
+            if (intervalTimeChanged) {
+                viewModel.onIntervalChanged(intervalTime)
+            }
+            if (intervalDistanceChanged) {
+                // TODO
             }
             if (languageChanged) {
                 viewModel.onLanguageChanged(state.languageCode)
             }
 
             initialState = state
+            return true
         } else {
             Toast.makeText(context, R.string.textfields_empty_or_spaces, Toast.LENGTH_LONG).show()
+            return false
         }
-
-        focusManager.clearFocus(true)
     }
 
     Page(
         onBack = { navController.navigateUp() },
-        onSave = { saveAndValidate() },
+        onSave = {
+            if (saveAndValidate()) {
+                navController.navigateUp()
+            }
+        },
         onChange = { state = it },
         canSave = canSave,
         state = state,
