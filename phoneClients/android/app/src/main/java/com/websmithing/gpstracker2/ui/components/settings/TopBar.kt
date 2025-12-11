@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
+import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.theme.SurfacePrimary
 import com.websmithing.gpstracker2.ui.theme.TextPrimary
 
@@ -38,7 +39,8 @@ import com.websmithing.gpstracker2.ui.theme.TextPrimary
 @Composable
 fun TopBar(
     statusBarHeight: Dp,
-    navController: NavHostController
+    navController: NavHostController,
+    viewModel: TrackingViewModel
 ) {
     Column(
         modifier = Modifier
@@ -60,7 +62,9 @@ fun TopBar(
                     .clickable(
                         interactionSource = MutableInteractionSource(),
                         indication = null
-                    ) { navController.popBackStack() },
+                    ) {
+                        viewModel.refreshSettingsFromRepository()
+                        navController.popBackStack() },
                 contentAlignment = Alignment.Center
             ) {
                 Image(

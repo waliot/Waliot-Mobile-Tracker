@@ -65,6 +65,12 @@ class TrackingViewModel @Inject constructor(
     val trackingInterval: LiveData<Int> = _trackingInterval
 
     /**
+     * Stores the current tracking interval in meters (1, 5, or 15)
+     */
+    private val _trackingIntervalMeters = MutableLiveData<Int>()
+    val trackingIntervalMeters: LiveData<Int> = _trackingIntervalMeters
+
+    /**
      * Stores the current website URL where tracking data is sent
      */
     private val _websiteUrl = MutableLiveData<String>()
@@ -177,6 +183,18 @@ class TrackingViewModel @Inject constructor(
     }
 
     /**
+     * Updates the tracking interval setting
+     *
+     * If tracking is currently active, this will restart the tracking service
+     * to apply the new interval immediately.
+     *
+     * @param newInterval The new tracking interval in meters (1, 5, or 15)
+     */
+    fun onIntervalMetersChanged(newInterval: Int) {
+        _trackingIntervalMeters.value = newInterval
+    }
+
+    /**
      * Updates the username setting
      *
      * @param newName The new username for tracking identification
@@ -201,6 +219,18 @@ class TrackingViewModel @Inject constructor(
      */
     fun onLanguageChanged(language: String) {
         _language.value = language
+        settingsRepository.saveLanguage(language)
+        localeHelper.setComposeLocale(context, language)
+    }
+
+    fun refreshSettingsFromRepository() {
+        viewModelScope.launch {
+            _userName.value = settingsRepository.getCurrentUsername()
+            _websiteUrl.value = settingsRepository.getCurrentWebsiteUrl()
+            _trackingInterval.value = settingsRepository.getCurrentTrackingInterval()
+            _language.value = settingsRepository.getCurrentLanguage()
+            _isTracking.value = settingsRepository.getCurrentTrackingState()
+        }
     }
 
     /**
@@ -210,10 +240,6 @@ class TrackingViewModel @Inject constructor(
         viewModelScope.launch {
             _userName.value?.let { settingsRepository.saveUsername(it) }
             _websiteUrl.value?.let { settingsRepository.saveWebsiteUrl(it) }
-            _language.value?.let {
-                settingsRepository.saveLanguage(it)
-                localeHelper.setComposeLocale(context, it)
-            }
 
             val currentInterval = settingsRepository.getCurrentTrackingInterval()
             val newInterval = _trackingInterval.value ?: currentInterval

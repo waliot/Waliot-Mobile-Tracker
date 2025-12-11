@@ -12,33 +12,37 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.components.*
-import timber.log.Timber
+import com.websmithing.gpstracker2.util.PermissionChecker
 
 @Composable
 fun GpsTrackerScreen(
     viewModel: TrackingViewModel = hiltViewModel(),
+    permissionChecker: PermissionChecker,
     navController: NavHostController
-
 ) {
         var menuVisible by remember { mutableStateOf(false) }
         var showNotifyBanner by remember { mutableStateOf(false) }
         var notifyStatus by remember { mutableStateOf(NotifyStatus.Success) }
 
         val username by viewModel.userName.observeAsState("")
-        val language by viewModel.language.observeAsState("")
-        Timber.d("LANGUAGE: $language")
 
         Surface(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxSize()) {
                 val markerColor = when {
-                    !menuVisible -> MarkerColor.GREY
-                    menuVisible && username.isNotBlank() -> MarkerColor.BLUE
-                    else -> MarkerColor.RED
+                    !menuVisible -> MarkerBackgroundColor.GREY
+                    menuVisible && username.isNotBlank() -> MarkerBackgroundColor.BLUE
+                    else -> MarkerBackgroundColor.RED
+                }
+                val markerIconColor = when (markerColor) {
+                    MarkerBackgroundColor.GREY -> MarkerIconColor.GREY
+                    MarkerBackgroundColor.BLUE -> MarkerIconColor.WHITE
+                    MarkerBackgroundColor.RED -> MarkerIconColor.WHITE
                 }
 
                 OsmMapContainer(
                     modifier = Modifier.fillMaxSize(),
-                    markerColor = markerColor,
+                    markerBackgroundColor = markerColor,
+                    markerIconColor = markerIconColor,
                     onPointerClick = { menuVisible = !menuVisible }
                 )
 
@@ -54,11 +58,12 @@ fun GpsTrackerScreen(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 16.dp),
-                    status = getTrackingButtonState(viewModel),
+                    status = getTrackingButtonState(viewModel, permissionChecker),
                     onClick = {
                         handleTrackingButtonClick(
                             username = username,
                             viewModel = viewModel,
+                            permissionChecker=permissionChecker,
                             showNotifyBanner = { showNotifyBanner = true },
                             notifyStatus = { notifyStatus = it }
                         )
@@ -82,13 +87,20 @@ fun GpsTrackerScreen(
     }
 
     @Composable
-    private fun getTrackingButtonState(viewModel: TrackingViewModel): TrackingButtonState {
+    private fun getTrackingButtonState(
+        viewModel: TrackingViewModel,
+        permissionChecker: PermissionChecker
+    ): TrackingButtonState {
         val username by viewModel.userName.observeAsState("")
         val website by viewModel.websiteUrl.observeAsState("")
-        val interval by viewModel.trackingInterval.observeAsState(0)
+        val intervalMinutes by viewModel.trackingInterval.observeAsState(0)
+        val intervalMeters by viewModel.trackingIntervalMeters.observeAsState(1)
         val isTracking by viewModel.isTracking.observeAsState(false)
 
-        val isFormValid = username.isNotBlank() && website.isNotBlank() && interval > 0
+        val isFormValid = username.isNotBlank() && website.isNotBlank()
+                && intervalMinutes > 0 && intervalMeters > 0
+                && permissionChecker.hasLocationPermissions()
+                && permissionChecker.hasBackgroundLocationPermissions()
         return when {
             !isFormValid -> TrackingButtonState.Disabled
             isTracking -> TrackingButtonState.Tracking
@@ -99,6 +111,7 @@ fun GpsTrackerScreen(
     private fun handleTrackingButtonClick(
         username: String,
         viewModel: TrackingViewModel,
+        permissionChecker: PermissionChecker,
         showNotifyBanner: () -> Unit,
         notifyStatus: (NotifyStatus) -> Unit
     ) {
@@ -106,14 +119,19 @@ fun GpsTrackerScreen(
             viewModel.stopTracking()
             return
         }
-
-        if (username.isEmpty()) {
+        if (permissionChecker.hasLocationPermissions() &&
+            permissionChecker.hasBackgroundLocationPermissions()) {
+            if (username.isEmpty()) {
+                notifyStatus(NotifyStatus.Warning)
+                showNotifyBanner()
+                return
+            }
+            viewModel.startTracking()
+            notifyStatus(NotifyStatus.Success)
             showNotifyBanner()
+        } else {
             notifyStatus(NotifyStatus.Warning)
+            showNotifyBanner()
             return
         }
-
-        viewModel.startTracking()
-        showNotifyBanner()
-        notifyStatus(NotifyStatus.Success)
     }

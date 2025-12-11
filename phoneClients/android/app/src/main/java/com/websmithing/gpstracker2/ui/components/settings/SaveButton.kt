@@ -3,6 +3,7 @@ package com.websmithing.gpstracker2.ui.components.settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,8 +14,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,6 +44,7 @@ fun SaveButton(
     val backgroundColor = if (enabled) AccentPrimary else SurfaceTertiary
     val textColor = if (enabled) TextPrimary else OnPrimaryButton
     val iconTint = if (enabled) TextPrimary else OnPrimaryButton
+    val interactionSource = remember { MutableInteractionSource() }
 
     Box(
         modifier = modifier
@@ -48,7 +52,12 @@ fun SaveButton(
             .height(56.dp)
             .padding(horizontal = 16.dp)
             .background(backgroundColor, RoundedCornerShape(4.dp))
-            .clickable { onClick() },
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -61,7 +70,7 @@ fun SaveButton(
                 modifier = Modifier
                     .size(16.dp)
                     .padding(end = 4.dp),
-                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(iconTint)
+                colorFilter = ColorFilter.tint(iconTint)
             )
             Text(
                 text = stringResource(R.string.settings_save),
@@ -71,4 +80,3 @@ fun SaveButton(
         }
     }
 }
-

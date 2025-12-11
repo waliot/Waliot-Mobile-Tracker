@@ -13,4 +13,5 @@
     <color name="colorAccent">#0080E5</color>
     <color name="colorText">#FFFFFF</color>
     <color name="splash_background">#0080E5</color>
+    <color name="nav_bar_color">#FFA8B2B7</color>
 </resources>

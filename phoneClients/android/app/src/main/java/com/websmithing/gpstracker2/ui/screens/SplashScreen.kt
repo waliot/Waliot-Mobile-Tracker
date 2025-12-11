@@ -16,11 +16,6 @@ import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.theme.AccentPrimary
 import com.websmithing.gpstracker2.ui.theme.TextPrimary
 
-/**
- * Composable Splash Screen.
- *
- * @param onTimeout Callback that будет вызван после окончания задержки (например, чтобы перейти на другой экран)
- */
 @Composable
 fun SplashScreen() {
     Box(

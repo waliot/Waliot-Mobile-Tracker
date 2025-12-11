@@ -4,19 +4,19 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
-import android.graphics.Paint
 import android.location.Location
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.theme.AccentPrimary
 import com.websmithing.gpstracker2.ui.theme.AccentSecondary
+import com.websmithing.gpstracker2.ui.theme.IconTintSecondary
 import com.websmithing.gpstracker2.ui.theme.SurfaceTertiary
+import com.websmithing.gpstracker2.ui.theme.TextPrimary
 import com.websmithing.gpstracker2.util.PermissionChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,17 +35,49 @@ import java.io.File
 import kotlin.math.atan2
 import javax.inject.Inject
 
+/**
+ * Converts Color to ARGB integer (0xAARRGGBB).
+ *
+ * Scales RGB components from [0f, 1f] to [0, 255] and packs them with full opacity (0xFF alpha).
+ */
 fun Color.toHexInt(): Int = (0xFF shl 24) or
         ((red * 255).toInt() shl 16) or
         ((green * 255).toInt() shl 8) or
         ((blue * 255).toInt())
 
-enum class MarkerColor(val colorInt: Int) {
+/**
+ * Enum defining available background colors for map markers.
+ *
+ * Each variant stores the color as an ARGB integer, converted from the app's design system tokens.
+ */
+enum class MarkerBackgroundColor(val colorInt: Int) {
     GREY(SurfaceTertiary.toHexInt()),
     BLUE(AccentPrimary.toHexInt()),
     RED(AccentSecondary.toHexInt())
 }
 
+/**
+ * Enum defining available icon colors for map markers.
+ *
+ * Each variant stores the color as an ARGB integer, converted from the app's design system tokens.
+ */
+enum class MarkerIconColor(val colorInt: Int) {
+    GREY(IconTintSecondary.toHexInt()),
+    WHITE(TextPrimary.toHexInt())
+}
+
+/**
+ * Converts a drawable resource into a bitmap of the specified dimensions.
+ *
+ * Creates a new ARGB_8888 bitmap, draws the provided drawable into it using a canvas,
+ * and returns the resulting bitmap.
+ *
+ * @param drawable The drawable to convert.
+ * @param width The target bitmap width in pixels.
+ * @param height The target bitmap height in pixels.
+ *
+ * @return A bitmap containing the rendered drawable.
+ */
 fun drawableToBitmap(drawable: android.graphics.drawable.Drawable, width: Int, height: Int): Bitmap {
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -54,72 +86,64 @@ fun drawableToBitmap(drawable: android.graphics.drawable.Drawable, width: Int, h
     return bitmap
 }
 
-fun createUserIconBitmap(width: Int, height: Int): Bitmap {
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    val paint = Paint().apply {
-        color = android.graphics.Color.WHITE
-        style = Paint.Style.FILL
-        isAntiAlias = true
-    }
-    val cx = width / 2f
-    val cy = height / 3f
-    val r = width / 4f
-    canvas.drawCircle(cx, cy, r, paint)
-
-    val path = android.graphics.Path().apply {
-        moveTo(cx - r, cy + r)
-        lineTo(cx + r, cy + r)
-        lineTo(cx, cy + r * 3)
-        close()
-    }
-    canvas.drawPath(path, paint)
-    return bitmap
-}
-
+/**
+ * Creates a custom map marker consisting of a colored background and a tinted icon.
+ *
+ * The function attempts to load predefined drawable resources for the marker background
+ * and user icon. If those drawables are unavailable, it programmatically generates
+ * simple vector-style shapes instead. Both the background and the icon are then tinted
+ * using the provided colors and returned as separate bitmaps.
+ *
+ * @param context Android context used to access drawable resources.
+ * @param backgroundColor Color applied to the marker background.
+ * @param markerSize Size (width and height in pixels) of the background bitmap.
+ * @param iconSize Size (width and height in pixels) of the icon bitmap.
+ * @param iconColor Color applied to the icon.
+ *
+ * @return A pair of bitmaps: (tinted background bitmap, tinted icon bitmap).
+ */
 fun createColoredMarkerBitmap(
     context: Context,
-    color: Int,
+    backgroundColor: Int,
     markerSize: Int,
-    iconSize: Int
+    iconSize: Int,
+    iconColor: Int
 ): Pair<Bitmap, Bitmap> {
-    val markerDrawable = ContextCompat.getDrawable(context, R.drawable.ic_marker_background)
-    val bgBitmap = markerDrawable?.let { drawableToBitmap(it, markerSize, markerSize) }
-        ?: Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888).apply {
-            val canvas = Canvas(this)
-            val paint = Paint().apply { this.color = color; style = Paint.Style.FILL; isAntiAlias = true }
-            val path = android.graphics.Path()
-            val cr = (markerSize * 0.1f).coerceAtLeast(8f)
-            path.moveTo(cr, 0f); path.lineTo(markerSize.toFloat(), 0f)
-            path.lineTo(markerSize.toFloat(), markerSize - cr)
-            path.quadTo(markerSize.toFloat(), markerSize.toFloat(), markerSize - cr, markerSize.toFloat())
-            path.lineTo(cr, markerSize.toFloat())
-            path.quadTo(0f, markerSize.toFloat(), 0f, markerSize - cr)
-            path.lineTo(0f, cr)
-            path.quadTo(0f, 0f, cr, 0f)
-            path.close()
-            canvas.drawPath(path, paint)
-        }
+    val markerDrawable = ContextCompat.getDrawable(context, R.drawable.ic_marker_background)!!
+    val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+    val markerCanvas = Canvas(markerBitmap)
 
-    val iconBitmap = try {
-        ContextCompat.getDrawable(context, R.drawable.ic_user)?.let { drawableToBitmap(it, iconSize, iconSize) }
-            ?: createUserIconBitmap(iconSize, iconSize)
-    } catch (e: Exception) {
-        createUserIconBitmap(iconSize, iconSize)
-    }
+    markerDrawable.setBounds(0, 0, markerSize, markerSize)
+    markerDrawable.setTint(backgroundColor)
+    markerDrawable.draw(markerCanvas)
 
-    if (markerDrawable != null) {
-        val newBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(newBitmap)
-        val paint = Paint().apply { colorFilter = android.graphics.PorterDuffColorFilter(color, android.graphics.PorterDuff.Mode.SRC_IN) }
-        canvas.drawBitmap(bgBitmap, 0f, 0f, paint)
-        bgBitmap.recycle()
-        return Pair(newBitmap, iconBitmap)
-    }
+    val iconDrawable = ContextCompat.getDrawable(context, R.drawable.ic_user)!!
+    val iconBitmap = Bitmap.createBitmap(iconSize, iconSize, Bitmap.Config.ARGB_8888)
+    val iconCanvas = Canvas(iconBitmap)
 
-    return Pair(bgBitmap, iconBitmap)
+    iconDrawable.setBounds(0, 0, iconSize, iconSize)
+    iconDrawable.setTint(iconColor)
+    iconDrawable.draw(iconCanvas)
+
+    return Pair(markerBitmap, iconBitmap)
 }
 
+/**
+ * ViewModel responsible for exposing and updating the application's
+ * location-permission state.
+ *
+ * This ViewModel checks the current permission status through the injected
+ * [PermissionChecker] and provides it to the UI as a [StateFlow]. The UI layer
+ * can observe [hasLocationPermission] and react to changes (e.g., show dialogs,
+ * enable features, or navigate accordingly).
+ *
+ * The method [refreshPermissions] allows the UI to request a re-evaluation of
+ * the permission status, typically after the user responds to the system
+ * permission dialog.
+ *
+ * @property permissionChecker Utility class that determines whether required
+ * location permissions are granted.
+ */
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val permissionChecker: PermissionChecker
@@ -133,46 +157,83 @@ class MapViewModel @Inject constructor(
     }
 }
 
+/**
+ * Sets the initial map center based on location permissions and available location data.
+ * Priority: lastFixLocation > lastKnownLocation > moscowPoint (fallback).
+ *
+ * @param hasLocationPermission Whether the app has location permission.
+ * @param lastFixLocation The most recent user location if available.
+ * @return The GeoPoint that was set as the map center.
+ */
+private fun setInitialMapCenter(
+    mapView: MapView,
+    context: Context,
+    moscowPoint: GeoPoint,
+    hasLocationPermission: Boolean,
+    lastFixLocation: Location? = null
+): GeoPoint {
+    val initialPoint = if (hasLocationPermission) {
+        lastFixLocation?.let {
+            GeoPoint(it.latitude, it.longitude)
+        } ?: run {
+            try {
+                val locationProvider = GpsMyLocationProvider(context)
+                locationProvider.lastKnownLocation?.let { lastKnownLocation ->
+                    GeoPoint(lastKnownLocation.latitude, lastKnownLocation.longitude)
+                } ?: moscowPoint
+            } catch (_: Exception) {
+                moscowPoint
+            }
+        }
+    } else {
+        moscowPoint
+    }
+
+    mapView.controller.setCenter(initialPoint)
+    return initialPoint
+}
+
+/**
+ * Displays an OSMDroid map inside a Compose layout and renders a customized
+ * location marker with dynamic rotation, coloring, and tap handling.
+ *
+ * The map initializes OSMDroid configuration, creates a MapView, and attaches
+ * a custom MyLocationNewOverlay that:
+ * - updates marker background/icon colors;
+ * - rotates the marker based on movement direction;
+ * - tracks and centers on the user when permissions are granted;
+ * - falls back to a default map position when permissions are missing.
+ *
+ * The marker is tappable and triggers [onPointerClick]. Bitmaps are recreated
+ * only when colors change to avoid unnecessary processing.
+ *
+ * @param modifier Layout modifier.
+ * @param markerBackgroundColor Color of the marker background.
+ * @param markerIconColor Color of the marker icon.
+ * @param onPointerClick Callback invoked when the marker is tapped.
+ */
 @Composable
 fun OsmMapContainer(
     modifier: Modifier = Modifier,
-    markerColor: MarkerColor = MarkerColor.GREY,
+    markerBackgroundColor: MarkerBackgroundColor = MarkerBackgroundColor.GREY,
+    markerIconColor: MarkerIconColor = MarkerIconColor.GREY,
     onPointerClick: () -> Unit
 ) {
-    val ctx = LocalContext.current
     var lastFixLocation by remember { mutableStateOf<Location?>(null) }
     val moscowPoint = remember { GeoPoint(55.7558, 37.6173) }
     var directionAngle by remember { mutableStateOf(0f) }
 
-    val colorState = rememberUpdatedState(markerColor)
-    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+    val currentBgColor = rememberUpdatedState(markerBackgroundColor)
+    val currentIconColor = rememberUpdatedState(markerIconColor)
 
     val viewModel: MapViewModel = hiltViewModel()
     val hasLocationPermission by viewModel.hasLocationPermission.collectAsState()
-
-    fun updateDirection(newLoc: Location) {
-        lastFixLocation?.let { prev ->
-            val dLat = newLoc.latitude - prev.latitude
-            val dLon = newLoc.longitude - prev.longitude
-            if (dLat != 0.0 || dLon != 0.0) {
-                directionAngle = Math.toDegrees(atan2(dLon, dLat)).toFloat()
-            }
-        }
-        lastFixLocation = newLoc
-    }
 
     var initialPositionSet by remember { mutableStateOf(false) }
     var followLocationEnabled by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshPermissions()
-    }
-
-    LaunchedEffect(hasLocationPermission) {
-        if (!hasLocationPermission) {
-            initialPositionSet = false
-            followLocationEnabled = false
-        }
     }
 
     AndroidView(factory = { ctx ->
@@ -184,7 +245,6 @@ fun OsmMapContainer(
         }
 
         MapView(ctx).apply {
-            mapViewRef = this
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             controller.setZoom(18.0)
@@ -195,33 +255,57 @@ fun OsmMapContainer(
             maxZoomLevel = 19.0
             isClickable = true
 
+            setInitialMapCenter(
+                mapView = this,
+                context = ctx,
+                moscowPoint = moscowPoint,
+                hasLocationPermission = hasLocationPermission,
+                lastFixLocation = null
+            )
+
             val density = ctx.resources.displayMetrics.density
             val markerSize = (48 * density).toInt()
             val iconSize = (32 * density).toInt()
-            val preGeneratedBitmaps = MarkerColor.values().associateWith { color ->
-                createColoredMarkerBitmap(ctx, color.colorInt, markerSize, iconSize)
-            }
 
             val overlay = object : MyLocationNewOverlay(GpsMyLocationProvider(ctx), this) {
                 private var currentBackgroundBitmap: Bitmap? = null
                 private var currentIconBitmap: Bitmap? = null
-                private var lastColor: MarkerColor? = null
+                private var lastBgColor: MarkerBackgroundColor? = null
+                private var lastIconColor: MarkerIconColor? = null
                 private var firstFixReceived = false
 
-                private fun updateBitmaps(color: MarkerColor) {
-                    if (lastColor != color) {
-                        val (bg, icon) = preGeneratedBitmaps[color]!!
+                private fun updateBitmaps(bgColor: MarkerBackgroundColor, iconColor: MarkerIconColor) {
+                    if (lastBgColor != bgColor || lastIconColor != iconColor) {
+                        currentBackgroundBitmap?.recycle()
+                        currentIconBitmap?.recycle()
+
+                        val (bg, icon) = createColoredMarkerBitmap(
+                            context = ctx,
+                            backgroundColor = bgColor.colorInt,
+                            markerSize = markerSize,
+                            iconSize = iconSize,
+                            iconColor = iconColor.colorInt
+                        )
+
                         currentBackgroundBitmap = bg
                         currentIconBitmap = icon
-                        lastColor = color
+                        lastBgColor = bgColor
+                        lastIconColor = iconColor
                     }
                 }
 
                 override fun drawMyLocation(canvas: Canvas?, pj: Projection?, lastFix: Location?) {
                     if (canvas == null || pj == null) return
                     val loc = lastFix ?: lastFixLocation ?: return
-                    updateBitmaps(colorState.value)
-                    updateDirection(loc)
+                    updateBitmaps(currentBgColor.value, currentIconColor.value)
+
+                    lastFixLocation?.let { prev ->
+                        val dLat = loc.latitude - prev.latitude
+                        val dLon = loc.longitude - prev.longitude
+                        if (dLat != 0.0 || dLon != 0.0) {
+                            directionAngle = Math.toDegrees(atan2(dLon, dLat)).toFloat()
+                        }
+                    }
 
                     val point = pj.toPixels(GeoPoint(loc.latitude, loc.longitude), null)
 
@@ -262,16 +346,6 @@ fun OsmMapContainer(
                     super.onLocationChanged(location, source)
 
                     location?.let { loc ->
-                        val previousLoc = lastFixLocation
-                        lastFixLocation = loc
-
-                        previousLoc?.let { prev ->
-                            val dLat = loc.latitude - prev.latitude
-                            val dLon = loc.longitude - prev.longitude
-                            if (dLat != 0.0 || dLon != 0.0) {
-                                directionAngle = Math.toDegrees(atan2(dLon, dLat)).toFloat()
-                            }
-                        }
 
                         if (hasLocationPermission && !firstFixReceived && !initialPositionSet) {
                             firstFixReceived = true
@@ -281,7 +355,6 @@ fun OsmMapContainer(
 
                                 if (!followLocationEnabled) {
                                     enableFollowLocation()
-                                    followLocationEnabled = true
                                 }
                             }
                         }
@@ -289,64 +362,9 @@ fun OsmMapContainer(
                 }
 
                 override fun onDetach(mapView: MapView?) {
-                    preGeneratedBitmaps.values.forEach { (bg, icon) ->
-                        bg.recycle()
-                        icon.recycle()
-                    }
+                    currentBackgroundBitmap?.recycle()
+                    currentIconBitmap?.recycle()
                     super.onDetach(mapView)
-                }
-            }
-
-            if (hasLocationPermission) {
-                overlay.enableMyLocation()
-                overlay.isDrawAccuracyEnabled = false
-
-                overlay.disableFollowLocation()
-                followLocationEnabled = false
-
-                try {
-                    val locationProvider = GpsMyLocationProvider(ctx)
-                    locationProvider.getLastKnownLocation()?.let { lastKnownLocation ->
-                        post {
-                            controller.setCenter(GeoPoint(lastKnownLocation.latitude, lastKnownLocation.longitude))
-                            initialPositionSet = true
-
-                            lastFixLocation = lastKnownLocation
-
-                            overlay.enableFollowLocation()
-                            followLocationEnabled = true
-                        }
-                    }
-                } catch (e: Exception) {
-                }
-
-                overlay.runOnFirstFix {
-                    post {
-                        val geoPoint = overlay.myLocation
-                        if (geoPoint != null && !initialPositionSet) {
-                            controller.setCenter(geoPoint)
-                            initialPositionSet = true
-
-                            val location = Location("gps").apply {
-                                latitude = geoPoint.latitude
-                                longitude = geoPoint.longitude
-                            }
-                            lastFixLocation = location
-
-                            if (!followLocationEnabled) {
-                                overlay.enableFollowLocation()
-                                followLocationEnabled = true
-                            }
-                        }
-                    }
-                }
-            } else {
-                overlay.disableMyLocation()
-                overlay.disableFollowLocation()
-                followLocationEnabled = false
-                post {
-                    controller.setCenter(moscowPoint)
-                    initialPositionSet = true
                 }
             }
 
@@ -364,23 +382,10 @@ fun OsmMapContainer(
 
                     if (!initialPositionSet) {
                         myLocation?.let { geoPoint ->
-                            // Мгновенная установка центра
                             mapView.controller.setCenter(geoPoint)
-                            initialPositionSet = true
-
-                            val location = Location("gps").apply {
-                                latitude = geoPoint.latitude
-                                longitude = geoPoint.longitude
-                            }
-                            lastFixLocation = location
-
-                            if (!followLocationEnabled) {
-                                enableFollowLocation()
-                                followLocationEnabled = true
-                            }
+                            enableFollowLocation()
                         } ?: run {
                             disableFollowLocation()
-                            followLocationEnabled = false
                         }
                     } else {
                         if (followLocationEnabled) {
@@ -392,9 +397,7 @@ fun OsmMapContainer(
                 } else {
                     disableMyLocation()
                     disableFollowLocation()
-                    followLocationEnabled = false
                     mapView.controller.setCenter(moscowPoint)
-                    initialPositionSet = true
                 }
             }
             mapView.invalidate()

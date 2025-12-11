@@ -43,19 +43,22 @@ fun TrackerSettingsScreen(
 
     val username by viewModel.userName.observeAsState(initial = "")
     val website by viewModel.websiteUrl.observeAsState(initial = "")
-    val intervalMinutes by viewModel.trackingInterval.observeAsState(initial = 1)
+    val intervalMinutes by viewModel.trackingInterval.observeAsState(initial = "")
+    val intervalMeters by viewModel.trackingIntervalMeters.observeAsState(initial = 1)
     val language by viewModel.language.observeAsState(initial = "ru")
 
     var usernameInput by remember { mutableStateOf(username) }
     var websiteInput by remember { mutableStateOf(website) }
-    var intervalInput by remember { mutableStateOf(intervalMinutes.toString()) }
+    var intervalMinutesInput by remember { mutableStateOf(intervalMinutes.toString()) }
+    var intervalMetersInput by remember { mutableStateOf(intervalMeters.toString()) }
+
     var selectedLanguageInput by remember { mutableStateOf(language) }
 
-    var isSaveClicked by remember { mutableStateOf(false) }
     val isFormValid by derivedStateOf {
         usernameInput.isNotBlank() &&
-                websiteInput.isNotBlank() &&
-                intervalInput.toIntOrNull()?.let { it > 0 } == true
+        websiteInput.isNotBlank() &&
+        intervalMinutesInput.toIntOrNull()?.let { it > 0 } == true
+        intervalMetersInput.toIntOrNull()?.let { it > 0 } == true
     }
 
     val languageOptions = listOf(
@@ -77,43 +80,68 @@ fun TrackerSettingsScreen(
                 .fillMaxSize()
                 .padding(bottom = 80.dp)
         ) {
-            TopBar(statusBarHeight = statusBarHeight, navController = navController)
+            TopBar(statusBarHeight = statusBarHeight, navController = navController, viewModel = viewModel)
 
             Column(modifier = Modifier.padding(horizontal = sidePadding, vertical = 16.dp)) {
                 SettingsField(
                     title = stringResource(R.string.settings_identifier),
                     value = usernameInput,
-                    onValueChange = { usernameInput = it.filter { char -> char.isDigit() } },
+                    onValueChange = {
+                        usernameInput = it.filter { char -> char.isDigit() }
+                        viewModel.onUserNameChanged(usernameInput)
+                    },
                     labelSpacing = labelToInputSpacing,
                     fieldPadding = sidePadding,
-                    isError = isSaveClicked && usernameInput.isBlank()
+                    isError = usernameInput.isBlank()
                 )
                 Spacer(modifier = Modifier.height(fieldSpacing))
 
                 SettingsField(
                     title = stringResource(R.string.settings_server_url),
                     value = websiteInput,
-                    onValueChange = { websiteInput = it.filter { char -> char.toString().matches(Regex("[a-zA-Z0-9.:/\\-_?&=]")) } },
+                    onValueChange = {
+                        websiteInput = it.filter { char -> char.toString().matches(Regex("[a-zA-Z0-9.:/\\-_?&=]")) }
+                        viewModel.onWebsiteUrlChanged(websiteInput)
+                    },
                     labelSpacing = labelToInputSpacing,
                     fieldPadding = sidePadding,
-                    isError = isSaveClicked && websiteInput.isBlank()
+                    isError = websiteInput.isBlank()
                 )
                 Spacer(modifier = Modifier.height(fieldSpacing))
 
                 SettingsField(
                     title = stringResource(R.string.settings_interval_minutes),
-                    value = intervalInput,
-                    onValueChange = { intervalInput = it.filter { char -> char.isDigit() } },
+                    value = intervalMinutesInput,
+                    onValueChange = {
+                        intervalMinutesInput = it.filter { char -> char.isDigit() }
+                        intervalMinutesInput.toIntOrNull()?.let { viewModel.onIntervalChanged(it) }
+                    },
                     labelSpacing = labelToInputSpacing,
                     fieldPadding = sidePadding,
-                    isError = isSaveClicked && intervalInput.isBlank()
+                    isError = intervalMinutesInput.isBlank() || intervalMinutesInput.toIntOrNull() == null || intervalMinutesInput.toInt() <= 0
+                )
+                Spacer(modifier = Modifier.height(fieldSpacing))
+
+                SettingsField(
+                    title = stringResource(R.string.settings_interval_meters),
+                    value = intervalMetersInput,
+                    onValueChange = {
+                        intervalMetersInput = it.filter { char -> char.isDigit() }
+                        intervalMetersInput.toIntOrNull()?.let { viewModel.onIntervalMetersChanged(it) }
+                    },
+                    labelSpacing = labelToInputSpacing,
+                    fieldPadding = sidePadding,
+                    isError = intervalMetersInput.isBlank() || intervalMetersInput.toIntOrNull() == null || intervalMetersInput.toInt() <= 0
                 )
                 Spacer(modifier = Modifier.height(fieldSpacing))
 
                 LanguageSelector(
                     options = languageOptions,
                     selectedLanguage = selectedLanguageInput,
-                    onLanguageSelected = { selectedLanguageInput = it },
+                    onLanguageSelected = {
+                        selectedLanguageInput = it
+                        viewModel.onLanguageChanged(selectedLanguageInput)
+                    },
                     title = stringResource(R.string.settings_language),
                     labelSpacing = labelToInputSpacing,
                     modifier = Modifier.fillMaxWidth()
@@ -135,7 +163,7 @@ fun TrackerSettingsScreen(
                     .height(47.dp),
                 colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(IconTintSecondary)
             )
-
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -163,12 +191,7 @@ fun TrackerSettingsScreen(
             ) {
                 SaveButton(
                     onClick = {
-                        isSaveClicked = true
                         if (isFormValid) {
-                            viewModel.onUserNameChanged(usernameInput)
-                            viewModel.onWebsiteUrlChanged(websiteInput)
-                            viewModel.onIntervalChanged(intervalInput.toInt())
-                            viewModel.onLanguageChanged(selectedLanguageInput)
                             viewModel.saveSettings()
                             navController.popBackStack()
                         }

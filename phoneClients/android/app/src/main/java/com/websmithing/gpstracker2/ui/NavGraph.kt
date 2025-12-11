@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.websmithing.gpstracker2.ui.screens.GpsTrackerScreen
 import com.websmithing.gpstracker2.ui.screens.TrackerSettingsScreen
+import com.websmithing.gpstracker2.util.PermissionChecker
 
 /**
  * Defines the navigation graph for the app using Jetpack Compose Navigation.
@@ -20,7 +21,8 @@ import com.websmithing.gpstracker2.ui.screens.TrackerSettingsScreen
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    viewModel: TrackingViewModel = hiltViewModel()
+    viewModel: TrackingViewModel = hiltViewModel(),
+    permissionChecker: PermissionChecker
 ) {
     NavHost(
         navController = navController,
@@ -29,7 +31,8 @@ fun AppNavGraph(
         composable("GpsTrackerScreen") { backStackEntry ->
             GpsTrackerScreen(
                 viewModel = viewModel,
-                navController = navController
+                navController = navController,
+                permissionChecker = permissionChecker
             )
         }
         composable("TrackerSettingsScreen") { backStackEntry ->

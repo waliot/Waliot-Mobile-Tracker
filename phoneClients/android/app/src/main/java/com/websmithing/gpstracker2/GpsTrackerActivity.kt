@@ -5,14 +5,21 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -132,9 +139,10 @@ class GpsTrackerActivity : ComponentActivity() {
                 showSplash.value = false
             }
 
-            Crossfade(targetState = showSplash.value) { isSplash ->
+            Crossfade(targetState = showSplash.value,
+                modifier = Modifier.navigationBarsPadding()) { isSplash ->
                 if (isSplash) SplashScreen()
-                else AppNavGraph(navController, viewModel)
+                else AppNavGraph(navController, viewModel, permissionChecker)
             }
 
             PermissionDialog(
