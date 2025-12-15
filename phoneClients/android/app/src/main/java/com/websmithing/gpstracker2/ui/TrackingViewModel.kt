@@ -12,6 +12,7 @@ import com.websmithing.gpstracker2.data.repository.LocationRepository
 import com.websmithing.gpstracker2.data.repository.SettingsRepository
 import com.websmithing.gpstracker2.data.repository.UploadStatus
 import com.websmithing.gpstracker2.service.TrackingService
+import com.websmithing.gpstracker2.util.LocaleHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -42,6 +43,7 @@ class TrackingViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val locationRepository: LocationRepository
 ) : ViewModel() {
+    private val localeHelper = LocaleHelper
 
     // --- LiveData for UI State ---
     /**
@@ -61,6 +63,12 @@ class TrackingViewModel @Inject constructor(
      */
     private val _trackingInterval = MutableLiveData<Int>()
     val trackingInterval: LiveData<Int> = _trackingInterval
+
+    /**
+     * Stores the current tracking interval in meters (1, 5, or 15)
+     */
+    private val _trackingIntervalMeters = MutableLiveData<Int>()
+    val trackingIntervalMeters: LiveData<Int> = _trackingIntervalMeters
 
     /**
      * Stores the current website URL where tracking data is sent
@@ -171,20 +179,80 @@ class TrackingViewModel @Inject constructor(
      * @param newInterval The new tracking interval in minutes (1, 5, or 15)
      */
     fun onIntervalChanged(newInterval: Int) {
-        if (newInterval != _trackingInterval.value) {
-            Timber.d("Interval changed to: $newInterval minutes")
-            _trackingInterval.value = newInterval
-            viewModelScope.launch {
-                settingsRepository.saveTrackingInterval(newInterval)
-                // If currently tracking, stop and restart the service to apply the new interval
-                if (_isTracking.value == true) {
+        _trackingInterval.value = newInterval
+    }
+
+    /**
+     * Updates the tracking interval setting
+     *
+     * If tracking is currently active, this will restart the tracking service
+     * to apply the new interval immediately.
+     *
+     * @param newInterval The new tracking interval in meters (1, 5, or 15)
+     */
+    fun onIntervalMetersChanged(newInterval: Int) {
+        _trackingIntervalMeters.value = newInterval
+    }
+
+    /**
+     * Updates the username setting
+     *
+     * @param newName The new username for tracking identification
+     */
+    fun onUserNameChanged(newName: String) {
+        _userName.value = newName.trim()
+    }
+
+    /**
+     * Updates the website URL setting
+     *
+     * @param newUrl The new URL where tracking data will be sent
+     */
+    fun onWebsiteUrlChanged(newUrl: String) {
+        _websiteUrl.value = newUrl.trim()
+    }
+
+    /**
+     * Updates the language setting
+     *
+     * @param language The new language where app be using
+     */
+    fun onLanguageChanged(language: String) {
+        _language.value = language
+        settingsRepository.saveLanguage(language)
+        localeHelper.setComposeLocale(context, language)
+    }
+
+    fun refreshSettingsFromRepository() {
+        viewModelScope.launch {
+            _userName.value = settingsRepository.getCurrentUsername()
+            _websiteUrl.value = settingsRepository.getCurrentWebsiteUrl()
+            _trackingInterval.value = settingsRepository.getCurrentTrackingInterval()
+            _language.value = settingsRepository.getCurrentLanguage()
+            _isTracking.value = settingsRepository.getCurrentTrackingState()
+        }
+    }
+
+    /**
+     * A new function (rewrite)
+     */
+    fun saveSettings() {
+        viewModelScope.launch {
+            _userName.value?.let { settingsRepository.saveUsername(it) }
+            _websiteUrl.value?.let { settingsRepository.saveWebsiteUrl(it) }
+
+            val currentInterval = settingsRepository.getCurrentTrackingInterval()
+            val newInterval = _trackingInterval.value ?: currentInterval
+            settingsRepository.saveTrackingInterval(newInterval)
+
+            if (_isTracking.value == true) {
+                val intervalChanged = currentInterval != newInterval
+                if (intervalChanged) {
                     _snackbarMessage.value = "Interval updated. Restarting tracking service."
-                    // Stop the service
                     Intent(context, TrackingService::class.java).also { intent ->
                         intent.action = TrackingService.ACTION_STOP_SERVICE
                         context.stopService(intent)
                     }
-                    // Start the service again (it will read the new interval)
                     Intent(context, TrackingService::class.java).also { intent ->
                         intent.action = TrackingService.ACTION_START_SERVICE
                         context.startForegroundService(intent)
@@ -194,46 +262,6 @@ class TrackingViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Updates the username setting
-     *
-     * @param newName The new username for tracking identification
-     */
-    fun onUserNameChanged(newName: String) {
-        val trimmedName = newName.trim()
-        if (trimmedName != _userName.value && trimmedName.isNotEmpty()) {
-            _userName.value = trimmedName
-            viewModelScope.launch {
-                settingsRepository.saveUsername(trimmedName)
-                Timber.d("Username saved: $trimmedName")
-            }
-        }
-    }
-
-    /**
-     * Updates the website URL setting
-     *
-     * @param newUrl The new URL where tracking data will be sent
-     */
-    fun onWebsiteUrlChanged(newUrl: String) {
-        val trimmedUrl = newUrl.trim()
-        if (trimmedUrl != _websiteUrl.value && trimmedUrl.isNotEmpty()) {
-            _websiteUrl.value = trimmedUrl
-            viewModelScope.launch {
-                settingsRepository.saveWebsiteUrl(trimmedUrl)
-                Timber.d("Website URL saved: $trimmedUrl")
-            }
-        }
-    }
-
-    fun onLanguageChanged(language: String) {
-        if (language != _language.value) {
-            viewModelScope.launch {
-                settingsRepository.saveLanguage(language)
-                _language.value = language
-            }
-        }
-    }
 
     /**
      * Marks a snackbar message as shown to prevent reappearance

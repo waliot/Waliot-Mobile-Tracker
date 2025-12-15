@@ -189,7 +189,7 @@ class TrackingService : Service() {
      * Creates a partial wake lock to keep the CPU running during tracking
      */
     private fun createWakeLock() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
             "GpsTracker::LocationTrackingWakeLock"
@@ -253,7 +253,7 @@ class TrackingService : Service() {
             applicationContext, 1, restartServiceIntent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
-        val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val alarmManager = applicationContext.getSystemService(ALARM_SERVICE) as AlarmManager
         alarmManager.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 5000, pIntent)
 
         Timber.d("TrackingService scheduled for restart in 5 seconds")
@@ -524,7 +524,7 @@ class TrackingService : Service() {
                 NOTIFICATION_CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_LOW
             )
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
             Timber.d("Notification channel created.")
         }
