@@ -4,6 +4,8 @@ package com.websmithing.gpstracker2.di
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.websmithing.gpstracker2.data.repository.ForegroundLocationRepository
+import com.websmithing.gpstracker2.data.repository.ForegroundLocationRepositoryImpl
 import com.websmithing.gpstracker2.data.repository.LocationRepository
 import com.websmithing.gpstracker2.data.repository.SettingsRepository
 import com.websmithing.gpstracker2.data.repository.SettingsRepositoryImpl
@@ -79,6 +81,15 @@ object RepositoryModule {
             fusedLocationProviderClient,
             settingsRepository,
             permissionChecker
+        )
+    }
+
+    @Provides
+    fun provideForegroundLocationRepository(
+        fusedLocationProviderClient: FusedLocationProviderClient,
+    ): ForegroundLocationRepository {
+        return ForegroundLocationRepositoryImpl(
+            provider = fusedLocationProviderClient
         )
     }
 }

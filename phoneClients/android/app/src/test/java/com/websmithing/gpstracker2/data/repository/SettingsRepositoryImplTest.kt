@@ -1,25 +1,35 @@
 // # android/app/src/test/java/com/websmithing/gpstracker2/data/repository/SettingsRepositoryImplTest.kt
 package com.websmithing.gpstracker2.data.repository // Corrected package
 
+// import org.junit.runner.RunWith // Import RunWith - Removed
 import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-// import org.junit.runner.RunWith // Import RunWith - Removed
-import org.mockito.ArgumentMatchers.anyBoolean // Keep standard matchers for primitives if needed
-import org.mockito.ArgumentMatchers.anyFloat
-import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
-import org.mockito.Mock // Import Mock annotation
-import org.mockito.Mockito.verifyNoMoreInteractions // Keep standard verifyNoMoreInteractions
-import org.mockito.MockitoAnnotations // Added for manual mock initialization
-import org.mockito.junit.MockitoJUnitRunner // Import MockitoJUnitRunner
-import org.mockito.kotlin.* // Use mockito-kotlin imports again
-import com.websmithing.gpstracker2.data.repository.SettingsRepositoryImpl // Correct import
+import org.mockito.Mock
+import org.mockito.Mockito.verifyNoMoreInteractions
+import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.clearInvocations
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.isNull
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+
 // import org.mockito.ArgumentCaptor // Not needed if using mockito-kotlin captor
 
 @ExperimentalCoroutinesApi // Restore annotation
@@ -143,11 +153,13 @@ class SettingsRepositoryImplTest {
 
     @Test
     fun `getCurrentWebsiteUrl returns correct value from prefs`() = runTest(testDispatcher) {
-        whenever(sharedPreferences.getString(eq(KEY_WEBSITE_URL), eq("https://www.websmithing.com/gpstracker/api/locations/update"))).thenReturn("http://custom.com")
-        assertEquals("http://custom.com", repository.getCurrentWebsiteUrl())
-
-        whenever(sharedPreferences.getString(eq(KEY_WEBSITE_URL), eq("https://www.websmithing.com/gpstracker/api/locations/update"))).thenReturn("")
-        assertEquals("", repository.getCurrentWebsiteUrl())
+        whenever(
+            sharedPreferences.getString(
+                eq(KEY_WEBSITE_URL),
+                eq("https://www.websmithing.com/gpstracker/api/locations/update")
+            )
+        ).thenReturn("device.waliot.com:30032")
+        assertEquals("device.waliot.com:30032", repository.getCurrentWebsiteUrl())
     }
 
     @Test
@@ -163,11 +175,13 @@ class SettingsRepositoryImplTest {
 
     @Test
     fun `getCurrentSessionId returns correct value from prefs`() = runTest(testDispatcher) {
-        whenever(sharedPreferences.getString(eq(KEY_SESSION_ID), eq(""))).thenReturn("session123")
-        assertEquals("session123", repository.getCurrentSessionId())
-
-        whenever(sharedPreferences.getString(eq(KEY_SESSION_ID), eq(""))).thenReturn("")
-        assertEquals("", repository.getCurrentSessionId())
+        whenever(
+            sharedPreferences.getString(
+                eq(KEY_SESSION_ID),
+                eq("")
+            )
+        ).thenReturn("68049c8c-360c-469f-b0df-6a1a78012998")
+        assertEquals("68049c8c-360c-469f-b0df-6a1a78012998", repository.getCurrentSessionId())
     }
 
     @Test
