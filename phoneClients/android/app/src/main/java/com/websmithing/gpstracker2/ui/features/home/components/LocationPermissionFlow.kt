@@ -74,7 +74,7 @@ fun ForegroundLocation(
         ) { result ->
 
             val anyGranted = result[Manifest.permission.ACCESS_FINE_LOCATION] == true
-                    || result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+                || result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
             if (anyGranted) {
                 if (isBackgroundLocationRequired) {
                     if (isBackgroundLocationPermissionGranted(context)) {
@@ -113,10 +113,12 @@ fun ForegroundLocation(
             title = { Text(context.getString(R.string.permission_rationale_foreground_location_title)) },
             text = { Text(context.getString(R.string.permission_rationale_foreground_location_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    showForegroundRationaleDialog = false
-                    permissionsLauncher.launch(permissions)
-                }) {
+                TextButton(
+                    onClick = {
+                        showForegroundRationaleDialog = false
+                        permissionsLauncher.launch(permissions)
+                    }
+                ) {
                     Text(context.getString(R.string.permission_button_grant))
                 }
             },
@@ -171,17 +173,21 @@ private fun BackgroundLocation(
             title = { Text(context.getString(R.string.permission_rationale_background_location_title)) },
             text = { Text(context.getString(R.string.permission_rationale_background_location_pre_request)) },
             confirmButton = {
-                TextButton(onClick = {
-                    onDismissRequest()
-                    backgroundLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                }) {
+                TextButton(
+                    onClick = {
+                        onDismissRequest()
+                        backgroundLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    }
+                ) {
                     Text(context.getString(R.string.permission_button_continue))
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    onDismissRequest()
-                }) {
+                TextButton(
+                    onClick = {
+                        onDismissRequest()
+                    }
+                ) {
                     Text(context.getString(R.string.permission_button_cancel))
                 }
             }

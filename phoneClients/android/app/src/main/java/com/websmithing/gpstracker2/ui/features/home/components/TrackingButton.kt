@@ -42,9 +42,11 @@ fun TrackingButton(
             TrackingButtonState.Stop -> MaterialTheme.extendedColors.onFab
         },
         elevation = 12.dp,
-        onClick = debounced(onClick = {
-            onClick()
-        }),
+        onClick = debounced(
+            onClick = {
+                onClick()
+            }
+        ),
         modifier = modifier.size(TrackingButtonSize)
     ) {
         when (state) {

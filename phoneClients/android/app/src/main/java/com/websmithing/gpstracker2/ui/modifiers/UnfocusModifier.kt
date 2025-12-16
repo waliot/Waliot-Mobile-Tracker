@@ -9,7 +9,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 @Stable
 fun Modifier.unfocus(focusManager: FocusManager) =
     this.pointerInput(Unit) {
-        detectTapGestures(onTap = {
-            focusManager.clearFocus()
-        })
+        detectTapGestures(
+            onTap = {
+                focusManager.clearFocus()
+            }
+        )
     }
