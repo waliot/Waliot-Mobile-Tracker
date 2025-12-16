@@ -17,12 +17,12 @@ sealed class UploadStatus {
      * Initial state or state after processing a success/failure
      */
     object Idle : UploadStatus()
-    
+
     /**
      * Indicates a successful location data upload
      */
     object Success : UploadStatus()
-    
+
     /**
      * Indicates a failed location data upload with an optional error message
      *
@@ -44,7 +44,7 @@ interface LocationRepository {
 
     /**
      * A flow emitting the latest known device location.
-     * 
+     *
      * Emits null if no location has been received yet.
      */
     val latestLocation: Flow<Location?>
@@ -61,7 +61,7 @@ interface LocationRepository {
 
     /**
      * Fetches the current device location synchronously.
-     * 
+     *
      * @return The current location or null if location could not be determined
      * @throws SecurityException if location permissions are not granted
      */
@@ -69,7 +69,7 @@ interface LocationRepository {
 
     /**
      * Uploads the provided location data to the remote server.
-     * 
+     *
      * @param location The location data to upload
      * @param username The username identifying this tracker
      * @param appId Unique identifier for this device/installation
@@ -87,7 +87,7 @@ interface LocationRepository {
 
     /**
      * Retrieves the previously saved location point.
-     * 
+     *
      * @return The previously saved location or null if no previous location is stored
      */
     suspend fun getPreviousLocation(): Location?
@@ -95,14 +95,14 @@ interface LocationRepository {
     /**
      * Saves the current location as the "previous" location for the next calculation.
      * Also updates the total distance calculation based on this new location.
-     * 
+     *
      * @param location The location to save as the current location
      */
     suspend fun saveAsPreviousLocation(location: Location)
 
     /**
      * Resets the location state for a new tracking session.
-     * 
+     *
      * Clears the previous location, resets the total distance to zero,
      * and resets the upload status to Idle.
      */

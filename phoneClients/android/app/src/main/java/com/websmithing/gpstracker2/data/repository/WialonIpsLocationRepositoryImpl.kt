@@ -51,7 +51,7 @@ import kotlin.math.roundToInt
  */
 @Singleton
 class WialonIpsLocationRepositoryImpl @Inject constructor(
-    @ApplicationContext private val appContext: Context,
+    @param:ApplicationContext private val appContext: Context,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val settingsRepository: SettingsRepository,
     private val permissionChecker: PermissionChecker
@@ -61,7 +61,8 @@ class WialonIpsLocationRepositoryImpl @Inject constructor(
     /**
      * SharedPreferences instance for persisting location data between app sessions
      */
-    private val sharedPreferences: SharedPreferences = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val sharedPreferences: SharedPreferences =
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     // --- State Flows ---
     /**
@@ -204,8 +205,10 @@ class WialonIpsLocationRepositoryImpl @Inject constructor(
                     val speed = (location.speed * 3.6).roundToInt()
                     val course = location.bearing.roundToInt()
                     val alt = location.altitude.roundToInt()
-                    val sats = location.extras?.getInt("satellites")?.takeIf { it != 0 }?.toString() ?: NO_VALUE
-                    val hdop = location.extras?.getDouble("hdop")?.takeIf { it != 0.0 }?.toString() ?: NO_VALUE
+                    val sats = location.extras?.getInt("satellites")?.takeIf { it != 0 }?.toString()
+                        ?: NO_VALUE
+                    val hdop = location.extras?.getDouble("hdop")?.takeIf { it != 0.0 }?.toString()
+                        ?: NO_VALUE
                     val inputs = NO_VALUE
                     val outputs = NO_VALUE
                     val adc = NO_VALUE
@@ -246,7 +249,8 @@ class WialonIpsLocationRepositoryImpl @Inject constructor(
         } finally {
             // Update the status flow regardless of outcome
             Timber.tag(TAG).d("Finally block: success=$success, errorMessage='$errorMessage'")
-            _lastUploadStatus.value = if (success) UploadStatus.Success else UploadStatus.Failure(errorMessage)
+            _lastUploadStatus.value =
+                if (success) UploadStatus.Success else UploadStatus.Failure(errorMessage)
         }
         return@withContext success
     }
@@ -302,7 +306,8 @@ class WialonIpsLocationRepositoryImpl @Inject constructor(
             putFloat(KEY_PREVIOUS_LONGITUDE, location.longitude.toFloat())
             apply()
         }
-        Timber.tag(TAG).d("Updated location state: Lat=${location.latitude}, Lon=${location.longitude}, TotalDist=${_totalDistance.value}m")
+        Timber.tag(TAG)
+            .d("Updated location state: Lat=${location.latitude}, Lon=${location.longitude}, TotalDist=${_totalDistance.value}m")
     }
 
     /**

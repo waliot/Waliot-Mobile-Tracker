@@ -37,8 +37,11 @@ import org.mockito.kotlin.whenever
 class SettingsRepositoryImplTest {
 
     // Use @Mock annotation
-    @Mock private lateinit var sharedPreferences: SharedPreferences
-    @Mock private lateinit var editor: SharedPreferences.Editor
+    @Mock
+    private lateinit var sharedPreferences: SharedPreferences
+
+    @Mock
+    private lateinit var editor: SharedPreferences.Editor
     private lateinit var repository: SettingsRepositoryImpl
 
     // Test dispatcher
@@ -75,7 +78,7 @@ class SettingsRepositoryImplTest {
         repository = SettingsRepositoryImpl(sharedPreferences)
     }
 
-     @After
+    @After
     fun tearDown() {
         Dispatchers.resetMain()
         // No reset needed with runner
@@ -85,10 +88,14 @@ class SettingsRepositoryImplTest {
 
     @Test
     fun `getCurrentTrackingState returns correct value from prefs`() = runTest(testDispatcher) {
-        whenever(sharedPreferences.getBoolean(eq(KEY_CURRENTLY_TRACKING), eq(false))).thenReturn(true)
+        whenever(sharedPreferences.getBoolean(eq(KEY_CURRENTLY_TRACKING), eq(false))).thenReturn(
+            true
+        )
         assertTrue(repository.getCurrentTrackingState())
 
-        whenever(sharedPreferences.getBoolean(eq(KEY_CURRENTLY_TRACKING), eq(false))).thenReturn(false)
+        whenever(sharedPreferences.getBoolean(eq(KEY_CURRENTLY_TRACKING), eq(false))).thenReturn(
+            false
+        )
         assertFalse(repository.getCurrentTrackingState())
     }
 
@@ -212,12 +219,12 @@ class SettingsRepositoryImplTest {
         verify(editor, never()).putString(eq(KEY_APP_ID), anyString())
     }
 
-      @Test
-     fun `getAppId generates and saves new ID if null`() = runTest(testDispatcher) {
+    @Test
+    fun `getAppId generates and saves new ID if null`() = runTest(testDispatcher) {
         clearInvocations(editor) // Keep clearInvocations
         whenever(sharedPreferences.getString(eq(KEY_APP_ID), isNull())).thenReturn(null)
 
-         val generatedId = repository.getAppId()
+        val generatedId = repository.getAppId()
 
         assertNotNull(generatedId)
         assertTrue(generatedId.isNotEmpty())
@@ -241,12 +248,12 @@ class SettingsRepositoryImplTest {
         assertFalse(repository.isFirstTimeLoading())
     }
 
-     @Test
-     fun `generateAndSaveAppId saves a non-null UUID to prefs`() = runTest(testDispatcher) {
+    @Test
+    fun `generateAndSaveAppId saves a non-null UUID to prefs`() = runTest(testDispatcher) {
         clearInvocations(editor) // Keep clearInvocations
         val generatedId = repository.generateAndSaveAppId()
 
-         assertNotNull(generatedId)
+        assertNotNull(generatedId)
         assertTrue(generatedId.isNotEmpty())
         val appIdCaptor = argumentCaptor<String>() // Use mockito-kotlin captor
         verify(editor).putString(eq(KEY_APP_ID), appIdCaptor.capture())
@@ -263,12 +270,22 @@ class SettingsRepositoryImplTest {
         assertEquals(123.4f, repository.getTotalDistance(), 0.001f)
     }
 
-     @Test
+    @Test
     fun `isFirstTimeGettingPosition returns correct value from prefs`() = runTest(testDispatcher) {
-        whenever(sharedPreferences.getBoolean(eq(KEY_FIRST_TIME_GETTING_POSITION), eq(true))).thenReturn(false)
+        whenever(
+            sharedPreferences.getBoolean(
+                eq(KEY_FIRST_TIME_GETTING_POSITION),
+                eq(true)
+            )
+        ).thenReturn(false)
         assertFalse(repository.isFirstTimeGettingPosition())
 
-        whenever(sharedPreferences.getBoolean(eq(KEY_FIRST_TIME_GETTING_POSITION), eq(true))).thenReturn(true)
+        whenever(
+            sharedPreferences.getBoolean(
+                eq(KEY_FIRST_TIME_GETTING_POSITION),
+                eq(true)
+            )
+        ).thenReturn(true)
         assertTrue(repository.isFirstTimeGettingPosition())
     }
 
@@ -283,14 +300,15 @@ class SettingsRepositoryImplTest {
     }
 
     @Test
-    fun `resetLocationStateForNewSession removes location keys from prefs`() = runTest(testDispatcher) {
-        clearInvocations(editor) // Keep clearInvocations
-        repository.resetLocationStateForNewSession()
-        verify(editor).putFloat(eq(KEY_TOTAL_DISTANCE), eq(0f))
-        verify(editor).putBoolean(eq(KEY_FIRST_TIME_GETTING_POSITION), eq(true))
-        verify(editor).remove(eq(KEY_PREVIOUS_LATITUDE))
-        verify(editor).remove(eq(KEY_PREVIOUS_LONGITUDE))
-        verify(editor).apply()
-        verifyNoMoreInteractions(editor) // Keep verifyNoMoreInteractions
-    }
+    fun `resetLocationStateForNewSession removes location keys from prefs`() =
+        runTest(testDispatcher) {
+            clearInvocations(editor) // Keep clearInvocations
+            repository.resetLocationStateForNewSession()
+            verify(editor).putFloat(eq(KEY_TOTAL_DISTANCE), eq(0f))
+            verify(editor).putBoolean(eq(KEY_FIRST_TIME_GETTING_POSITION), eq(true))
+            verify(editor).remove(eq(KEY_PREVIOUS_LATITUDE))
+            verify(editor).remove(eq(KEY_PREVIOUS_LONGITUDE))
+            verify(editor).apply()
+            verifyNoMoreInteractions(editor) // Keep verifyNoMoreInteractions
+        }
 }

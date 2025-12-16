@@ -57,7 +57,7 @@ interface ApiService {
         @Field("extrainfo") extraInfo: String,
         @Field("eventtype") eventType: String
     ): Response<String>
-    
+
     /**
      * Simple test method with minimal required parameters for debugging.
      *
@@ -88,7 +88,7 @@ interface ApiService {
         @Field("speed") speed: Int = 0,
         @Field("direction") direction: Int = 0,
         @Field("distance") distance: String = "0.0",
-        @Field("date") date: String = "2023-04-05 00:00:00", 
+        @Field("date") date: String = "2023-04-05 00:00:00",
         @Field("locationmethod") locationMethod: String = "test",
         @Field("username") username: String,
         @Field("phonenumber") phoneNumber: String = "test_phone",

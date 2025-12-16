@@ -41,6 +41,7 @@ class TrackingViewModelTest {
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var foregroundLocationRepository: ForegroundLocationRepository
+
     // private lateinit var workerScheduler: WorkerScheduler // Removed
     private lateinit var context: Context // Added
     private lateinit var viewModel: TrackingViewModel
@@ -75,7 +76,8 @@ class TrackingViewModelTest {
 
         // Initialize captors manually
         stringCaptor = ArgumentCaptor.forClass(String::class.java)
-        longCaptor = ArgumentCaptor.forClass(Long::class.javaObjectType) // Use object type for generics
+        longCaptor =
+            ArgumentCaptor.forClass(Long::class.javaObjectType) // Use object type for generics
         timeUnitCaptor = ArgumentCaptor.forClass(TimeUnit::class.java)
         intentCaptor = ArgumentCaptor.forClass(Intent::class.java) // Added
 
@@ -90,11 +92,11 @@ class TrackingViewModelTest {
         Dispatchers.resetMain()
         // Clean up observers if viewModel was initialized
         if (::viewModel.isInitialized) {
-             viewModel.isTracking.removeObserver(isTrackingObserver)
-             viewModel.userName.removeObserver(userNameObserver)
-             viewModel.trackingInterval.removeObserver(trackingIntervalObserver)
-             viewModel.websiteUrl.removeObserver(websiteUrlObserver)
-             // viewModel.workInfo.removeObserver(workInfoObserver) // Removed
+            viewModel.isTracking.removeObserver(isTrackingObserver)
+            viewModel.userName.removeObserver(userNameObserver)
+            viewModel.trackingInterval.removeObserver(trackingIntervalObserver)
+            viewModel.websiteUrl.removeObserver(websiteUrlObserver)
+            // viewModel.workInfo.removeObserver(workInfoObserver) // Removed
         }
     }
 
@@ -160,7 +162,10 @@ class TrackingViewModelTest {
         verify(settingsRepository).getCurrentTrackingInterval()
         verify(settingsRepository).getCurrentWebsiteUrl()
         verify(settingsRepository).isFirstTimeLoading()
-        verify(settingsRepository, never()).generateAndSaveAppId() // Assuming isFirstTimeInitial = false
+        verify(
+            settingsRepository,
+            never()
+        ).generateAndSaveAppId() // Assuming isFirstTimeInitial = false
 
         // Verify LiveData updates from init
         verify(isTrackingObserver).onChanged(eq(false))

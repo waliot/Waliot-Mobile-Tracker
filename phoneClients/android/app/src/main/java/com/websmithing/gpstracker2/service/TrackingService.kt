@@ -253,8 +253,13 @@ class TrackingService : Service() {
             applicationContext, 1, restartServiceIntent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
-        val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 5000, pIntent)
+        val alarmManager =
+            applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.set(
+            AlarmManager.ELAPSED_REALTIME,
+            SystemClock.elapsedRealtime() + 5000,
+            pIntent
+        )
 
         Timber.d("TrackingService scheduled for restart in 5 seconds")
     }
@@ -319,11 +324,12 @@ class TrackingService : Service() {
 
             val intervalMillis = TimeUnit.MINUTES.toMillis(intervalMinutes.toLong())
 
-            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
-                .setMinUpdateIntervalMillis(intervalMillis / 2)
-                .setMaxUpdateDelayMillis(intervalMillis)
-                .setWaitForAccurateLocation(false)
-                .build()
+            val locationRequest =
+                LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
+                    .setMinUpdateIntervalMillis(intervalMillis / 2)
+                    .setMaxUpdateDelayMillis(intervalMillis)
+                    .setWaitForAccurateLocation(false)
+                    .build()
 
             locationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
@@ -426,7 +432,10 @@ class TrackingService : Service() {
                             }
                             Timber.d("Executor: Exited runBlocking for uploadLocationData successfully")
                         } catch (rbError: Exception) {
-                            Timber.e(rbError, "Executor: Exception occurred WITHIN or AROUND runBlocking for uploadLocationData")
+                            Timber.e(
+                                rbError,
+                                "Executor: Exception occurred WITHIN or AROUND runBlocking for uploadLocationData"
+                            )
                             success = false
                         }
 
@@ -447,7 +456,10 @@ class TrackingService : Service() {
                             }
                         }
                     } catch (uploadException: Exception) {
-                        Timber.e(uploadException, "Executor: Exception during upload attempt ${retryCount + 1}")
+                        Timber.e(
+                            uploadException,
+                            "Executor: Exception during upload attempt ${retryCount + 1}"
+                        )
                         if (retryCount < maxRetries - 1) {
                             val delayMs = 1000L * (retryCount + 1)
                             Timber.d("Executor: Waiting ${delayMs}ms before retry after exception...")

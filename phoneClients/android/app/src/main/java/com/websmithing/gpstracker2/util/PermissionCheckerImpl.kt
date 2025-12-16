@@ -11,21 +11,21 @@ import javax.inject.Singleton
 
 /**
  * Default implementation of [PermissionChecker] using Android's [ContextCompat].
- * 
+ *
  * This class uses Android's permission checking mechanisms to determine if the app
  * has been granted the required location permissions.
- * 
+ *
  * It is provided as a singleton through Hilt dependency injection to ensure
  * consistent permission checking throughout the application.
  */
 @Singleton
 class PermissionCheckerImpl @Inject constructor(
-    @ApplicationContext private val appContext: Context
+    @param:ApplicationContext private val appContext: Context
 ) : PermissionChecker {
 
     /**
      * Checks if either ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION permission is granted.
-     * 
+     *
      * Uses [ContextCompat.checkSelfPermission] to safely check permission status on
      * all Android versions.
      *

@@ -6,25 +6,26 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.location.Location
 import com.google.android.gms.location.FusedLocationProviderClient
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import timber.log.Timber
 import com.google.android.gms.location.Priority
 import com.websmithing.gpstracker2.network.ApiService
 import com.websmithing.gpstracker2.util.PermissionChecker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import timber.log.Timber
 import java.net.URLEncoder
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -50,7 +51,7 @@ import kotlin.math.roundToInt
  */
 @Singleton
 class LocationRepositoryImpl @Inject constructor(
-    @ApplicationContext private val appContext: Context,
+    @param:ApplicationContext private val appContext: Context,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val okHttpClient: OkHttpClient,
     private val retrofitBuilder: Retrofit.Builder,
@@ -70,7 +71,7 @@ class LocationRepositoryImpl @Inject constructor(
      * Internal mutable state flow for the latest location
      */
     private val _latestLocation = MutableStateFlow<Location?>(null)
-    
+
     /**
      * Publicly exposed immutable state flow of the latest location
      */
@@ -80,7 +81,7 @@ class LocationRepositoryImpl @Inject constructor(
      * Internal mutable state flow for the total distance in meters
      */
     private val _totalDistance = MutableStateFlow(0f)
-    
+
     /**
      * Publicly exposed immutable state flow of the total distance
      */
@@ -90,7 +91,7 @@ class LocationRepositoryImpl @Inject constructor(
      * Internal mutable state flow for the upload status
      */
     private val _lastUploadStatus = MutableStateFlow<UploadStatus>(UploadStatus.Idle)
-    
+
     /**
      * Publicly exposed immutable state flow of the upload status
      */
@@ -98,7 +99,7 @@ class LocationRepositoryImpl @Inject constructor(
 
     /**
      * Initializes the repository with fresh state.
-     * 
+     *
      * In a production app, we might want to restore state from persistent storage
      * in case the app was restarted during an active tracking session.
      */
@@ -168,13 +169,21 @@ class LocationRepositoryImpl @Inject constructor(
         var errorMessage: String? = null
         try {
             Timber.tag(TAG).i("REPO-CRITICAL: Starting location upload process")
-            
+
             // Format and encode data
             val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).apply {
                 timeZone = TimeZone.getDefault()
             }.format(Date(location.time))
-            val encodedDate = try { URLEncoder.encode(formattedDate, "UTF-8") } catch (e: Exception) { formattedDate }
-            val encodedMethod = try { URLEncoder.encode(location.provider ?: "unknown", "UTF-8") } catch (e: Exception) { location.provider ?: "unknown" }
+            val encodedDate = try {
+                URLEncoder.encode(formattedDate, "UTF-8")
+            } catch (e: Exception) {
+                formattedDate
+            }
+            val encodedMethod = try {
+                URLEncoder.encode(location.provider ?: "unknown", "UTF-8")
+            } catch (e: Exception) {
+                location.provider ?: "unknown"
+            }
 
             // Prepare numeric data
             val speedMph = (location.speed * 2.2369).roundToInt()
@@ -182,22 +191,23 @@ class LocationRepositoryImpl @Inject constructor(
             val altitudeMeters = location.altitude.roundToInt()
             val direction = location.bearing.roundToInt()
             val currentTotalDistanceMeters = _totalDistance.value
-            val totalDistanceMiles = currentTotalDistanceMeters / 1609.34f // Convert meters to miles for API
-            
+            val totalDistanceMiles =
+                currentTotalDistanceMeters / 1609.34f // Convert meters to miles for API
+
             // Get server URL
             var targetUrl = settingsRepository.getCurrentWebsiteUrl()
             Timber.tag(TAG).i("REPO-CRITICAL: Got URL from settings: $targetUrl")
             if (targetUrl.isBlank()) {
-                 Timber.tag(TAG).e("Website URL is blank. Using default URL.")
-                 targetUrl = "https://www.websmithing.com/gpstracker/api/locations/update"
+                Timber.tag(TAG).e("Website URL is blank. Using default URL.")
+                targetUrl = "https://www.websmithing.com/gpstracker/api/locations/update"
             }
-            
+
             // Ensure URL is properly formatted
             if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
                 targetUrl = "https://" + targetUrl
                 Timber.tag(TAG).d("Added https:// to URL: $targetUrl")
             }
-            
+
             // Ensure URL has the correct endpoint
             if (!targetUrl.contains("/update") && !targetUrl.contains("/api/")) {
                 if (targetUrl.endsWith("/")) {
@@ -214,11 +224,11 @@ class LocationRepositoryImpl @Inject constructor(
                 Timber.tag(TAG).e("Invalid URL format after processing: $targetUrl")
                 return@withContext false
             }
-            
+
             // Build base URL
             val pathSegments = httpUrl.pathSegments.filter { it.isNotEmpty() }
             val baseUrl: String
-            
+
             if (pathSegments.size <= 1) {
                 val tempUrl = httpUrl.newBuilder().query(null).fragment(null).build().toString()
                 baseUrl = if (tempUrl.endsWith("/")) tempUrl else "$tempUrl/"
@@ -231,7 +241,7 @@ class LocationRepositoryImpl @Inject constructor(
                     .build()
                     .toString()
             }
-            
+
             // Ensure baseUrl ends with a slash
             val finalBaseUrl = if (!baseUrl.endsWith("/")) "$baseUrl/" else baseUrl
             Timber.tag(TAG).d("Using base URL: $finalBaseUrl")
@@ -263,8 +273,9 @@ class LocationRepositoryImpl @Inject constructor(
                 Timber.tag(TAG).e(e, "REPO-CRITICAL: Exception during API call")
                 return@withContext false
             }
-            
-            Timber.tag(TAG).i("REPO-CRITICAL: Got response code: ${response.code()}, message: ${response.message()}")
+
+            Timber.tag(TAG)
+                .i("REPO-CRITICAL: Got response code: ${response.code()}, message: ${response.message()}")
 
             // Process response
             val responseBody = response.body()
@@ -276,9 +287,14 @@ class LocationRepositoryImpl @Inject constructor(
                 // Log more details about the failure
                 val failureReason = when {
                     !response.isSuccessful -> {
-                        val errorBodyString = try { response.errorBody()?.string() } catch (e: Exception) { "Error reading error body: ${e.message}" }
+                        val errorBodyString = try {
+                            response.errorBody()?.string()
+                        } catch (e: Exception) {
+                            "Error reading error body: ${e.message}"
+                        }
                         "HTTP error. Code: ${response.code()}, Message: ${response.message()}, Body: $errorBodyString"
                     }
+
                     responseBody == null -> "Response body was null."
                     responseBody == "-1" -> "Server returned error code: -1."
                     else -> "Unexpected successful response body: $responseBody"
@@ -292,9 +308,10 @@ class LocationRepositoryImpl @Inject constructor(
             errorMessage = e.localizedMessage ?: "Unknown upload error"
             success = false
         } finally {
-             // Update the status flow regardless of outcome
-             Timber.tag(TAG).d("Finally block: success=$success, errorMessage='$errorMessage'")
-             _lastUploadStatus.value = if (success) UploadStatus.Success else UploadStatus.Failure(errorMessage)
+            // Update the status flow regardless of outcome
+            Timber.tag(TAG).d("Finally block: success=$success, errorMessage='$errorMessage'")
+            _lastUploadStatus.value =
+                if (success) UploadStatus.Success else UploadStatus.Failure(errorMessage)
         }
         return@withContext success
     }
@@ -338,7 +355,7 @@ class LocationRepositoryImpl @Inject constructor(
             _totalDistance.update { it + distanceIncrement }
             Timber.d("Distance updated: +${distanceIncrement}m, Total: ${_totalDistance.value}m")
         } else {
-             Timber.d("First location received, distance starts at 0.")
+            Timber.d("First location received, distance starts at 0.")
         }
 
         // Update the latest location flow
@@ -350,7 +367,8 @@ class LocationRepositoryImpl @Inject constructor(
             putFloat(KEY_PREVIOUS_LONGITUDE, location.longitude.toFloat())
             apply()
         }
-        Timber.tag(TAG).d("Updated location state: Lat=${location.latitude}, Lon=${location.longitude}, TotalDist=${_totalDistance.value}m")
+        Timber.tag(TAG)
+            .d("Updated location state: Lat=${location.latitude}, Lon=${location.longitude}, TotalDist=${_totalDistance.value}m")
     }
 
     /**
@@ -362,7 +380,7 @@ class LocationRepositoryImpl @Inject constructor(
      * 3. Sets the upload status to Idle
      * 4. Removes persisted location data from SharedPreferences
      */
-     override suspend fun resetLocationState() = withContext(Dispatchers.IO) {
+    override suspend fun resetLocationState() = withContext(Dispatchers.IO) {
         _latestLocation.value = null
         _totalDistance.value = 0f
         _lastUploadStatus.value = UploadStatus.Idle

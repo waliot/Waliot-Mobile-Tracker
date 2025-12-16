@@ -147,12 +147,18 @@ class LocationRepositoryImplTest {
         }
     }
 
-     @After
+    @After
     fun tearDown() {
         // No reset needed with runner
     }
 
-    private fun createMockLocation(lat: Double, lon: Double, accuracy: Float = TEST_ACCURACY, speed: Float = TEST_SPEED, altitude: Double = TEST_ALT): Location {
+    private fun createMockLocation(
+        lat: Double,
+        lon: Double,
+        accuracy: Float = TEST_ACCURACY,
+        speed: Float = TEST_SPEED,
+        altitude: Double = TEST_ALT
+    ): Location {
         val location: Location = mock() // Use mockito-kotlin mock()
         whenever(location.latitude).thenReturn(lat)
         whenever(location.longitude).thenReturn(lon)
@@ -172,9 +178,9 @@ class LocationRepositoryImplTest {
         whenever(permissionChecker.hasLocationPermission()).thenReturn(false)
 
         // Act & Assert
-         assertFailsWith<SecurityException> { // Restore assertFailsWith
-             repository.getCurrentLocation()
-         }
+        assertFailsWith<SecurityException> { // Restore assertFailsWith
+            repository.getCurrentLocation()
+        }
         // Verify FusedLocationProviderClient was never called
         verify(fusedLocationProviderClient, never()).getCurrentLocation(any<Int>(), any())
     }
@@ -268,37 +274,37 @@ class LocationRepositoryImplTest {
         assertFalse(success)
     }
 
-     @Test
+    @Test
     fun `uploadLocationData returns false on API success response with error body`() = runTest {
         // Arrange
         val location = createMockLocation(TEST_LAT, TEST_LON)
         val mockApiResponse: Response<String> = Response.success("-1")
-         whenever(
-             apiService.updateLocation(
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any(),
-                 any()
-             )
-         )
+        whenever(
+            apiService.updateLocation(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        )
             .thenReturn(mockApiResponse)
 
         // Act
-         val success = repository.uploadLocationData(
-             location,
-             TEST_USERNAME,
-             TEST_APP_ID,
-             TEST_SESSION_ID,
-             "test"
-         )
+        val success = repository.uploadLocationData(
+            location,
+            TEST_USERNAME,
+            TEST_APP_ID,
+            TEST_SESSION_ID,
+            "test"
+        )
 
         // Assert
         assertFalse(success)

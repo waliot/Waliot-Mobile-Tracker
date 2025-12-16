@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.websmithing.gpstracker2.network.ApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -56,7 +55,7 @@ object AppModule {
     /**
      * Provides a singleton instance of FusedLocationProviderClient.
      *
-     * FusedLocationProviderClient is the main entry point for interacting with the 
+     * FusedLocationProviderClient is the main entry point for interacting with the
      * Google Play Services location APIs.
      *
      * @param context The application context
@@ -109,6 +108,6 @@ object AppModule {
         return Retrofit.Builder()
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
-            // No base URL here, it will be set dynamically in the repository
+        // No base URL here, it will be set dynamically in the repository
     }
 }

@@ -3,7 +3,7 @@ package com.websmithing.gpstracker2.util
 
 /**
  * Interface for checking app permissions.
- * 
+ *
  * This interface abstracts permission checking functionality from its implementation,
  * making it easier to test components that depend on permission checks by allowing
  * the permission checker to be mocked.
@@ -11,7 +11,7 @@ package com.websmithing.gpstracker2.util
 interface PermissionChecker {
     /**
      * Checks if either ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION permission is granted.
-     * 
+     *
      * The app requires at least one of these permissions to access the device's location.
      * ACCESS_FINE_LOCATION provides precise location, while ACCESS_COARSE_LOCATION provides
      * approximate location.

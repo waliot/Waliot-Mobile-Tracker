@@ -153,7 +153,8 @@ class SettingsRepositoryImpl @Inject constructor(
      */
     override suspend fun getCurrentWebsiteUrl(): String {
         return withContext(Dispatchers.IO) {
-            sharedPreferences.getString(KEY_WEBSITE_URL, "device.waliot.com:30032") ?: "device.waliot.com:30032"
+            sharedPreferences.getString(KEY_WEBSITE_URL, "device.waliot.com:30032")
+                ?: "device.waliot.com:30032"
         }
     }
 

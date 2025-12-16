@@ -42,7 +42,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class TrackingViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
     private val locationRepository: LocationRepository,
     private val foregroundLocationRepository: ForegroundLocationRepository
