@@ -2,14 +2,23 @@ name: Android CI
 
 on:
   push:
-    branches: [ "master" ]
+    paths:
+      - 'phoneClients/android/**'
+    branches: 
+      - master
   pull_request:
-    branches: [ "master" ]
+    paths:
+      - 'phoneClients/android/**'
+    branches: 
+      - master
   workflow_dispatch:
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: phoneClients/android
 
     steps:
     - uses: actions/checkout@v4
