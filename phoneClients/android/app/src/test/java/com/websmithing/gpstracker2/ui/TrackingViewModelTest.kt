@@ -1,24 +1,34 @@
 // # android/app/src/test/java/com/websmithing/gpstracker2/ui/TrackingViewModelTest.kt
 package com.websmithing.gpstracker2.ui
 
-import android.content.Context // Added
-import android.content.Intent // Added
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Observer
 // import androidx.work.WorkInfo // Removed
-import com.websmithing.gpstracker2.data.repository.SettingsRepository
 // import com.websmithing.gpstracker2.util.WorkerScheduler // Removed
+import android.content.Context
+import android.content.Intent
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.Observer
+import com.websmithing.gpstracker2.data.repository.ForegroundLocationRepository
+import com.websmithing.gpstracker2.data.repository.LocationRepository
+import com.websmithing.gpstracker2.data.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.ArgumentCaptor
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.util.concurrent.TimeUnit
 
 @ExperimentalCoroutinesApi
@@ -29,6 +39,8 @@ class TrackingViewModelTest {
 
     // Mocks and Captors will be initialized manually
     private lateinit var settingsRepository: SettingsRepository
+    private lateinit var locationRepository: LocationRepository
+    private lateinit var foregroundLocationRepository: ForegroundLocationRepository
     // private lateinit var workerScheduler: WorkerScheduler // Removed
     private lateinit var context: Context // Added
     private lateinit var viewModel: TrackingViewModel
@@ -51,6 +63,8 @@ class TrackingViewModelTest {
         Dispatchers.setMain(testDispatcher)
         // Initialize mocks manually
         settingsRepository = mock()
+        locationRepository = mock()
+        foregroundLocationRepository = mock()
         // workerScheduler = mock() // Removed
         context = mock() // Added
         isTrackingObserver = mock()
@@ -116,7 +130,12 @@ class TrackingViewModelTest {
         whenever(settingsRepository.saveWebsiteUrl(any())).thenReturn(Unit)
 
         // ViewModel needs to be initialized *after* mocks are set up
-        viewModel = TrackingViewModel(context, settingsRepository) // Updated constructor call
+        viewModel = TrackingViewModel(
+            context,
+            settingsRepository,
+            locationRepository,
+            foregroundLocationRepository
+        ) // Updated constructor call
 
         // Observe LiveData
         viewModel.isTracking.observeForever(isTrackingObserver)
