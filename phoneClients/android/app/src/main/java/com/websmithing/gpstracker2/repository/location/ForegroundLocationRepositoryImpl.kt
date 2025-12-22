@@ -1,4 +1,4 @@
-package com.websmithing.gpstracker2.data.repository
+package com.websmithing.gpstracker2.repository.location
 
 import android.annotation.SuppressLint
 import android.location.Location
@@ -25,7 +25,10 @@ class ForegroundLocationRepositoryImpl @Inject constructor(
     private var callback: LocationCallback? = null
     private var initialFixReceived = false
 
-    @SuppressLint("MissingPermission")
+    companion object {
+        private const val TAG = "ForegroundLocationRepository"
+    }
+
     override fun start() {
         if (callback != null) {
             return
@@ -36,7 +39,7 @@ class ForegroundLocationRepositoryImpl @Inject constructor(
                 val loc = result.lastLocation ?: return
                 initialFixReceived = true
                 _currentLocation.value = loc
-                Timber.d("Callback fix: ${loc.latitude}, ${loc.longitude}")
+                Timber.tag(TAG).d("Callback fix: ${loc.latitude}, ${loc.longitude}")
             }
         }
 
@@ -47,7 +50,7 @@ class ForegroundLocationRepositoryImpl @Inject constructor(
     override fun stop() {
         callback?.let {
             provider.removeLocationUpdates(it)
-            Timber.d("Location updates stopped")
+            Timber.tag(TAG).d("Location updates stopped")
         }
         callback = null
     }
@@ -58,7 +61,7 @@ class ForegroundLocationRepositoryImpl @Inject constructor(
             if (loc != null) {
                 initialFixReceived = true
                 _currentLocation.value = loc
-                Timber.d("Initial fix from lastLocation")
+                Timber.tag(TAG).d("Initial fix from lastLocation")
             }
         }
 
@@ -67,19 +70,22 @@ class ForegroundLocationRepositoryImpl @Inject constructor(
                 if (!initialFixReceived && loc != null) {
                     initialFixReceived = true
                     _currentLocation.value = loc
-                    Timber.d("Initial fix from getCurrentLocation")
+                    Timber.tag(TAG).d("Initial fix from getCurrentLocation")
                 }
             }
     }
 
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
+        // https://developers.google.com/android/reference/com/google/android/gms/location/LocationRequest.Builder
         val request = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            TimeUnit.SECONDS.toMillis(60)
+            TimeUnit.SECONDS.toMillis(10)
         )
-            .setMinUpdateIntervalMillis(TimeUnit.SECONDS.toMillis(30))
-            .setMaxUpdateDelayMillis(TimeUnit.MINUTES.toMillis(2))
+            .setMinUpdateIntervalMillis(TimeUnit.SECONDS.toMillis(5))
+            .setMaxUpdateDelayMillis(TimeUnit.SECONDS.toMillis(15))
+            .setMinUpdateDistanceMeters(10f)
+            .setWaitForAccurateLocation(true)
             .build()
 
         provider.requestLocationUpdates(
@@ -87,6 +93,6 @@ class ForegroundLocationRepositoryImpl @Inject constructor(
             callback!!,
             Looper.getMainLooper()
         )
-        Timber.d("Location updates started")
+        Timber.tag(TAG).d("Location updates started")
     }
 }

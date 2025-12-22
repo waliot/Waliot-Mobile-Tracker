@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.isSpecified
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.data.repository.UploadStatus
+import com.websmithing.gpstracker2.repository.location.UploadStatus
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.activityHiltViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton

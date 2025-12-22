@@ -10,12 +10,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 
-/**
- * Wraps an [onClick] lambda with another one that supports debouncing. The default deboucing time
- * is 1000ms.
- *
- * @return debounced onClick
- */
 @Composable
 inline fun debounced(crossinline onClick: () -> Unit, debounceTime: Long = 1000L): () -> Unit {
     var lastTimeClicked by remember { mutableStateOf(0L) }
@@ -29,9 +23,6 @@ inline fun debounced(crossinline onClick: () -> Unit, debounceTime: Long = 1000L
     return onClickLambda
 }
 
-/**
- * The same as [Modifier.clickable] with support to debouncing.
- */
 fun Modifier.debouncedClickable(
     debounceTime: Long = 1000L,
     onClick: () -> Unit

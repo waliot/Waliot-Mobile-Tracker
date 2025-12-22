@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">WALIOT.Tracker</string>
+    <string name="app_name">WALIOT.Трекер</string>
     <string name="default_upload_website">device.waliot.com:30032</string>
 
     <string name="tracking_is_off">Начать отслеживание</string>
     <string name="tracking_is_on">Остановить отслеживание</string>
     <string name="textfields_empty_or_spaces">Проверьте выделенные поля. Поля не могут быть пустыми или содержать пробелы.</string>
-    <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play.</string>
+    <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play</string>
 
     <!-- Input Validation -->
-    <string name="username_error_spaces">Номер трекера может состоять только из цифр.</string>
-    <string name="username_error_empty">Номер трекера не может быть пустым.</string>
-    <string name="website_error_empty">Адрес сервера не может быть пустым.</string>
-    <string name="website_error_spaces">Адрес сервера не может содержать пробелы.</string>
+    <string name="username_error_spaces">Номер трекера может состоять только из цифр</string>
+    <string name="username_error_empty">Номер трекера не может быть пустым</string>
+    <string name="website_error_empty">Адрес сервера не может быть пустым</string>
+    <string name="website_error_spaces">Адрес сервера не может содержать пробелы</string>
     <string name="interval_error">Интервал должен быть больше 0</string>
 
     <!-- Permissions -->
     <string name="permission_rationale_foreground_location_title">Требуется разрешение на определение местоположения</string>
-    <string name="permission_rationale_foreground_location_message">Приложению требуется доступ к местоположению для отслеживания.</string>
+    <string name="permission_rationale_foreground_location_message">Приложению требуется доступ к местоположению для отслеживания</string>
     <string name="permission_rationale_background_location_title">Требуется разрешение на фоновое определение местоположения</string>
     <string name="permission_rationale_background_location_pre_request">Это приложение собирает данные о местоположении для отслеживания даже при закрытом приложении. Для этого требуется разрешение «Разрешить всегда». Пожалуйста, предоставьте его на следующем экране.</string>
     <string name="permission_denied_foreground_location">Разрешение на определение местоположения в активном режиме отклонено. Отслеживание не может быть запущено.</string>

@@ -53,7 +53,7 @@ fun LocationMarker(
     ) {
         Icon(
             painterResource(R.drawable.ic_person_32),
-            contentDescription = "Текущая локация",
+            contentDescription = "Current location",
             modifier = Modifier.requiredSize(32.dp)
         )
     }

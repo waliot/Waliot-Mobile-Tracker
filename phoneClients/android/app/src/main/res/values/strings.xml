@@ -3,22 +3,22 @@
     <string name="app_name">WALIOT.Tracker</string>
     <string name="default_upload_website">device.waliot.com:30032</string>
 
-    <string name="tracking_is_off">Start Tracking</string>
-    <string name="tracking_is_on">Stop Tracking</string>
+    <string name="tracking_is_off">Start tracking</string>
+    <string name="tracking_is_on">Stop tracking</string>
     <string name="textfields_empty_or_spaces">Please check the highlighted fields. Inputs cannot be empty or contain spaces.</string> <!-- Updated -->
-    <string name="google_play_services_unavailable">Please go into Settings > Apps and enable Google Play Services.</string>
+    <string name="google_play_services_unavailable">Please go into Settings > Apps and enable Google Play Services</string>
 
     <!-- Input Validation -->
-    <string name="username_error_spaces">The tracker number can only contain digits.</string>
-    <string name="username_error_empty">Tracker number cannot be empty.</string>
-    <string name="website_error_empty">Server address cannot be empty.</string>
-    <string name="website_error_spaces">Server address cannot contain spaces.</string>
+    <string name="username_error_spaces">The tracker number can only contain digits</string>
+    <string name="username_error_empty">Tracker number cannot be empty</string>
+    <string name="website_error_empty">Server address cannot be empty</string>
+    <string name="website_error_spaces">Server address cannot contain spaces</string>
     <string name="interval_error">The interval must be greater than 0</string>
 
     <!-- Permissions -->
-    <string name="permission_rationale_foreground_location_title">Location Permission Needed</string>
-    <string name="permission_rationale_foreground_location_message">This app needs access to your location to track your position.</string>
-    <string name="permission_rationale_background_location_title">Background Location Permission Needed</string>
+    <string name="permission_rationale_foreground_location_title">Location permission is needed</string>
+    <string name="permission_rationale_foreground_location_message">This app needs access to your location to track your position</string>
+    <string name="permission_rationale_background_location_title">Background location permission is needed</string>
     <string name="permission_rationale_background_location_pre_request">This app collects location data to enable tracking even when the app is closed or not in use. This requires the "Allow all the time" location permission. Please grant this on the next screen.</string>
     <string name="permission_denied_foreground_location">Foreground location permission denied. Tracking cannot start.</string>
     <string name="permission_denied_background_location">Background location permission denied. Tracking may stop when the app is closed.</string>

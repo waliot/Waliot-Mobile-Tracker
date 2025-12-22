@@ -34,7 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.data.repository.UploadStatus
+import com.websmithing.gpstracker2.repository.location.UploadStatus
 import com.websmithing.gpstracker2.ui.components.DragHandle
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors

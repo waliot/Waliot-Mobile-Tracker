@@ -12,8 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.R
+import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 
 enum class CustomSnackbarType {
@@ -52,5 +54,17 @@ fun CustomSnackbar(
             )
             Text(message)
         }
+    }
+}
+
+@Preview
+@Composable
+private fun CustomSnackbarPreview() {
+    WaliotTheme {
+        CustomSnackbar(
+            type = CustomSnackbarType.success,
+            message = "This is a snackbar",
+            onClick = {}
+        )
     }
 }

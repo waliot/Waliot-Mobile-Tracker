@@ -19,22 +19,12 @@ import org.maplibre.spatialk.geojson.Position
 import timber.log.Timber
 import java.util.UUID
 
-// Constants needed for SharedPreferences checkFirstTimeLoading
 private const val PREFS_NAME = "com.websmithing.gpstracker.prefs"
 private const val KEY_FIRST_TIME_LOADING = "firstTimeLoadingApp"
 private const val KEY_APP_ID = "appID"
 
-fun Location.toPosition() =
-    Position(longitude = longitude, latitude = latitude, altitude = altitude)
+fun Location.toPosition() = Position(longitude = longitude, latitude = latitude, altitude = altitude)
 
-/**
- * Checks if Google Play Services is available and enabled
- *
- * Shows an appropriate error dialog if Google Play Services is unavailable
- * or needs to be updated.
- *
- * @return True if Google Play Services is available and up-to-date
- */
 fun Activity.checkIfGooglePlayEnabled(): Boolean {
     val googleApiAvailability = GoogleApiAvailability.getInstance()
     val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(this)
@@ -55,12 +45,6 @@ fun Activity.checkIfGooglePlayEnabled(): Boolean {
     }
 }
 
-/**
- * Performs first-time app setup
- *
- * Generates a unique app ID and stores it in SharedPreferences along with
- * a flag indicating the app has been run at least once.
- */
 fun Activity.checkFirstTimeLoading() {
     val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val firstTimeLoadingApp = prefs.getBoolean(KEY_FIRST_TIME_LOADING, true)
@@ -73,7 +57,6 @@ fun Activity.checkFirstTimeLoading() {
         Timber.d("First time loading setup complete.")
     }
 }
-
 
 @Composable
 inline fun <reified VM : ViewModel> activityHiltViewModel(): VM {
