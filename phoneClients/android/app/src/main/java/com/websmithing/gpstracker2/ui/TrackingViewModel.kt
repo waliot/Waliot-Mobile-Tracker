@@ -52,15 +52,15 @@ class TrackingViewModel @Inject constructor(
     private val _snackbarMessage = MutableLiveData<String?>()
     val snackbarMessage: LiveData<String?> = _snackbarMessage
 
-    val latestLocation: StateFlow<Location?> = locationRepository.latestLocation
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+//    val latestLocation: StateFlow<Location?> = locationRepository.latestLocation
+//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val latestForegroundLocation: StateFlow<Location?> =
         foregroundLocationRepository.currentLocation
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val totalDistance: StateFlow<Float> = locationRepository.totalDistance
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0f)
+//    val totalDistance: StateFlow<Float> = locationRepository.totalDistance
+//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0f)
 
     val lastUploadStatus: StateFlow<UploadStatus> = locationRepository.lastUploadStatus
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UploadStatus.Idle)
@@ -189,7 +189,7 @@ class TrackingViewModel @Inject constructor(
             if (shouldTrack) {
                 val newSessionId = UUID.randomUUID().toString()
                 settingsRepository.saveSessionId(newSessionId)
-                locationRepository.resetLocationState() // Reset location repo state
+                locationRepository.resetUploadStatus() // Reset location repo state
                 // Start the foreground service
                 Intent(context, TrackingService::class.java).also { intent ->
                     intent.action = TrackingService.ACTION_START_SERVICE

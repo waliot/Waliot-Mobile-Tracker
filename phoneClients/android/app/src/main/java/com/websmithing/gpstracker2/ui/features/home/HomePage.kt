@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.repository.location.UploadStatus
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_MAP_ZOOM
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.activityHiltViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
@@ -54,12 +55,11 @@ import com.websmithing.gpstracker2.ui.features.home.components.TrackingInfoSheet
 import com.websmithing.gpstracker2.ui.isBackgroundLocationPermissionGranted
 import com.websmithing.gpstracker2.ui.router.AppDestination
 import com.websmithing.gpstracker2.ui.toPosition
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import kotlin.time.Duration.Companion.milliseconds
-
-private const val defaultZoom = 15.0
 
 @Composable
 fun HomePage(
@@ -101,7 +101,7 @@ fun HomePage(
             cameraState.animateTo(
                 CameraPosition(
                     target = it.toPosition(),
-                    zoom = if (oldZoom == 1.0) defaultZoom else oldZoom,
+                    zoom = if (oldZoom == 1.0) DEFAULT_MAP_ZOOM else oldZoom,
                 ),
                 duration = 500.milliseconds,
             )
@@ -242,7 +242,7 @@ fun HomePage(
             onDismissRequest = { showTrackingInfoSheet = false },
             userName = userName,
             location = latestLocation,
-            totalDistance = viewModel.totalDistance,
+            totalDistance = MutableStateFlow(0f), //TODO viewModel.totalDistance,
             lastUploadStatus = lastUploadStatus
         )
     }

@@ -38,7 +38,7 @@ fun DragHandle(
         color = color,
         shape = shape,
     ) {
-        Box(Modifier.Companion.size(width = width, height = height))
+        Box(Modifier.size(width = width, height = height))
     }
 }
 

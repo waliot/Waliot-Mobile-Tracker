@@ -58,13 +58,13 @@ fun SettingsPage(
 
     val userName by viewModel.userName.observeAsState()
     val websiteUrl by viewModel.websiteUrl.observeAsState()
-    val language by viewModel.language.observeAsState()
     val intervalTime by viewModel.trackingInterval.observeAsState()
+    val language by viewModel.language.observeAsState()
 
     var initialState = SettingsFormState(
         userName = userName ?: "",
         websiteUrl = websiteUrl ?: context.getString(R.string.default_upload_website),
-        intervalTime = intervalTime?.toString() ?: "1",
+        intervalTime = intervalTime?.toString() ?: "5",
         intervalDistance = "100",
         languageCode = language ?: "ru"
     )
@@ -79,8 +79,7 @@ fun SettingsPage(
         val name = state.userName.trim()
         val website = state.websiteUrl.trim()
         val intervalTime = state.intervalTime.trim().let { if (it.isEmpty()) 0 else it.toInt() }
-        val intervalDistance =
-            state.intervalDistance.trim().let { if (it.isEmpty()) 0 else it.toInt() }
+        val intervalDistance = state.intervalDistance.trim().let { if (it.isEmpty()) 0 else it.toInt() }
 
         val isNameValid = name.isEmpty() || name.isDigitsOnly()
         val isWebsiteValid = website.isNotBlank() && !hasSpaces(website)
@@ -95,11 +94,9 @@ fun SettingsPage(
 
         if (!isWebsiteValid) {
             if (website.isBlank()) {
-                state =
-                    state.copy(websiteUrlError = context.getString(R.string.website_error_empty))
+                state = state.copy(websiteUrlError = context.getString(R.string.website_error_empty))
             } else if (hasSpaces(website)) {
-                state =
-                    state.copy(websiteUrlError = context.getString(R.string.website_error_spaces))
+                state = state.copy(websiteUrlError = context.getString(R.string.website_error_spaces))
             }
         } else {
             state = state.copy(websiteUrlError = null)
@@ -121,10 +118,10 @@ fun SettingsPage(
 
         if (isNameValid && isWebsiteValid && isIntervalDistanceValid && isIntervalTimeValid) {
             val userNameChanged = initialState.userName != state.userName
-            val languageChanged = initialState.languageCode != state.languageCode
             val websiteUrlChanged = initialState.websiteUrl != state.websiteUrl
             val intervalTimeChanged = initialState.intervalTime != state.intervalTime
             val intervalDistanceChanged = initialState.intervalDistance != state.intervalDistance
+            val languageChanged = initialState.languageCode != state.languageCode
 
             if (userNameChanged) {
                 viewModel.onUserNameChanged(state.userName.trim())

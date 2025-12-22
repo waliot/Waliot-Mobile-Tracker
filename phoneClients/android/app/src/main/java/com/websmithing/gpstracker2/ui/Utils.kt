@@ -17,13 +17,14 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.websmithing.gpstracker2.R
 import org.maplibre.spatialk.geojson.Position
 import timber.log.Timber
-import java.util.UUID
 
-private const val PREFS_NAME = "com.websmithing.gpstracker.prefs"
-private const val KEY_FIRST_TIME_LOADING = "firstTimeLoadingApp"
-private const val KEY_APP_ID = "appID"
-
-fun Location.toPosition() = Position(longitude = longitude, latitude = latitude, altitude = altitude)
+@Composable
+inline fun <reified VM : ViewModel> activityHiltViewModel(): VM {
+    val context = LocalContext.current
+    val viewModelStoreOwner = context as? ViewModelStoreOwner
+        ?: error("Context is not a ViewModelStoreOwner")
+    return hiltViewModel(viewModelStoreOwner)
+}
 
 fun Activity.checkIfGooglePlayEnabled(): Boolean {
     val googleApiAvailability = GoogleApiAvailability.getInstance()
@@ -45,32 +46,10 @@ fun Activity.checkIfGooglePlayEnabled(): Boolean {
     }
 }
 
-fun Activity.checkFirstTimeLoading() {
-    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    val firstTimeLoadingApp = prefs.getBoolean(KEY_FIRST_TIME_LOADING, true)
-    if (firstTimeLoadingApp) {
-        prefs.edit().apply {
-            putBoolean(KEY_FIRST_TIME_LOADING, false)
-            putString(KEY_APP_ID, UUID.randomUUID().toString())
-            apply()
-        }
-        Timber.d("First time loading setup complete.")
-    }
-}
-
-@Composable
-inline fun <reified VM : ViewModel> activityHiltViewModel(): VM {
-    val context = LocalContext.current
-    val viewModelStoreOwner = context as? ViewModelStoreOwner
-        ?: error("Context is not a ViewModelStoreOwner")
-    return hiltViewModel(viewModelStoreOwner)
+fun isBackgroundLocationPermissionGranted(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
 }
 
 fun hasSpaces(str: String) = str.contains(' ')
 
-fun isBackgroundLocationPermissionGranted(context: Context): Boolean {
-    return ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
-}
+fun Location.toPosition() = Position(longitude = longitude, latitude = latitude, altitude = altitude)

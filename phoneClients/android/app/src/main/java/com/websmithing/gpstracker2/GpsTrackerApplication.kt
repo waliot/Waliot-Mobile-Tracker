@@ -9,11 +9,13 @@ class GpsTrackerApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        setupTimber()
+    }
+
+    private fun setupTimber() {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
             Timber.d("Timber DebugTree planted.")
-        } else {
-            Timber.d("Timber ReleaseTree planted.")
         }
     }
 }

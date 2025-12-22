@@ -4,22 +4,10 @@ import android.location.Location
 import kotlinx.coroutines.flow.Flow
 
 interface LocationRepository {
-
-    val latestLocation: Flow<Location?>
-    val totalDistance: Flow<Float>
     val lastUploadStatus: Flow<UploadStatus>
 
-    suspend fun getCurrentLocation(): Location?
-    suspend fun getPreviousLocation(): Location?
-    suspend fun saveAsPreviousLocation(location: Location)
-    suspend fun resetLocationState()
-    suspend fun uploadLocationData(
-        location: Location,
-        username: String,
-        appId: String,
-        sessionId: String,
-        eventType: String
-    ): Boolean
+    suspend fun resetUploadStatus()
+    suspend fun uploadLocationData(username: String, location: Location): Boolean
 }
 
 sealed class UploadStatus {

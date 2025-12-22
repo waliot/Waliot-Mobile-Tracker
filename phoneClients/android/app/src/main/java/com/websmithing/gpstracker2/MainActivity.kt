@@ -6,23 +6,21 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.websmithing.gpstracker2.di.SettingsRepositoryEntryPoint
+import com.websmithing.gpstracker2.helper.LocaleHelper
 import com.websmithing.gpstracker2.ui.App
-import com.websmithing.gpstracker2.ui.checkFirstTimeLoading
 import com.websmithing.gpstracker2.ui.checkIfGooglePlayEnabled
-import com.websmithing.gpstracker2.util.LocaleHelper
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
-        val entryPoint = EntryPointAccessors.fromApplication(
-            newBase.applicationContext,
-            SettingsRepositoryEntryPoint::class.java
-        )
-        val repo = entryPoint.getSettingsRepository()
-        val newCtx = LocaleHelper.onAttach(newBase, repo)
+        val repo = getSettingsRepository(newBase)
+        val newCtx = runBlocking {
+            LocaleHelper.wrapContext(newBase, repo)
+        }
         super.attachBaseContext(newCtx)
     }
 
@@ -31,10 +29,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         checkIfGooglePlayEnabled()
-        checkFirstTimeLoading()
 
         setContent {
             App()
         }
     }
+
+    private fun getSettingsRepository(context: Context) = EntryPointAccessors.fromApplication(
+        context.applicationContext,
+        SettingsRepositoryEntryPoint::class.java
+    ).settingsRepository()
 }

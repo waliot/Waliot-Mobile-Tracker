@@ -8,6 +8,8 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_LOCATION_UPDATE_DISTANCE_METERS
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_LOCATION_UPDATE_INTERVAL_SECONDS
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import timber.log.Timber
@@ -19,27 +21,25 @@ import javax.inject.Singleton
 class ForegroundLocationRepositoryImpl @Inject constructor(
     private val provider: FusedLocationProviderClient,
 ) : ForegroundLocationRepository {
+
     private val _currentLocation = MutableStateFlow<Location?>(null)
     override val currentLocation: StateFlow<Location?> = _currentLocation
 
-    private var callback: LocationCallback? = null
+    private var locationCallback: LocationCallback? = null
     private var initialFixReceived = false
 
-    companion object {
-        private const val TAG = "ForegroundLocationRepository"
+    private companion object {
+        const val TAG = "ForegroundLocationRepository"
     }
 
     override fun start() {
-        if (callback != null) {
-            return
-        }
+        if (locationCallback != null) return
 
-        callback = object : LocationCallback() {
+        locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
-                val loc = result.lastLocation ?: return
-                initialFixReceived = true
-                _currentLocation.value = loc
-                Timber.tag(TAG).d("Callback fix: ${loc.latitude}, ${loc.longitude}")
+                result.lastLocation?.let { loc ->
+                    updateLocationState(loc, "Callback fix")
+                }
             }
         }
 
@@ -48,51 +48,48 @@ class ForegroundLocationRepositoryImpl @Inject constructor(
     }
 
     override fun stop() {
-        callback?.let {
+        locationCallback?.let {
             provider.removeLocationUpdates(it)
             Timber.tag(TAG).d("Location updates stopped")
         }
-        callback = null
+        locationCallback = null
+    }
+
+    private fun updateLocationState(location: Location, source: String) {
+        initialFixReceived = true
+        _currentLocation.value = location
+        Timber.tag(TAG).d("$source: ${location.latitude}, ${location.longitude}")
     }
 
     @SuppressLint("MissingPermission")
     private fun requestInitialFix() {
         provider.lastLocation.addOnSuccessListener { loc ->
-            if (loc != null) {
-                initialFixReceived = true
-                _currentLocation.value = loc
-                Timber.tag(TAG).d("Initial fix from lastLocation")
-            }
+            loc?.let { updateLocationState(it, "Initial fix from lastLocation") }
         }
 
         provider.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
             .addOnSuccessListener { loc ->
                 if (!initialFixReceived && loc != null) {
-                    initialFixReceived = true
-                    _currentLocation.value = loc
-                    Timber.tag(TAG).d("Initial fix from getCurrentLocation")
+                    updateLocationState(loc, "Initial fix from getCurrentLocation")
                 }
             }
     }
 
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
-        // https://developers.google.com/android/reference/com/google/android/gms/location/LocationRequest.Builder
-        val request = LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            TimeUnit.SECONDS.toMillis(10)
-        )
-            .setMinUpdateIntervalMillis(TimeUnit.SECONDS.toMillis(5))
-            .setMaxUpdateDelayMillis(TimeUnit.SECONDS.toMillis(15))
-            .setMinUpdateDistanceMeters(10f)
+        val request = createLocationRequest()
+        locationCallback?.let { cb ->
+            provider.requestLocationUpdates(request, cb, Looper.getMainLooper())
+            Timber.tag(TAG).d("Location updates started")
+        }
+    }
+
+    private fun createLocationRequest(): LocationRequest {
+        return LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, TimeUnit.SECONDS.toMillis(DEFAULT_LOCATION_UPDATE_INTERVAL_SECONDS))
+            .setMinUpdateIntervalMillis(TimeUnit.SECONDS.toMillis(DEFAULT_LOCATION_UPDATE_INTERVAL_SECONDS / 2))
+            .setMaxUpdateDelayMillis(TimeUnit.SECONDS.toMillis(DEFAULT_LOCATION_UPDATE_INTERVAL_SECONDS * 2))
+            .setMinUpdateDistanceMeters(DEFAULT_LOCATION_UPDATE_DISTANCE_METERS)
             .setWaitForAccurateLocation(true)
             .build()
-
-        provider.requestLocationUpdates(
-            request,
-            callback!!,
-            Looper.getMainLooper()
-        )
-        Timber.tag(TAG).d("Location updates started")
     }
 }

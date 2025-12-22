@@ -43,7 +43,7 @@ import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-private val coordinateFormatter = DecimalFormat("0.00000")
+private val coordinateFormatter = DecimalFormat("0.000000")
 private val distanceFormatter = DecimalFormat("0.0")
 
 @Composable
@@ -294,18 +294,12 @@ private fun ChipItem(
     }
 }
 
-/**
- * Gets a human-readable description of signal strength based on accuracy
- *
- * @param accuracy The accuracy of the location in meters
- * @return A string describing the signal strength
- */
 @Composable
 private fun getSignalStrengthDescription(accuracy: Float): String {
     val context = LocalContext.current
     return when {
-        accuracy <= 0 -> context.getString(R.string.signal_unknown) // Accuracy shouldn't be <= 0
-        accuracy <= 10 -> context.getString(R.string.signal_excellent) // meters
+        accuracy <= 0 -> context.getString(R.string.signal_unknown)
+        accuracy <= 10 -> context.getString(R.string.signal_excellent)
         accuracy <= 25 -> context.getString(R.string.signal_good)
         accuracy <= 50 -> context.getString(R.string.signal_fair)
         else -> context.getString(R.string.signal_poor)
@@ -334,7 +328,7 @@ private fun TrackingInfoSheetEmpty() {
             onDismissRequest = {},
             userName = "89181201004",
             location = Location(""),
-            totalDistance = 7000f,
+            totalDistance = 10500f,
             lastUploadStatus = null
         )
     }

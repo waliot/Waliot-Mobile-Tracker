@@ -16,6 +16,6 @@ fun MapView(modifier: Modifier = Modifier, cameraState: CameraState) {
         baseStyle = BaseStyle.Uri(mapStyleUri),
         cameraState = cameraState,
         options = MapOptions(ornamentOptions = OrnamentOptions.AllDisabled),
-        modifier = modifier,
+        modifier = modifier
     )
 }
