@@ -29,8 +29,8 @@ fun CustomFloatingButton(
     onClick: () -> Unit,
     icon: @Composable () -> Unit
 ) {
-    val animatedContentColor: Color by animateColorAsState(targetValue = contentColor)
     val animatedColor: Color by animateColorAsState(targetValue = color)
+    val animatedContentColor: Color by animateColorAsState(targetValue = contentColor)
 
     Surface(
         color = animatedColor,
@@ -38,7 +38,7 @@ fun CustomFloatingButton(
         shape = shape,
         shadowElevation = elevation,
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier
     ) {
         icon()
     }

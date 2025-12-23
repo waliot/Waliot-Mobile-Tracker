@@ -17,9 +17,9 @@ import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 
 enum class LocationMarkerState {
-    Active,
-    Inactive,
-    Error
+    ACTIVE,
+    INACTIVE,
+    ERROR
 }
 
 val LocationMarkerSize = 48.dp
@@ -27,7 +27,7 @@ val LocationMarkerSize = 48.dp
 @Composable
 fun LocationMarker(
     modifier: Modifier = Modifier,
-    state: LocationMarkerState = LocationMarkerState.Inactive,
+    state: LocationMarkerState = LocationMarkerState.INACTIVE,
     onClick: () -> Unit,
 ) {
     val teardropShape = RoundedCornerShape(
@@ -39,13 +39,13 @@ fun LocationMarker(
 
     CustomFloatingButton(
         color = when (state) {
-            LocationMarkerState.Active -> MaterialTheme.colorScheme.primary
-            LocationMarkerState.Inactive -> MaterialTheme.extendedColors.fab
-            LocationMarkerState.Error -> MaterialTheme.colorScheme.error
+            LocationMarkerState.ACTIVE -> MaterialTheme.colorScheme.primary
+            LocationMarkerState.INACTIVE -> MaterialTheme.extendedColors.fab
+            LocationMarkerState.ERROR -> MaterialTheme.colorScheme.error
         },
         contentColor = when (state) {
-            LocationMarkerState.Active, LocationMarkerState.Error -> Color.White
-            LocationMarkerState.Inactive -> MaterialTheme.extendedColors.onFab
+            LocationMarkerState.ACTIVE, LocationMarkerState.ERROR -> Color.White
+            LocationMarkerState.INACTIVE -> MaterialTheme.extendedColors.onFab
         },
         shape = teardropShape,
         onClick = onClick,
@@ -53,7 +53,7 @@ fun LocationMarker(
     ) {
         Icon(
             painterResource(R.drawable.ic_person_32),
-            contentDescription = "Current location",
+            contentDescription = null,
             modifier = Modifier.requiredSize(32.dp)
         )
     }
@@ -71,7 +71,7 @@ private fun LocationMarkerPreview() {
 @Composable
 private fun LocationMarkerActivePreview() {
     WaliotTheme {
-        LocationMarker(onClick = {}, state = LocationMarkerState.Active)
+        LocationMarker(onClick = {}, state = LocationMarkerState.ACTIVE)
     }
 }
 
@@ -79,6 +79,6 @@ private fun LocationMarkerActivePreview() {
 @Composable
 private fun LocationMarkerErrorPreview() {
     WaliotTheme {
-        LocationMarker(onClick = {}, state = LocationMarkerState.Error)
+        LocationMarker(onClick = {}, state = LocationMarkerState.ERROR)
     }
 }

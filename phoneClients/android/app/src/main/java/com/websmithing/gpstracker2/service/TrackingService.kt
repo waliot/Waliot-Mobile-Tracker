@@ -1,6 +1,5 @@
 package com.websmithing.gpstracker2.service
 
-import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -9,29 +8,19 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.location.Location
 import android.os.IBinder
-import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.Priority
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.di.SettingsRepositoryEntryPoint
 import com.websmithing.gpstracker2.helper.LocaleHelper
 import com.websmithing.gpstracker2.repository.location.LocationRepository
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository
+import com.websmithing.gpstracker2.repository.upload.UploadRepository
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.util.concurrent.ExecutorService
@@ -49,12 +38,10 @@ class TrackingService : Service() {
     lateinit var locationRepository: LocationRepository
 
     @Inject
-    lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    lateinit var uploadRepository: UploadRepository
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var backgroundExecutor: ExecutorService? = null
-    private var locationCallback: LocationCallback? = null
-    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     companion object {
         private const val TAG = "TrackingService"
@@ -127,7 +114,7 @@ class TrackingService : Service() {
     //region onStartCommand
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val action = extractAction(intent)
+        val action = intent?.action
         Timber.tag(TAG).d("TrackingService onStartCommand: $action")
 
         when (action) {
@@ -138,8 +125,6 @@ class TrackingService : Service() {
         return START_STICKY
     }
 
-    private fun extractAction(intent: Intent?): String? = intent?.action
-
     private fun handleDefaultAction() {
         Timber.tag(TAG).d("Service restarted without specific action. Re-initializing.")
         handleStartService()
@@ -147,11 +132,13 @@ class TrackingService : Service() {
 
     private fun handleStartService() {
         startForeground(NOTIFICATION_ID, createNotification())
-        startLocationUpdates()
+        acquireWakeLock()
+        locationRepository.start()
+        // TODO UPLOAD
     }
 
     private fun handleStopService() {
-        stopLocationUpdates()
+        locationRepository.stop()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -210,7 +197,7 @@ class TrackingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
 
-        stopLocationUpdates()
+        locationRepository.stop()
         shutdownExecutor()
         releaseWakeLock()
     }
@@ -235,27 +222,6 @@ class TrackingService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    @SuppressLint("MissingPermission")
-    private fun startLocationUpdates() {
-        Timber.tag(TAG).d("Starting location updates...")
-        acquireWakeLock()
-
-        try {
-            val trackingIntervalMinutes = runBlocking { settingsRepository.getCurrentTrackingInterval() }
-            Timber.tag(TAG).d("Using tracking interval: $trackingIntervalMinutes minutes")
-
-            val intervalMillis = TimeUnit.MINUTES.toMillis(trackingIntervalMinutes.toLong())
-            val locationRequest = createLocationRequest(intervalMillis, 10f)
-            locationCallback = createLocationCallback()
-
-            requestImmediateLocation()
-            subscribeToLocationUpdates(locationRequest)
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Exception in startLocationUpdates: ${e.message}")
-            stopSelf()
-        }
-    }
-
     private fun acquireWakeLock() {
         wakeLock?.apply {
             if (!isHeld) {
@@ -265,136 +231,5 @@ class TrackingService : Service() {
                 Timber.tag(TAG).d("Wake lock already held")
             }
         } ?: Timber.tag(TAG).e("Wake lock is null, cannot acquire")
-    }
-
-    private fun createLocationRequest(intervalMillis: Long, intervalMeters: Float): LocationRequest {
-        return LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
-            .setMinUpdateIntervalMillis(intervalMillis / 2)
-            .setMaxUpdateDelayMillis(intervalMillis * 2)
-            .setMinUpdateDistanceMeters(intervalMeters)
-            .setWaitForAccurateLocation(true)
-            .build()
-    }
-
-    private fun createLocationCallback(): LocationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            locationResult.lastLocation?.let { location ->
-                Timber.tag(TAG).d("Location received: ${location.latitude}, ${location.longitude}")
-                handleNewLocation(location)
-            } ?: Timber.tag(TAG).w("Received null location in onLocationResult")
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun requestImmediateLocation() {
-        Timber.tag(TAG).d("Requesting immediate location update...")
-        fusedLocationProviderClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-            .addOnSuccessListener { location ->
-                location?.let {
-                    Timber.tag(TAG).d("Got immediate location: ${it.latitude}, ${it.longitude}")
-                    handleNewLocation(it)
-                } ?: Timber.tag(TAG).w("Immediate location request returned null")
-            }
-            .addOnFailureListener { e -> Timber.tag(TAG).e(e, "Failed to get immediate location") }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun subscribeToLocationUpdates(locationRequest: LocationRequest) {
-        fusedLocationProviderClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback!!,
-            Looper.getMainLooper()
-        ).addOnSuccessListener {
-            Timber.tag(TAG).d("Location updates requested successfully.")
-        }.addOnFailureListener { e ->
-            Timber.tag(TAG).e(e, "Failed to request location updates.")
-            stopSelf()
-        }
-    }
-
-    private fun handleNewLocation(currentLocation: Location) {
-        Timber.tag(TAG).d("handleNewLocation: Received location ${currentLocation.latitude}, ${currentLocation.longitude}")
-
-        serviceScope.launch {
-            try {
-                Timber.tag(TAG).i("Location processing started: ${currentLocation.latitude}, ${currentLocation.longitude}")
-
-                val username = settingsRepository.getCurrentUsername()
-                val sessionId = settingsRepository.getCurrentSessionId()
-                val appId = settingsRepository.getAppId()
-
-                val success = uploadLocationWithRetry(currentLocation, username, sessionId, appId)
-
-                if (!success) {
-                    Timber.tag(TAG).e("All upload attempts failed for location ${currentLocation.latitude}, ${currentLocation.longitude}")
-                }
-            } catch (t: Throwable) {
-                Timber.tag(TAG).e(t, "Error processing location")
-            } finally {
-                Timber.tag(TAG).i("Location processing finished")
-            }
-        }
-    }
-
-    private suspend fun uploadLocationWithRetry(
-        location: Location,
-        username: String,
-        sessionId: String,
-        appId: String,
-        maxRetries: Int = 3
-    ): Boolean {
-        repeat(maxRetries) { attempt ->
-            try {
-                val retryCount = attempt + 1
-                Timber.tag(TAG).d("Upload Attempt $retryCount/$maxRetries")
-
-                val isSuccessful = locationRepository.uploadLocationData(
-                    username = username,
-                    location = location
-                )
-
-                if (isSuccessful) {
-                    Timber.tag(TAG).i("Upload SUCCESS! (Attempt $retryCount)")
-                    return true
-                }
-
-                Timber.tag(TAG).w("Upload FAILED (Attempt $retryCount)")
-            } catch (e: Exception) {
-                Timber.tag(TAG).e(e, "Exception during upload attempt ${attempt + 1}")
-            }
-
-            if (attempt < maxRetries - 1) {
-                delay(1000L * (attempt + 1))
-            }
-        }
-        return false
-    }
-
-    private fun stopLocationUpdates() {
-        Timber.tag(TAG).d("stopLocationUpdates() called")
-
-        releaseWakeLock()
-
-        val callback = locationCallback ?: run {
-            Timber.tag(TAG).d("stopLocationUpdates called but locationCallback was already null.")
-            return
-        }
-
-        Timber.tag(TAG).d("Stopping location updates...")
-        try {
-            fusedLocationProviderClient.removeLocationUpdates(callback)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        Timber.tag(TAG).d("Location updates stopped successfully.")
-                    } else {
-                        Timber.tag(TAG).w(task.exception, "Failed to stop location updates.")
-                    }
-                }
-        } catch (e: SecurityException) {
-            Timber.tag(TAG).e(e, "SecurityException while stopping location updates.")
-        } finally {
-            locationCallback = null
-            Timber.tag(TAG).d("Location callback cleared.")
-        }
     }
 }

@@ -14,8 +14,8 @@ import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 
 @Composable
-fun PermissionDeniedDialog(
-    modifier: Modifier = Modifier.Companion,
+fun CustomPermissionDeniedDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     text: String
 ) {
@@ -44,9 +44,9 @@ fun PermissionDeniedDialog(
 
 @Preview
 @Composable
-private fun PermissionDeniedDialogPreview() {
+private fun CustomPermissionDeniedDialogPreview() {
     WaliotTheme {
-        PermissionDeniedDialog(
+        CustomPermissionDeniedDialog(
             onDismissRequest = {},
             text = "This is a dialog"
         )

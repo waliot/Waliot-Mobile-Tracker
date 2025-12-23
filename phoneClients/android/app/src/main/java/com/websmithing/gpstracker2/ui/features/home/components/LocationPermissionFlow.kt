@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.components.PermissionDeniedDialog
+import com.websmithing.gpstracker2.ui.components.CustomPermissionDeniedDialog
 import com.websmithing.gpstracker2.ui.isBackgroundLocationPermissionGranted
 
 private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -82,7 +82,6 @@ fun ForegroundLocation(
                     } else {
                         onShowBackgroundDialog()
                     }
-
                 } else {
                     onAllow()
                 }
@@ -131,7 +130,7 @@ fun ForegroundLocation(
     }
 
     if (showForegroundDeniedDialog) {
-        PermissionDeniedDialog(
+        CustomPermissionDeniedDialog(
             text = context.getString(R.string.permission_denied_foreground_location),
             onDismissRequest = { showForegroundDeniedDialog = false }
         )
@@ -195,7 +194,7 @@ private fun BackgroundLocation(
     }
 
     if (showBackgroundDeniedDialog) {
-        PermissionDeniedDialog(
+        CustomPermissionDeniedDialog(
             text = context.getString(R.string.permission_denied_background_location),
             onDismissRequest = { showBackgroundDeniedDialog = false }
         )

@@ -19,8 +19,8 @@ import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 
 enum class CustomSnackbarType {
-    success,
-    warning
+    SUCCESS,
+    WARNING
 }
 
 @Composable
@@ -32,12 +32,12 @@ fun CustomSnackbar(
 ) {
     Snackbar(
         containerColor = when (type) {
-            CustomSnackbarType.success -> MaterialTheme.extendedColors.okContainer
-            CustomSnackbarType.warning -> MaterialTheme.extendedColors.warningContainer
+            CustomSnackbarType.SUCCESS -> MaterialTheme.extendedColors.okContainer
+            CustomSnackbarType.WARNING -> MaterialTheme.extendedColors.warningContainer
         },
         contentColor = MaterialTheme.colorScheme.onPrimary,
         shape = RectangleShape,
-        modifier = modifier.clickable(true, onClick = onClick),
+        modifier = modifier.clickable(true, onClick = onClick)
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -45,8 +45,8 @@ fun CustomSnackbar(
             Icon(
                 painterResource(
                     when (type) {
-                        CustomSnackbarType.success -> R.drawable.ic_ok_16
-                        CustomSnackbarType.warning -> R.drawable.ic_warning_16
+                        CustomSnackbarType.SUCCESS -> R.drawable.ic_ok_16
+                        CustomSnackbarType.WARNING -> R.drawable.ic_warning_16
                     }
                 ),
                 tint = Color.Unspecified,
@@ -59,11 +59,23 @@ fun CustomSnackbar(
 
 @Preview
 @Composable
-private fun CustomSnackbarPreview() {
+private fun SuccessCustomSnackbarPreview() {
     WaliotTheme {
         CustomSnackbar(
-            type = CustomSnackbarType.success,
-            message = "This is a snackbar",
+            type = CustomSnackbarType.SUCCESS,
+            message = "This is a success!",
+            onClick = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun WarningCustomSnackbarPreview() {
+    WaliotTheme {
+        CustomSnackbar(
+            type = CustomSnackbarType.WARNING,
+            message = "This is a warning!",
             onClick = {}
         )
     }

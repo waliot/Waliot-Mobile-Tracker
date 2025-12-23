@@ -10,7 +10,7 @@ object LocaleHelper {
 
     suspend fun wrapContext(ctx: Context, settingsRepository: SettingsRepository): Context {
         val languageCode = try {
-            settingsRepository.getCurrentLanguage()
+            settingsRepository.getLanguage()
         } catch (_: Exception) {
             DEFAULT_LANGUAGE
         }

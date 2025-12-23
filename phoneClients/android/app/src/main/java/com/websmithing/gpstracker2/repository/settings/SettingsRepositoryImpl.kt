@@ -2,15 +2,18 @@ package com.websmithing.gpstracker2.repository.settings
 
 import android.content.SharedPreferences
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_LANGUAGE
-import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_TRACKING_INTERVAL
-import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_WEBSITE_URL
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_TRACKER_IDENTIFIER
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_TRACKING_STATE
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_UPLOAD_DISTANCE_INTERVAL
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_UPLOAD_SERVER
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_UPLOAD_TIME_INTERVAL
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_APP_ID
-import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_CURRENTLY_TRACKING
-import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_INTERVAL_MINUTES
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_LANGUAGE
-import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_SESSION_ID
-import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_USER_NAME
-import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_WEBSITE_URL
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_TRACKER_IDENTIFIER
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_TRACKING_STATE
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_UPLOAD_DISTANCE_INTERVAL
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_UPLOAD_SERVER
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.KEY_UPLOAD_TIME_INTERVAL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -22,14 +25,6 @@ class SettingsRepositoryImpl @Inject constructor(
     private val sharedPreferences: SharedPreferences
 ) : SettingsRepository {
 
-    override suspend fun isFirstTimeLoading(): Boolean = withContext(Dispatchers.IO) {
-        !sharedPreferences.contains(KEY_APP_ID)
-    }
-
-    override suspend fun setFirstTimeLoading(isFirst: Boolean) {
-        if (!isFirst) getAppId()
-    }
-
     override suspend fun getAppId(): String = withContext(Dispatchers.IO) {
         sharedPreferences.getString(KEY_APP_ID, null) ?: generateAndSaveAppId()
     }
@@ -40,56 +35,54 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun clearSessionId() = updateSettings {
-        remove(KEY_SESSION_ID)
-    }
-
-    override suspend fun getCurrentSessionId(): String = withContext(Dispatchers.IO) {
-        sharedPreferences.getString(KEY_SESSION_ID, "").let { id ->
-            if (id.isNullOrBlank()) {
-                UUID.randomUUID().toString().also { newId ->
-                    updateSettings { putString(KEY_SESSION_ID, newId) }
-                }
-            } else id
-        }
-    }
-
-    override suspend fun saveSessionId(sessionId: String) = updateSettings {
-        putString(KEY_SESSION_ID, sessionId.trim())
-    }
-
-    override suspend fun getCurrentTrackingState(): Boolean = withContext(Dispatchers.IO) {
-        sharedPreferences.getBoolean(KEY_CURRENTLY_TRACKING, false)
+    override suspend fun getTrackingState(): Boolean = withContext(Dispatchers.IO) {
+        sharedPreferences.getBoolean(KEY_TRACKING_STATE, DEFAULT_TRACKING_STATE)
     }
 
     override suspend fun setTrackingState(isTracking: Boolean) = updateSettings {
-        putBoolean(KEY_CURRENTLY_TRACKING, isTracking)
+        putBoolean(KEY_TRACKING_STATE, isTracking)
     }
 
-    override suspend fun getCurrentUsername(): String = getStringOrDefault(KEY_USER_NAME, "")
+    override suspend fun getTrackerIdentifier(): String = getStringOrDefault(KEY_TRACKER_IDENTIFIER, DEFAULT_TRACKER_IDENTIFIER)
 
-    override suspend fun saveUsername(username: String) = updateSettings {
-        putString(KEY_USER_NAME, username.trim())
+    override suspend fun setTrackingIdentifier(trackerIdentifier: String) = updateSettings {
+        putString(KEY_TRACKER_IDENTIFIER, trackerIdentifier.trim())
     }
 
-    override suspend fun getCurrentWebsiteUrl(): String = getStringOrDefault(KEY_WEBSITE_URL, DEFAULT_WEBSITE_URL)
+    override suspend fun getUploadServer(): String = getStringOrDefault(KEY_UPLOAD_SERVER, DEFAULT_UPLOAD_SERVER)
 
-    override suspend fun saveWebsiteUrl(url: String) = updateSettings {
-        putString(KEY_WEBSITE_URL, url.trim())
+    override suspend fun setUploadServer(serverAddress: String) = updateSettings {
+        putString(KEY_UPLOAD_SERVER, serverAddress.trim())
     }
 
-    override suspend fun getCurrentTrackingInterval(): Int = withContext(Dispatchers.IO) {
-        sharedPreferences.getInt(KEY_INTERVAL_MINUTES, DEFAULT_TRACKING_INTERVAL)
+    override suspend fun getUploadTimeInterval(): Int = withContext(Dispatchers.IO) {
+        sharedPreferences.getInt(KEY_UPLOAD_TIME_INTERVAL, DEFAULT_UPLOAD_TIME_INTERVAL)
     }
 
-    override suspend fun saveTrackingInterval(intervalMinutes: Int) = updateSettings {
-        putInt(KEY_INTERVAL_MINUTES, intervalMinutes)
+    override suspend fun setUploadTimeInterval(intervalMinutes: Int) = updateSettings {
+        putInt(KEY_UPLOAD_TIME_INTERVAL, intervalMinutes)
     }
 
-    override suspend fun getCurrentLanguage(): String = getStringOrDefault(KEY_LANGUAGE, DEFAULT_LANGUAGE)
+    override suspend fun getUploadDistanceInterval(): Int = withContext(Dispatchers.IO) {
+        sharedPreferences.getInt(KEY_UPLOAD_DISTANCE_INTERVAL, DEFAULT_UPLOAD_DISTANCE_INTERVAL)
+    }
 
-    override suspend fun saveLanguage(language: String) = updateSettings {
+    override suspend fun setUploadDistanceInterval(intervalMeters: Int) = updateSettings {
+        putInt(KEY_UPLOAD_DISTANCE_INTERVAL, intervalMeters)
+    }
+
+    override suspend fun getLanguage(): String = getStringOrDefault(KEY_LANGUAGE, DEFAULT_LANGUAGE)
+
+    override suspend fun setLanguage(language: String) = updateSettings {
         putString(KEY_LANGUAGE, language.trim())
+    }
+
+    override suspend fun isFirstTimeLoading(): Boolean = withContext(Dispatchers.IO) {
+        !sharedPreferences.contains(KEY_APP_ID)
+    }
+
+    override suspend fun setFirstTimeLoading(isFirst: Boolean) {
+        if (!isFirst) getAppId()
     }
 
     private suspend fun getStringOrDefault(key: String, default: String): String = withContext(Dispatchers.IO) {

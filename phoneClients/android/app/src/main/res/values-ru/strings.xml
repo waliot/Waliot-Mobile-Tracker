@@ -1,21 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WALIOT.Трекер</string>
-    <string name="default_upload_website">device.waliot.com:30032</string>
-
-    <string name="tracking_is_off">Начать отслеживание</string>
-    <string name="tracking_is_on">Остановить отслеживание</string>
-    <string name="textfields_empty_or_spaces">Проверьте выделенные поля. Поля не могут быть пустыми или содержать пробелы.</string>
-    <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play</string>
-
-    <!-- Input Validation -->
-    <string name="username_error_spaces">Номер трекера может состоять только из цифр</string>
-    <string name="username_error_empty">Номер трекера не может быть пустым</string>
-    <string name="website_error_empty">Адрес сервера не может быть пустым</string>
-    <string name="website_error_spaces">Адрес сервера не может содержать пробелы</string>
-    <string name="interval_error">Интервал должен быть больше 0</string>
+    <string name="splash_logo_text">трекер</string>
 
     <!-- Permissions -->
+    <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play</string>
     <string name="permission_rationale_foreground_location_title">Требуется разрешение на определение местоположения</string>
     <string name="permission_rationale_foreground_location_message">Приложению требуется доступ к местоположению для отслеживания</string>
     <string name="permission_rationale_background_location_title">Требуется разрешение на фоновое определение местоположения</string>
@@ -28,57 +17,66 @@
     <string name="permission_button_continue">Продолжить</string>
     <string name="permission_button_cancel">Отмена</string>
 
-    <!-- Other UI Messages -->
-    <string name="user_name">Идентификатор</string>
-    <string name="upload_website">Адрес сервера и порт</string>
-    <string name="upload_frequency">Отправлять данные каждые, минут</string>
-    <string name="upload_distance">Отправлять данные каждые, метров</string>
-    <string name="one_minute">1</string>
-    <string name="five_minutes">5</string>
-    <string name="fifteen_minutes">15</string>
+    <!-- Settings -->
+    <string name="settings">Настройки</string>
+    <string name="close">Закрыть</string>
+    <string name="save">Сохранить</string>
+    <string name="tracker_identifier">Идентификатор</string>
+    <string name="upload_server">Адрес сервера</string>
+    <string name="upload_time_interval">Отправлять данные каждые, минут</string>
+    <string name="upload_distance_interval">Отправлять данные каждые, метров</string>
+    <string name="language">Язык</string>
+    <string name="lang_en">Английский</string>
+    <string name="lang_ru">Русский</string>
+    <string name="app_version_format">Версия:</string>
 
-    <!-- New UI Display Strings -->
+    <string name="text_fields_empty_or_spaces">Проверьте выделенные поля. Поля не могут быть пустыми или содержать пробелы</string>
+    <string name="tracker_identifier_error">Номер трекера не может быть пустым и должен состоять только из цифр</string>
+    <string name="upload_server_error">Адрес сервера не может быть пустым или содержать пробелы</string>
+    <string name="interval_error">Интервал должен быть больше 0</string>
+    <string name="interval_updated">Интервал обновлён. Перезапуск службы отслеживания.</string>
+
+    <!-- UI -->
+    <string name="no_data_placeholder">—</string>
+    <string name="provide_identifier">Укажите идентификатор</string>
+    <string name="error_format">Ошибка: %1$s</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
+
+    <string name="tracking_is_off">Начать отслеживание</string>
+    <string name="tracking_is_on">Остановить отслеживание</string>
+    <string name="notification_text">Идёт отслеживание местоположения…</string>
+    <string name="tracking_enabled">Отслеживание включено</string>
+
+    <string name="coordinates">Координаты</string>
+
+    <string name="altitude">Высота</string>
+    <string name="altitude_format">%.0f м</string>
+
     <string name="speed">Скорость</string>
     <string name="speed_format_kmh">%.1f км/ч</string>
-    <string name="coordinates">Координаты</string>
-    <string name="altitude_format">%.0f м</string>
-    <string name="accuracy_format">%.0f м</string>
-    <string name="bearing_format">%.0f°</string>
-    <string name="distance_format_km">%s км</string>
-    <string name="signal_strength">Сигнал GPS</string>
-    <string name="no_data_placeholder">—</string>
-    <string name="update_time">Обновление</string>
-    <string name="extra_data">Дополнительные данные</string>
-    <string name="accuracy">Точность</string>
-    <string name="distance">Расстояние</string>
-    <string name="altitude">Высота</string>
+
     <string name="bearing">Направление</string>
+    <string name="bearing_format">%.0f°</string>
 
+    <string name="accuracy">Точность</string>
+    <string name="accuracy_format">%.0f м</string>
+
+    <string name="distance">Расстояние</string>
+    <string name="distance_format_km">%s км</string>
+
+    <string name="data_buffer">Буфер данных</string>
+
+    <string name="signal_strength">Сигнал GPS</string>
     <string name="search_satellites">Поиск спутников…</string>
-
-    <string name="upload_status_success">%1$s (успешно)</string>
-    <string name="upload_status_failure">%1$s (ошибка: %2$s)</string>
-
     <string name="signal_unknown">Неизвестно</string>
     <string name="signal_excellent">Отлично</string>
     <string name="signal_good">Хорошо</string>
     <string name="signal_fair">Удовлетворительно</string>
     <string name="signal_poor">Плохо</string>
 
-    <string name="notification_text">Идёт отслеживание местоположения…</string>
+    <string name="update_time">Обновление</string>
+    <string name="extra_data">Дополнительные данные</string>
 
-    <string name="language">Язык</string>
-    <string name="lang_en">Английский</string>
-    <string name="lang_ru">Русский</string>
-    <string name="splash_logo_text">трекер</string>
-    <string name="settings">Настройки</string>
-    <string name="close">Закрыть</string>
-    <string name="app_version_format">Версия приложения:</string>
-    <string name="save">Сохранить</string>
-    <string name="tracking_enabled">Отслеживание включено</string>
-    <string name="interval_updated">Интервал обновлён. Перезапуск службы отслеживания.</string>
-    <string name="error_format">Ошибка: %1$s</string>
-    <string name="unknown_error">Неизвестная ошибка</string>
-    <string name="provide_identifier">Укажите идентификатор</string>
-    <string name="data_buffer">Буфер данных</string>
+    <string name="upload_status_success">%1$s (успешно)</string>
+    <string name="upload_status_failure">%1$s (ошибка: %2$s)</string>
 </resources>

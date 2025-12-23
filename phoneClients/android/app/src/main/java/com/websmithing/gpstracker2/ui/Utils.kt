@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -15,14 +14,12 @@ import androidx.lifecycle.ViewModelStoreOwner
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.websmithing.gpstracker2.R
-import org.maplibre.spatialk.geojson.Position
 import timber.log.Timber
 
 @Composable
 inline fun <reified VM : ViewModel> activityHiltViewModel(): VM {
     val context = LocalContext.current
-    val viewModelStoreOwner = context as? ViewModelStoreOwner
-        ?: error("Context is not a ViewModelStoreOwner")
+    val viewModelStoreOwner = context as? ViewModelStoreOwner ?: error("Context is not a ViewModelStoreOwner")
     return hiltViewModel(viewModelStoreOwner)
 }
 
@@ -49,7 +46,3 @@ fun Activity.checkIfGooglePlayEnabled(): Boolean {
 fun isBackgroundLocationPermissionGranted(context: Context): Boolean {
     return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
 }
-
-fun hasSpaces(str: String) = str.contains(' ')
-
-fun Location.toPosition() = Position(longitude = longitude, latitude = latitude, altitude = altitude)

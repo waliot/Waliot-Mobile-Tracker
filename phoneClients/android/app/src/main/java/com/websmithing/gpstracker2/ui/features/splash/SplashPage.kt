@@ -25,7 +25,7 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun SplashPage(navController: NavHostController, modifier: Modifier = Modifier) {
+fun SplashPage(navController: NavHostController) {
     LaunchedEffect(true) {
         delay(3.seconds)
         navController.navigate(AppDestination.Home) {

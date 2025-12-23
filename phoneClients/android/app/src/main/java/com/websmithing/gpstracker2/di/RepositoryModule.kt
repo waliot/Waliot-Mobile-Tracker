@@ -1,11 +1,11 @@
 package com.websmithing.gpstracker2.di
 
-import com.websmithing.gpstracker2.repository.location.ForegroundLocationRepository
-import com.websmithing.gpstracker2.repository.location.ForegroundLocationRepositoryImpl
 import com.websmithing.gpstracker2.repository.location.LocationRepository
 import com.websmithing.gpstracker2.repository.location.LocationRepositoryImpl
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository
 import com.websmithing.gpstracker2.repository.settings.SettingsRepositoryImpl
+import com.websmithing.gpstracker2.repository.upload.UploadRepository
+import com.websmithing.gpstracker2.repository.upload.UploadRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -22,9 +22,9 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
+    abstract fun bindUploadRepository(impl: UploadRepositoryImpl): UploadRepository
 
     @Binds
     @Singleton
-    abstract fun bindForegroundLocationRepository(impl: ForegroundLocationRepositoryImpl): ForegroundLocationRepository
+    abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
 }

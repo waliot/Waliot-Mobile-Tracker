@@ -9,11 +9,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.repository.location.ForegroundLocationRepository
 import com.websmithing.gpstracker2.repository.location.LocationRepository
-import com.websmithing.gpstracker2.repository.location.UploadStatus
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository
+import com.websmithing.gpstracker2.repository.upload.UploadRepository
+import com.websmithing.gpstracker2.repository.upload.UploadStatus
 import com.websmithing.gpstracker2.service.TrackingService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -31,20 +29,23 @@ class TrackingViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
     private val locationRepository: LocationRepository,
-    private val foregroundLocationRepository: ForegroundLocationRepository
+    private val uploadRepository: UploadRepository
 ) : ViewModel() {
 
     private val _isTracking = MutableLiveData<Boolean>()
     val isTracking: LiveData<Boolean> = _isTracking
 
-    private val _userName = MutableLiveData<String>()
-    val userName: LiveData<String> = _userName
+    private val _trackerIdentifier = MutableLiveData<String>()
+    val trackerIdentifier: LiveData<String> = _trackerIdentifier
 
-    private val _trackingInterval = MutableLiveData<Int>()
-    val trackingInterval: LiveData<Int> = _trackingInterval
+    private val _uploadServer = MutableLiveData<String>()
+    val uploadServer: LiveData<String> = _uploadServer
 
-    private val _websiteUrl = MutableLiveData<String>()
-    val websiteUrl: LiveData<String> = _websiteUrl
+    private val _uploadTimeInterval = MutableLiveData<Int>()
+    val uploadTimeInterval: LiveData<Int> = _uploadTimeInterval
+
+    private val _uploadDistanceInterval = MutableLiveData<Int>()
+    val uploadDistanceInterval: LiveData<Int> = _uploadDistanceInterval
 
     private val _language = MutableLiveData<String>()
     val language: LiveData<String> = _language
@@ -52,58 +53,108 @@ class TrackingViewModel @Inject constructor(
     private val _snackbarMessage = MutableLiveData<String?>()
     val snackbarMessage: LiveData<String?> = _snackbarMessage
 
-//    val latestLocation: StateFlow<Location?> = locationRepository.latestLocation
-//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val latestLocation: StateFlow<Location?> = locationRepository.currentLocation
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val latestForegroundLocation: StateFlow<Location?> =
-        foregroundLocationRepository.currentLocation
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-//    val totalDistance: StateFlow<Float> = locationRepository.totalDistance
-//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0f)
-
-    val lastUploadStatus: StateFlow<UploadStatus> = locationRepository.lastUploadStatus
+    val lastUploadStatus: StateFlow<UploadStatus> = uploadRepository.lastUploadStatus
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UploadStatus.Idle)
 
-    internal val initJob: Job
+    internal val initJob: Job = viewModelScope.launch {
+        _isTracking.value = settingsRepository.getTrackingState()
+        _trackerIdentifier.value = settingsRepository.getTrackerIdentifier()
+        _uploadServer.value = settingsRepository.getUploadServer()
+        _uploadTimeInterval.value = settingsRepository.getUploadTimeInterval()
+        _uploadDistanceInterval.value = settingsRepository.getUploadDistanceInterval()
+        _language.value = settingsRepository.getLanguage()
+        Timber.d("ViewModel initialized. Tracking: ${isTracking.value}")
 
-    init {
-        initJob = viewModelScope.launch {
-            _isTracking.value = settingsRepository.getCurrentTrackingState()
-            _userName.value = settingsRepository.getCurrentUsername()
-            _trackingInterval.value = settingsRepository.getCurrentTrackingInterval()
-            _websiteUrl.value = settingsRepository.getCurrentWebsiteUrl()
-            _language.value = settingsRepository.getCurrentLanguage()
-            Timber.d("ViewModel initialized. Tracking: ${isTracking.value}")
+        if (settingsRepository.isFirstTimeLoading()) {
+            Timber.d("First time loading detected, generating App ID.")
+            settingsRepository.generateAndSaveAppId()
+            settingsRepository.setFirstTimeLoading(false)
+        }
+    }
 
-            if (settingsRepository.isFirstTimeLoading()) {
-                Timber.d("First time loading detected, generating App ID.")
-                settingsRepository.generateAndSaveAppId()
-                settingsRepository.setFirstTimeLoading(false) // Mark as no longer first time
+    //region SETTING CHANGES
+
+    fun onTrackerIdentifierChanged(newValue: String) {
+        val newTrackerIdentifier = newValue.trim()
+        if (newTrackerIdentifier != _trackerIdentifier.value) {
+            _trackerIdentifier.value = newTrackerIdentifier
+            viewModelScope.launch {
+                settingsRepository.setTrackingIdentifier(newTrackerIdentifier)
+                Timber.d("Tracker identifier saved: $newTrackerIdentifier")
             }
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        stopForegroundLocation()
+    fun onUploadServerChanged(newValue: String) {
+        val newServerAddress = newValue.trim()
+        if (newServerAddress != _uploadServer.value) {
+            _uploadServer.value = newServerAddress
+            viewModelScope.launch {
+                settingsRepository.setUploadServer(newServerAddress)
+                Timber.d("Upload server saved: $newServerAddress")
+            }
+        }
     }
 
+    fun onTimeIntervalChanged(newValue: String) {
+        val newTimeInterval = newValue.toIntOrNull() ?: return
+        if (newTimeInterval == _uploadTimeInterval.value) return
+
+        _uploadTimeInterval.value = newTimeInterval
+        viewModelScope.launch {
+            settingsRepository.setUploadTimeInterval(newTimeInterval)
+            Timber.d("Interval changed to: $newTimeInterval minutes")
+
+            restartForegroundServiceIfRequired()
+        }
+    }
+
+    fun onDistanceIntervalChanged(newValue: String) {
+        val newDistanceInterval = newValue.toIntOrNull() ?: return
+        if (newDistanceInterval == _uploadDistanceInterval.value) return
+
+        _uploadDistanceInterval.value = newDistanceInterval
+        viewModelScope.launch {
+            settingsRepository.setUploadDistanceInterval(newDistanceInterval)
+            Timber.d("Interval changed to: $newDistanceInterval meters")
+
+            restartForegroundServiceIfRequired()
+        }
+    }
+
+    fun onLanguageChanged(language: String) {
+        if (language != _language.value) {
+            AppCompatDelegate.setApplicationLocales(
+                LocaleListCompat.forLanguageTags(language)
+            )
+            viewModelScope.launch {
+                settingsRepository.setLanguage(language)
+                _language.value = language
+            }
+        }
+    }
+
+    //endregion SETTING CHANGES
+
+    //region MAP LOCATION UPDATE
+
+    fun startForegroundLocation() = locationRepository.start()
+
+    fun stopForegroundLocation() = locationRepository.stop()
+
+    //endregion MAP LOCATION UPDATE
+
+    //region UPLOADING CONTROL
+
     fun startTracking() {
-        Timber.d("startTracking called in ViewModel")
         updateTrackingState(true)
     }
 
     fun stopTracking() {
-        Timber.d("stopTracking called in ViewModel")
         updateTrackingState(false)
-    }
-
-    fun forceStopTracking() {
-        Timber.d("forceStopTracking called in ViewModel")
-        if (_isTracking.value == true) {
-            updateTrackingState(false)
-        }
     }
 
     fun switchTrackingState() {
@@ -114,101 +165,35 @@ class TrackingViewModel @Inject constructor(
         }
     }
 
-    fun startForegroundLocation() = foregroundLocationRepository.start()
-
-    fun stopForegroundLocation() = foregroundLocationRepository.stop()
-
-    fun onIntervalChanged(newInterval: Int) {
-        if (newInterval != _trackingInterval.value) {
-            Timber.d("Interval changed to: $newInterval minutes")
-            _trackingInterval.value = newInterval
-            viewModelScope.launch {
-                settingsRepository.saveTrackingInterval(newInterval)
-                // If currently tracking, stop and restart the service to apply the new interval
-                if (_isTracking.value == true) {
-                    _snackbarMessage.value = context.getString(R.string.interval_updated)
-                    // Stop the service
-                    Intent(context, TrackingService::class.java).also { intent ->
-                        intent.action = TrackingService.ACTION_STOP_SERVICE
-                        context.stopService(intent)
-                    }
-                    // Start the service again (it will read the new interval)
-                    Intent(context, TrackingService::class.java).also { intent ->
-                        intent.action = TrackingService.ACTION_START_SERVICE
-                        context.startForegroundService(intent)
-                    }
-                }
-            }
-        }
-    }
-
-    fun onUserNameChanged(newName: String) {
-        val trimmedName = newName.trim()
-        if (trimmedName != _userName.value) {
-            _userName.value = trimmedName
-            viewModelScope.launch {
-                settingsRepository.saveUsername(trimmedName)
-                Timber.d("Username saved: $trimmedName")
-            }
-        }
-    }
-
-    fun onWebsiteUrlChanged(newUrl: String) {
-        val trimmedUrl = newUrl.trim()
-        if (trimmedUrl != _websiteUrl.value && trimmedUrl.isNotEmpty()) {
-            _websiteUrl.value = trimmedUrl
-            viewModelScope.launch {
-                settingsRepository.saveWebsiteUrl(trimmedUrl)
-                Timber.d("Website URL saved: $trimmedUrl")
-            }
-        }
-    }
-
-    fun onLanguageChanged(language: String) {
-        if (language != _language.value) {
-            AppCompatDelegate.setApplicationLocales(
-                LocaleListCompat.forLanguageTags(language)
-            )
-            viewModelScope.launch {
-                settingsRepository.saveLanguage(language)
-                _language.value = language
-            }
-        }
-    }
-
-    fun onSnackbarMessageShown() {
-        _snackbarMessage.value = null
-    }
-
     private fun updateTrackingState(shouldTrack: Boolean): Job {
         if (_isTracking.value == shouldTrack) return Job().apply { complete() }
 
         _isTracking.value = shouldTrack
+
         return viewModelScope.launch {
             settingsRepository.setTrackingState(shouldTrack)
+
             if (shouldTrack) {
-                val newSessionId = UUID.randomUUID().toString()
-                settingsRepository.saveSessionId(newSessionId)
-                locationRepository.resetUploadStatus() // Reset location repo state
-                // Start the foreground service
+                uploadRepository.resetUploadStatus()
                 Intent(context, TrackingService::class.java).also { intent ->
                     intent.action = TrackingService.ACTION_START_SERVICE
                     context.startForegroundService(intent)
-                    Timber.i("Tracking started via ViewModel. Session: $newSessionId. Service started.")
                 }
             } else {
-                settingsRepository.clearSessionId()
-                // Stop the foreground service
                 Intent(context, TrackingService::class.java).also { intent ->
                     intent.action = TrackingService.ACTION_STOP_SERVICE
-                    context.stopService(intent) // Use stopService for foreground services
-                    Timber.i("Tracking stopped via ViewModel. Service stopped.")
+                    context.stopService(intent)
                 }
             }
         }
     }
 
-    companion object {
-        private const val TAG = "TrackingViewModel"
+    private fun restartForegroundServiceIfRequired() {
+        if (_isTracking.value != true) return
+
+        stopTracking()
+        startTracking()
     }
+
+    //endregion UPLOADING CONTROL
 }
