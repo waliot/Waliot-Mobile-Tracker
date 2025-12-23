@@ -11,7 +11,6 @@ import com.google.android.gms.location.Priority
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import timber.log.Timber
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,9 +27,6 @@ class LocationRepositoryImpl @Inject constructor(
 
     private companion object {
         const val TAG = "LocationRepository"
-
-        const val LOCATION_UPDATE_INTERVAL_SECONDS = 10L
-        const val LOCATION_UPDATE_DISTANCE_METERS = 10f
     }
 
     override fun start() {
@@ -86,10 +82,11 @@ class LocationRepositoryImpl @Inject constructor(
     }
 
     private fun createLocationRequest(): LocationRequest {
-        return LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, TimeUnit.SECONDS.toMillis(LOCATION_UPDATE_INTERVAL_SECONDS))
-            .setMinUpdateIntervalMillis(TimeUnit.SECONDS.toMillis(LOCATION_UPDATE_INTERVAL_SECONDS / 2))
-            .setMaxUpdateDelayMillis(TimeUnit.SECONDS.toMillis(LOCATION_UPDATE_INTERVAL_SECONDS * 2))
-            .setMinUpdateDistanceMeters(LOCATION_UPDATE_DISTANCE_METERS)
+        val interval = 10_000L
+        return LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, interval)
+            .setMinUpdateIntervalMillis(interval)
+            .setMaxUpdateDelayMillis(interval)
+            .setMinUpdateDistanceMeters(0f)
             .setWaitForAccurateLocation(true)
             .build()
     }

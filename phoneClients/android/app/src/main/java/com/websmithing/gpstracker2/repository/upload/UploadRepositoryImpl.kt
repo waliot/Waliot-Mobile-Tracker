@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -39,6 +40,7 @@ class UploadRepositoryImpl @Inject constructor(
 
         const val DEFAULT_HOST = "device.waliot.com"
         const val DEFAULT_PORT = 30032
+        const val DEFAULT_TIMEOUT = 10_000
 
         const val PROTOCOL_VERSION = "2.0"
         const val NO_VALUE = "NA"
@@ -56,7 +58,10 @@ class UploadRepositoryImpl @Inject constructor(
             Timber.tag(TAG).i("\uD83C\uDF00 Starting location upload process...")
             val (host, port) = getServerAddress()
 
-            Socket(host, port).use { socket ->
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), DEFAULT_TIMEOUT)
+                socket.soTimeout = DEFAULT_TIMEOUT
+
                 val output = socket.getOutputStream()
                 val input = socket.getInputStream().bufferedReader()
 

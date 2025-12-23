@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ val LocationMarkerSize = 48.dp
 fun LocationMarker(
     modifier: Modifier = Modifier,
     state: LocationMarkerState = LocationMarkerState.INACTIVE,
+    rotation: Float = 0f,
     onClick: () -> Unit,
 ) {
     val teardropShape = RoundedCornerShape(
@@ -49,12 +51,20 @@ fun LocationMarker(
         },
         shape = teardropShape,
         onClick = onClick,
-        modifier = modifier.size(LocationMarkerSize)
+        modifier = modifier
+            .size(LocationMarkerSize)
+            .graphicsLayer {
+                rotationZ = rotation
+            }
     ) {
         Icon(
             painterResource(R.drawable.ic_person_32),
             contentDescription = null,
-            modifier = Modifier.requiredSize(32.dp)
+            modifier = Modifier
+                .requiredSize(32.dp)
+                .graphicsLayer {
+                    rotationZ = -rotation
+                }
         )
     }
 }

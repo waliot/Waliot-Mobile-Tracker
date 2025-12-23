@@ -22,9 +22,9 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindUploadRepository(impl: UploadRepositoryImpl): UploadRepository
+    abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
 
     @Binds
     @Singleton
-    abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
+    abstract fun bindUploadRepository(impl: UploadRepositoryImpl): UploadRepository
 }

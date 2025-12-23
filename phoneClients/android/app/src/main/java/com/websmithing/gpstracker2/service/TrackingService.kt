@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.location.Location
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
@@ -20,11 +21,13 @@ import com.websmithing.gpstracker2.repository.settings.SettingsRepository
 import com.websmithing.gpstracker2.repository.upload.UploadRepository
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -40,25 +43,28 @@ class TrackingService : Service() {
     @Inject
     lateinit var uploadRepository: UploadRepository
 
-    private var wakeLock: PowerManager.WakeLock? = null
-    private var backgroundExecutor: ExecutorService? = null
-
     companion object {
         private const val TAG = "TrackingService"
         private const val WAKE_LOCK_TAG = "WaliotTracker::TrackingServiceWakeLock"
 
-        const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
-        const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
-
         private const val NOTIFICATION_CHANNEL_ID = "tracking_channel"
-        private const val NOTIFICATION_CHANNEL_NAME = "GPS Tracking"
+        private const val NOTIFICATION_CHANNEL_NAME = "Waliot Tracker"
         private const val NOTIFICATION_ID = 1
 
         private const val RESTART_DELAY_MS = 5000L
         private const val RESTART_REQUEST_CODE = 1
+
+        const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
+        const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
     }
 
-    //region attachBaseContext
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var wakeLock: PowerManager.WakeLock? = null
+
+    private var lastUploadedLocation: Location? = null
+    private var lastUploadTime = 0L
+
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun attachBaseContext(newBase: Context) {
         val repo = getSettingsRepository(newBase)
@@ -73,43 +79,19 @@ class TrackingService : Service() {
         SettingsRepositoryEntryPoint::class.java
     ).settingsRepository()
 
-    //endregion attachBaseContext
-
-    //region onCreate
-
     override fun onCreate() {
         super.onCreate()
-        setupNotificationChannel()
         setupWakeLock()
-        setupBackgroundExecutor()
+        setupNotificationChannel()
     }
 
-    private fun setupNotificationChannel() {
-        getSystemService(NotificationManager::class.java)?.apply {
-            val channel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                NOTIFICATION_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            createNotificationChannel(channel)
-            Timber.tag(TAG).d("Notification channel created.")
-        }
-    }
+    override fun onDestroy() {
+        super.onDestroy()
+        releaseWakeLock()
+        serviceScope.cancel()
 
-    private fun setupWakeLock() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
-            setReferenceCounted(false)
-        }
-        Timber.tag(TAG).d("Wake lock created.")
+        locationRepository.stop()
     }
-
-    private fun setupBackgroundExecutor() {
-        backgroundExecutor = Executors.newSingleThreadExecutor()
-        Timber.tag(TAG).d("Background executor initialized.")
-    }
-
-    //endregion onCreate
 
     //region onStartCommand
 
@@ -125,32 +107,60 @@ class TrackingService : Service() {
         return START_STICKY
     }
 
+    private fun handleStartService() {
+        acquireWakeLock()
+        startForeground(NOTIFICATION_ID, createNotification())
+
+        locationRepository.start()
+
+        serviceScope.launch {
+            val trackerId = settingsRepository.getTrackerIdentifier()
+            val uploadTimeInterval = settingsRepository.getUploadTimeInterval().toLong()
+            val uploadDistanceInterval = settingsRepository.getUploadDistanceInterval().toLong()
+            locationRepository.currentLocation.collect { location ->
+                if (location != null) {
+                    if (shouldUpload(location, uploadTimeInterval, uploadDistanceInterval)) {
+                        uploadData(trackerId, location)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun handleStopService() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+
+        locationRepository.stop()
+
+        stopSelf()
+    }
+
     private fun handleDefaultAction() {
         Timber.tag(TAG).d("Service restarted without specific action. Re-initializing.")
         handleStartService()
     }
 
-    private fun handleStartService() {
-        startForeground(NOTIFICATION_ID, createNotification())
-        acquireWakeLock()
-        locationRepository.start()
-        // TODO UPLOAD
+    private fun shouldUpload(location: Location, uploadTimeInterval: Long, uploadDistanceInterval: Long): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val lastLoc = lastUploadedLocation
+
+        if (lastLoc == null) return true
+
+        val timeElapsed = currentTime - lastUploadTime
+        val distance = location.distanceTo(lastLoc)
+
+        val moveUpdateTimeout = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval) && distance >= uploadDistanceInterval
+        val stopUpdateTimeout = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval * 5)
+
+        return moveUpdateTimeout || stopUpdateTimeout
     }
 
-    private fun handleStopService() {
-        locationRepository.stop()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
-    private fun createNotification(): Notification {
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notification_text))
-            .setSmallIcon(R.drawable.ic_notification_tracking)
-            .setOngoing(true)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
+    private suspend fun uploadData(trackerIdentifier: String, location: Location) {
+        val success = uploadRepository.uploadData(trackerIdentifier, location)
+        if (success) {
+            lastUploadedLocation = location
+            lastUploadTime = System.currentTimeMillis()
+        }
     }
 
     //endregion onStartCommand
@@ -164,7 +174,7 @@ class TrackingService : Service() {
     }
 
     private fun scheduleServiceRestart() {
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         val restartPendingIntent = createRestartPendingIntent()
 
         val triggerAtMillis = SystemClock.elapsedRealtime() + RESTART_DELAY_MS
@@ -174,8 +184,7 @@ class TrackingService : Service() {
             restartPendingIntent
         )
 
-        val delayInSeconds = RESTART_DELAY_MS / 1000
-        Timber.tag(TAG).d("TrackingService scheduled for restart in $delayInSeconds seconds")
+        Timber.tag(TAG).d("TrackingService scheduled for restart in ${RESTART_DELAY_MS / 1000} seconds")
     }
 
     private fun createRestartPendingIntent(): PendingIntent {
@@ -192,20 +201,25 @@ class TrackingService : Service() {
 
     //endregion onTaskRemoved
 
-    //region onDestroy
+    //region WAKE LOCK
 
-    override fun onDestroy() {
-        super.onDestroy()
-
-        locationRepository.stop()
-        shutdownExecutor()
-        releaseWakeLock()
+    private fun setupWakeLock() {
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
+            setReferenceCounted(false)
+        }
+        Timber.tag(TAG).d("Wake lock created.")
     }
 
-    private fun shutdownExecutor() {
-        backgroundExecutor?.shutdown()
-        backgroundExecutor = null
-        Timber.tag(TAG).d("Background executor shutdown requested.")
+    private fun acquireWakeLock() {
+        wakeLock?.apply {
+            if (!isHeld) {
+                acquire(TimeUnit.HOURS.toMillis(24))
+                Timber.tag(TAG).d("Wake lock acquired")
+            } else {
+                Timber.tag(TAG).d("Wake lock already held")
+            }
+        } ?: Timber.tag(TAG).e("Wake lock is null, cannot acquire")
     }
 
     private fun releaseWakeLock() {
@@ -218,18 +232,32 @@ class TrackingService : Service() {
         Timber.tag(TAG).d("Wake lock released")
     }
 
-    //endregion onDestroy
+    //endregion WAKE LOCK
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    //region NOTIFICATION
 
-    private fun acquireWakeLock() {
-        wakeLock?.apply {
-            if (!isHeld) {
-                acquire(TimeUnit.HOURS.toMillis(24))
-                Timber.tag(TAG).d("Wake lock acquired")
-            } else {
-                Timber.tag(TAG).d("Wake lock already held")
-            }
-        } ?: Timber.tag(TAG).e("Wake lock is null, cannot acquire")
+    private fun setupNotificationChannel() {
+        getSystemService(NotificationManager::class.java)?.apply {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                NOTIFICATION_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_LOW
+            )
+            createNotificationChannel(channel)
+            Timber.tag(TAG).d("Notification channel created.")
+        }
     }
+
+    private fun createNotification(): Notification {
+        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.notification_text))
+            .setSmallIcon(R.drawable.ic_notification_tracking)
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
+    }
+
+    //endregion NOTIFICATION
 }

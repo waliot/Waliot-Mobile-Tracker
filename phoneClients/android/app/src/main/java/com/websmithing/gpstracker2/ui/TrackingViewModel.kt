@@ -59,19 +59,23 @@ class TrackingViewModel @Inject constructor(
     val lastUploadStatus: StateFlow<UploadStatus> = uploadRepository.lastUploadStatus
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UploadStatus.Idle)
 
-    internal val initJob: Job = viewModelScope.launch {
-        _isTracking.value = settingsRepository.getTrackingState()
-        _trackerIdentifier.value = settingsRepository.getTrackerIdentifier()
-        _uploadServer.value = settingsRepository.getUploadServer()
-        _uploadTimeInterval.value = settingsRepository.getUploadTimeInterval()
-        _uploadDistanceInterval.value = settingsRepository.getUploadDistanceInterval()
-        _language.value = settingsRepository.getLanguage()
-        Timber.d("ViewModel initialized. Tracking: ${isTracking.value}")
+    init {
+        viewModelScope.launch {
+            _isTracking.value = settingsRepository.getTrackingState()
+            _trackerIdentifier.value = settingsRepository.getTrackerIdentifier()
+            _uploadServer.value = settingsRepository.getUploadServer()
+            _uploadTimeInterval.value = settingsRepository.getUploadTimeInterval()
+            _uploadDistanceInterval.value = settingsRepository.getUploadDistanceInterval()
+            _language.value = settingsRepository.getLanguage()
+            Timber.d("ViewModel initialized. Tracking: ${isTracking.value}")
 
-        if (settingsRepository.isFirstTimeLoading()) {
-            Timber.d("First time loading detected, generating App ID.")
-            settingsRepository.generateAndSaveAppId()
-            settingsRepository.setFirstTimeLoading(false)
+            if (settingsRepository.isFirstTimeLoading()) {
+                Timber.d("First time loading detected, generating App ID.")
+                settingsRepository.generateAndSaveAppId()
+                settingsRepository.setFirstTimeLoading(false)
+            }
+
+            restartForegroundServiceIfRequired()
         }
     }
 

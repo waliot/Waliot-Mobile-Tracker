@@ -70,7 +70,7 @@ fun HomePage(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    var showBackgroundDeniedDialog by remember { mutableStateOf(false) }
 
     val cameraState = rememberCameraState()
     val latestLocation by viewModel.latestLocation.collectAsStateWithLifecycle()
@@ -82,7 +82,13 @@ fun HomePage(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarMessage by viewModel.snackbarMessage.observeAsState()
+
     val isTracking by viewModel.isTracking.observeAsState(false)
+    val lastUploadStatus by viewModel.lastUploadStatus.collectAsStateWithLifecycle()
+    var showTrackingInfoSheet by remember { mutableStateOf(false) }
+
     val trackerIdentifier by viewModel.trackerIdentifier.observeAsState()
     val uploadServer by viewModel.uploadServer.observeAsState()
     val canRunTracking by remember(trackerIdentifier, uploadServer) {
@@ -90,19 +96,19 @@ fun HomePage(
             !uploadServer.isNullOrBlank() && !trackerIdentifier.isNullOrBlank()
         }
     }
-    val lastUploadStatus by viewModel.lastUploadStatus.collectAsStateWithLifecycle()
-    val snackbarMessage by viewModel.snackbarMessage.observeAsState()
 
-    var showTrackingInfoSheet by remember { mutableStateOf(false) }
-    var showBackgroundDeniedDialog by remember { mutableStateOf(false) }
+    LocationPermissionFlow(
+        onAllow = { viewModel.startForegroundLocation() },
+        onDeny = { viewModel.stopForegroundLocation() }
+    )
 
     LaunchedEffect(latestLocation) {
-        val oldZoom = cameraState.position.zoom
+        val curZoom = cameraState.position.zoom
         latestLocation?.let {
             cameraState.animateTo(
                 CameraPosition(
                     target = it.toPosition(),
-                    zoom = if (oldZoom == 1.0) DEFAULT_MAP_ZOOM else oldZoom,
+                    zoom = if (curZoom == 1.0) DEFAULT_MAP_ZOOM else curZoom,
                 ),
                 duration = 500.milliseconds,
             )
@@ -114,6 +120,18 @@ fun HomePage(
             scope.launch {
                 snackbarHostState.showSnackbar(
                     it,
+                    actionLabel = CustomSnackbarType.SUCCESS.name,
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(isTracking) {
+        if (isTracking) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    context.getString(R.string.tracking_enabled),
                     actionLabel = CustomSnackbarType.SUCCESS.name,
                     duration = SnackbarDuration.Short
                 )
@@ -137,23 +155,6 @@ fun HomePage(
             else -> {}
         }
     }
-
-    LaunchedEffect(isTracking) {
-        if (isTracking) {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    context.getString(R.string.tracking_enabled),
-                    actionLabel = CustomSnackbarType.SUCCESS.name,
-                    duration = SnackbarDuration.Short
-                )
-            }
-        }
-    }
-
-    LocationPermissionFlow(
-        onAllow = { viewModel.startForegroundLocation() },
-        onDeny = { viewModel.stopForegroundLocation() }
-    )
 
     fun switchTracking() {
         if (!canRunTracking) {
@@ -225,6 +226,7 @@ fun HomePage(
                         trackerIdentifier.isNullOrEmpty() -> LocationMarkerState.ERROR
                         else -> LocationMarkerState.ACTIVE
                     },
+                    rotation = (latestLocation?.bearing ?: 0f) - 45f,
                     modifier = Modifier.offset(
                         x = markerPosition.x - LocationMarkerSize / 2,
                         y = markerPosition.y - LocationMarkerSize / 2
