@@ -15,7 +15,7 @@ class GpsTrackerApplication : Application() {
     private fun setupTimber() {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
-            Timber.d("Timber DebugTree planted.")
+            Timber.d("Timber DebugTree planted")
         }
     }
 }

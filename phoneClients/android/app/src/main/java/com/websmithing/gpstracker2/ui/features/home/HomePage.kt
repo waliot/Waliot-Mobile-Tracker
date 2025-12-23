@@ -87,6 +87,7 @@ fun HomePage(
 
     val isTracking by viewModel.isTracking.observeAsState(false)
     val lastUploadStatus by viewModel.lastUploadStatus.collectAsStateWithLifecycle()
+    val bufferCount by viewModel.bufferCount.collectAsStateWithLifecycle()
     var showTrackingInfoSheet by remember { mutableStateOf(false) }
 
     val trackerIdentifier by viewModel.trackerIdentifier.observeAsState()
@@ -241,7 +242,8 @@ fun HomePage(
             onDismissRequest = { showTrackingInfoSheet = false },
             trackerIdentifier = trackerIdentifier,
             location = latestLocation,
-            lastUploadStatus = lastUploadStatus
+            lastUploadStatus = lastUploadStatus,
+            bufferCount = bufferCount
         )
     }
 

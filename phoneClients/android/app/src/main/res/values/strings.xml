@@ -64,7 +64,7 @@
     <string name="distance">Distance</string>
     <string name="distance_format_km">%s km</string>
 
-    <string name="data_buffer">Data buffer</string>
+    <string name="data_buffer">Buffer</string>
 
     <string name="signal_strength">GPS Signal</string>
     <string name="search_satellites">Search satellites…</string>

@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -59,6 +58,9 @@ class TrackingViewModel @Inject constructor(
     val lastUploadStatus: StateFlow<UploadStatus> = uploadRepository.lastUploadStatus
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UploadStatus.Idle)
 
+    val bufferCount: StateFlow<Int> = TrackingService.bufferCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     init {
         viewModelScope.launch {
             _isTracking.value = settingsRepository.getTrackingState()
@@ -67,10 +69,8 @@ class TrackingViewModel @Inject constructor(
             _uploadTimeInterval.value = settingsRepository.getUploadTimeInterval()
             _uploadDistanceInterval.value = settingsRepository.getUploadDistanceInterval()
             _language.value = settingsRepository.getLanguage()
-            Timber.d("ViewModel initialized. Tracking: ${isTracking.value}")
 
             if (settingsRepository.isFirstTimeLoading()) {
-                Timber.d("First time loading detected, generating App ID.")
                 settingsRepository.generateAndSaveAppId()
                 settingsRepository.setFirstTimeLoading(false)
             }
@@ -87,7 +87,6 @@ class TrackingViewModel @Inject constructor(
             _trackerIdentifier.value = newTrackerIdentifier
             viewModelScope.launch {
                 settingsRepository.setTrackingIdentifier(newTrackerIdentifier)
-                Timber.d("Tracker identifier saved: $newTrackerIdentifier")
             }
         }
     }
@@ -98,7 +97,6 @@ class TrackingViewModel @Inject constructor(
             _uploadServer.value = newServerAddress
             viewModelScope.launch {
                 settingsRepository.setUploadServer(newServerAddress)
-                Timber.d("Upload server saved: $newServerAddress")
             }
         }
     }
@@ -110,7 +108,6 @@ class TrackingViewModel @Inject constructor(
         _uploadTimeInterval.value = newTimeInterval
         viewModelScope.launch {
             settingsRepository.setUploadTimeInterval(newTimeInterval)
-            Timber.d("Interval changed to: $newTimeInterval minutes")
 
             restartForegroundServiceIfRequired()
         }
@@ -123,7 +120,6 @@ class TrackingViewModel @Inject constructor(
         _uploadDistanceInterval.value = newDistanceInterval
         viewModelScope.launch {
             settingsRepository.setUploadDistanceInterval(newDistanceInterval)
-            Timber.d("Interval changed to: $newDistanceInterval meters")
 
             restartForegroundServiceIfRequired()
         }

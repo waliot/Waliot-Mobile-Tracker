@@ -64,7 +64,7 @@
     <string name="distance">Расстояние</string>
     <string name="distance_format_km">%s км</string>
 
-    <string name="data_buffer">Буфер данных</string>
+    <string name="data_buffer">Буфер</string>
 
     <string name="signal_strength">Сигнал GPS</string>
     <string name="search_satellites">Поиск спутников…</string>

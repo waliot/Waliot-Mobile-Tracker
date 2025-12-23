@@ -55,7 +55,7 @@ class LocationRepositoryImpl @Inject constructor(
     private fun updateLocationState(location: Location, source: String) {
         initialFixReceived = true
         _currentLocation.value = location
-        Timber.tag(TAG).d("$source: ${location.latitude}, ${location.longitude}")
+        Timber.tag(TAG).i("$source: ${location.latitude}, ${location.longitude}")
     }
 
     @SuppressLint("MissingPermission")

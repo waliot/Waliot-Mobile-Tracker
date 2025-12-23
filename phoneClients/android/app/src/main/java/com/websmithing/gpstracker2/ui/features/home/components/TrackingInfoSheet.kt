@@ -47,6 +47,7 @@ fun TrackingInfoSheet(
     trackerIdentifier: String?,
     location: Location?,
     lastUploadStatus: UploadStatus?,
+    bufferCount: Int,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -55,6 +56,7 @@ fun TrackingInfoSheet(
         trackerIdentifier = trackerIdentifier,
         location = location,
         lastUploadStatus = lastUploadStatus,
+        bufferCount = bufferCount,
         modifier = modifier
     )
 }
@@ -65,6 +67,7 @@ private fun Sheet(
     trackerIdentifier: String?,
     location: Location?,
     lastUploadStatus: UploadStatus?,
+    bufferCount: Int,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -95,7 +98,7 @@ private fun Sheet(
                 item(span = { GridItemSpan(2) }) {
                     Text(
                         if (location == null) context.getString(R.string.search_satellites)
-                        else "${coordinateFormatter.format(location.latitude)}, ${coordinateFormatter.format(location.longitude)}"
+                        else "${coordinateFormatter.format(location.latitude)}; ${coordinateFormatter.format(location.longitude)}"
                     )
                 }
 
@@ -165,7 +168,7 @@ private fun Sheet(
                 }
             }
 
-            ExtraInfo(context, location)
+            ExtraInfo(context, location, bufferCount)
         }
     }
 }
@@ -173,7 +176,8 @@ private fun Sheet(
 @Composable
 private fun ExtraInfo(
     context: Context,
-    location: Location?
+    location: Location?,
+    bufferCount: Int
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(5.dp),
@@ -200,7 +204,11 @@ private fun ExtraInfo(
 
             ChipItem(
                 label = stringResource(R.string.data_buffer),
-                value = context.getString(R.string.no_data_placeholder)
+                value = if (bufferCount > 0) {
+                    bufferCount.toString()
+                } else {
+                    context.getString(R.string.no_data_placeholder)
+                }
             )
         }
     }
@@ -287,7 +295,8 @@ private fun SheetPreview() {
             onDismissRequest = {},
             trackerIdentifier = "89181201004",
             location = Location(""),
-            lastUploadStatus = UploadStatus.Success
+            lastUploadStatus = UploadStatus.Success,
+            bufferCount = 7
         )
     }
 }
@@ -300,7 +309,8 @@ private fun EmptySheetPreview() {
             onDismissRequest = {},
             trackerIdentifier = null,
             location = null,
-            lastUploadStatus = null
+            lastUploadStatus = null,
+            bufferCount = 0
         )
     }
 }

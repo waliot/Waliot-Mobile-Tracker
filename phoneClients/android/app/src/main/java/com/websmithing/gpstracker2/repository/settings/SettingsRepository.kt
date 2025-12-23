@@ -17,7 +17,7 @@ interface SettingsRepository {
         const val DEFAULT_UPLOAD_SERVER = "device.waliot.com:30032"
 
         const val KEY_UPLOAD_TIME_INTERVAL = "uploadTimeInterval"
-        const val DEFAULT_UPLOAD_TIME_INTERVAL = 5
+        const val DEFAULT_UPLOAD_TIME_INTERVAL = 1
 
         const val KEY_UPLOAD_DISTANCE_INTERVAL = "uploadDistanceInterval"
         const val DEFAULT_UPLOAD_DISTANCE_INTERVAL = 100

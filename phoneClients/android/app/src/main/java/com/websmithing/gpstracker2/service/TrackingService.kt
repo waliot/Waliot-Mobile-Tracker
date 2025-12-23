@@ -25,6 +25,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
@@ -54,15 +57,20 @@ class TrackingService : Service() {
         private const val RESTART_DELAY_MS = 5000L
         private const val RESTART_REQUEST_CODE = 1
 
+        private const val UPLOAD_BUFFER_INTERVAL_MS = 5 * 60 * 1000L
+
         const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
         const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
+
+        private val _bufferCount = MutableStateFlow(0)
+        val bufferCount: StateFlow<Int> = _bufferCount
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var wakeLock: PowerManager.WakeLock? = null
 
-    private var lastUploadedLocation: Location? = null
-    private var lastUploadTime = 0L
+    private val locationBuffer = mutableListOf<Location>()
+    private var lastBufferLocation: Location? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -114,14 +122,27 @@ class TrackingService : Service() {
         locationRepository.start()
 
         serviceScope.launch {
-            val trackerId = settingsRepository.getTrackerIdentifier()
             val uploadTimeInterval = settingsRepository.getUploadTimeInterval().toLong()
             val uploadDistanceInterval = settingsRepository.getUploadDistanceInterval().toLong()
+
             locationRepository.currentLocation.collect { location ->
                 if (location != null) {
-                    if (shouldUpload(location, uploadTimeInterval, uploadDistanceInterval)) {
-                        uploadData(trackerId, location)
+                    if (shouldAddToBuffer(location, uploadTimeInterval, uploadDistanceInterval)) {
+                        locationBuffer.add(location)
+                        lastBufferLocation = location
+
+                        _bufferCount.value = locationBuffer.size
+                        Timber.tag(TAG).i("Location added to buffer. Total: ${locationBuffer.size}")
                     }
+                }
+            }
+        }
+
+        serviceScope.launch {
+            while (true) {
+                delay(UPLOAD_BUFFER_INTERVAL_MS)
+                if (locationBuffer.isNotEmpty()) {
+                    uploadBuffer()
                 }
             }
         }
@@ -129,37 +150,41 @@ class TrackingService : Service() {
 
     private fun handleStopService() {
         stopForeground(STOP_FOREGROUND_REMOVE)
-
         locationRepository.stop()
-
         stopSelf()
     }
 
     private fun handleDefaultAction() {
-        Timber.tag(TAG).d("Service restarted without specific action. Re-initializing.")
         handleStartService()
     }
 
-    private fun shouldUpload(location: Location, uploadTimeInterval: Long, uploadDistanceInterval: Long): Boolean {
-        val currentTime = System.currentTimeMillis()
-        val lastLoc = lastUploadedLocation
+    private fun shouldAddToBuffer(location: Location, uploadTimeInterval: Long, uploadDistanceInterval: Long): Boolean {
+        val lastLoc = lastBufferLocation ?: return true
 
-        if (lastLoc == null) return true
-
-        val timeElapsed = currentTime - lastUploadTime
+        val timeElapsed = System.currentTimeMillis() - lastLoc.time
         val distance = location.distanceTo(lastLoc)
 
-        val moveUpdateTimeout = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval) && distance >= uploadDistanceInterval
-        val stopUpdateTimeout = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval * 5)
+        val moveUpdateTrigger = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval) && distance >= uploadDistanceInterval
+        val stopUpdateTrigger = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval * 5)
 
-        return moveUpdateTimeout || stopUpdateTimeout
+        return moveUpdateTrigger || stopUpdateTrigger
     }
 
-    private suspend fun uploadData(trackerIdentifier: String, location: Location) {
-        val success = uploadRepository.uploadData(trackerIdentifier, location)
-        if (success) {
-            lastUploadedLocation = location
-            lastUploadTime = System.currentTimeMillis()
+    private suspend fun uploadBuffer() {
+        Timber.tag(TAG).i("Attempting to upload buffer: ${locationBuffer.size} points")
+
+        val trackerId = settingsRepository.getTrackerIdentifier()
+        val iterator = locationBuffer.iterator()
+        while (iterator.hasNext()) {
+            val loc = iterator.next()
+            val success = uploadRepository.uploadData(trackerId, loc)
+            if (success) {
+                iterator.remove()
+                _bufferCount.value = locationBuffer.size
+            } else {
+                Timber.tag(TAG).w("Upload failed, stopping buffer processing until next cycle")
+                break
+            }
         }
     }
 
@@ -169,7 +194,6 @@ class TrackingService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        Timber.tag(TAG).d("TrackingService onTaskRemoved - application swiped away from recent apps")
         scheduleServiceRestart()
     }
 
@@ -183,8 +207,6 @@ class TrackingService : Service() {
             triggerAtMillis,
             restartPendingIntent
         )
-
-        Timber.tag(TAG).d("TrackingService scheduled for restart in ${RESTART_DELAY_MS / 1000} seconds")
     }
 
     private fun createRestartPendingIntent(): PendingIntent {
@@ -208,7 +230,7 @@ class TrackingService : Service() {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
             setReferenceCounted(false)
         }
-        Timber.tag(TAG).d("Wake lock created.")
+        Timber.tag(TAG).d("Wake lock created")
     }
 
     private fun acquireWakeLock() {
@@ -244,7 +266,7 @@ class TrackingService : Service() {
                 NotificationManager.IMPORTANCE_LOW
             )
             createNotificationChannel(channel)
-            Timber.tag(TAG).d("Notification channel created.")
+            Timber.tag(TAG).d("Notification channel created")
         }
     }
 
