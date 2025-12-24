@@ -56,7 +56,7 @@ class TrackingService : Service() {
         private const val NOTIFICATION_CHANNEL_NAME = "Waliot Tracker"
         private const val NOTIFICATION_ID = 1
 
-        private const val RESTART_DELAY_MS = 5000L
+        private const val RESTART_DELAY_MS = 5_000
         private const val RESTART_REQUEST_CODE = 1
 
         const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
@@ -100,7 +100,6 @@ class TrackingService : Service() {
         super.onDestroy()
         releaseWakeLock()
         serviceScope.cancel()
-
         locationRepository.stop()
     }
 
