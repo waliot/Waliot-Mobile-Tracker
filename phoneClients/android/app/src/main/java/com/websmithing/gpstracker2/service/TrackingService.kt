@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -57,8 +59,6 @@ class TrackingService : Service() {
         private const val RESTART_DELAY_MS = 5000L
         private const val RESTART_REQUEST_CODE = 1
 
-        private const val UPLOAD_BUFFER_INTERVAL_MS = 5 * 60 * 1000L
-
         const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
         const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
 
@@ -68,6 +68,9 @@ class TrackingService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var wakeLock: PowerManager.WakeLock? = null
+
+    private val bufferMutex = Mutex()
+    private val uploadMutex = Mutex()
 
     private val locationBuffer = mutableListOf<Location>()
     private var lastBufferLocation: Location? = null
@@ -128,22 +131,26 @@ class TrackingService : Service() {
             locationRepository.currentLocation.collect { location ->
                 if (location != null) {
                     if (shouldAddToBuffer(location, uploadTimeInterval, uploadDistanceInterval)) {
-                        locationBuffer.add(location)
                         lastBufferLocation = location
 
-                        _bufferCount.value = locationBuffer.size
-                        Timber.tag(TAG).i("Location added to buffer. Total: ${locationBuffer.size}")
+                        bufferMutex.withLock {
+                            locationBuffer.add(location)
+                            _bufferCount.value = locationBuffer.size
+                        }
+
+                        Timber.tag(TAG).i("Location added to buffer. Total: ${_bufferCount.value}")
                     }
                 }
             }
         }
 
         serviceScope.launch {
+            val trackerId = settingsRepository.getTrackerIdentifier()
+            val uploadTimeInterval = settingsRepository.getUploadTimeInterval().toLong()
+
             while (true) {
-                delay(UPLOAD_BUFFER_INTERVAL_MS)
-                if (locationBuffer.isNotEmpty()) {
-                    uploadBuffer()
-                }
+                delay(TimeUnit.MINUTES.toMillis(uploadTimeInterval))
+                uploadBuffer(trackerId)
             }
         }
     }
@@ -164,26 +171,36 @@ class TrackingService : Service() {
         val timeElapsed = System.currentTimeMillis() - lastLoc.time
         val distance = location.distanceTo(lastLoc)
 
-        val moveUpdateTrigger = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval) && distance >= uploadDistanceInterval
-        val stopUpdateTrigger = timeElapsed >= TimeUnit.MINUTES.toMillis(uploadTimeInterval * 5)
-
-        return moveUpdateTrigger || stopUpdateTrigger
+        return timeElapsed > TimeUnit.MINUTES.toMillis(uploadTimeInterval)
+            || distance > uploadDistanceInterval
     }
 
-    private suspend fun uploadBuffer() {
-        Timber.tag(TAG).i("Attempting to upload buffer: ${locationBuffer.size} points")
+    private suspend fun uploadBuffer(trackerId: String) {
+        uploadMutex.withLock {
+            Timber.tag(TAG).i("Attempting to upload buffer: ${locationBuffer.size} points")
+            if (locationBuffer.isEmpty()) {
+                return
+            }
 
-        val trackerId = settingsRepository.getTrackerIdentifier()
-        val iterator = locationBuffer.iterator()
-        while (iterator.hasNext()) {
-            val loc = iterator.next()
-            val success = uploadRepository.uploadData(trackerId, loc)
-            if (success) {
-                iterator.remove()
-                _bufferCount.value = locationBuffer.size
-            } else {
-                Timber.tag(TAG).w("Upload failed, stopping buffer processing until next cycle")
-                break
+            while (true) {
+                val next: Location = bufferMutex.withLock {
+                    val loc = locationBuffer.firstOrNull() ?: return
+                    locationBuffer.removeAt(0)
+                    _bufferCount.value = locationBuffer.size
+                    loc
+                }
+
+                val success = uploadRepository.uploadData(trackerId, next)
+
+                if (!success) {
+                    bufferMutex.withLock {
+                        locationBuffer.add(0, next)
+                        _bufferCount.value = locationBuffer.size
+                    }
+
+                    Timber.tag(TAG).w("Upload failed, stopping buffer processing until next cycle")
+                    return
+                }
             }
         }
     }

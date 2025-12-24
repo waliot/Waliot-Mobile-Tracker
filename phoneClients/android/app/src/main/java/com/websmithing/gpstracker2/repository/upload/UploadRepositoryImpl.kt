@@ -40,7 +40,8 @@ class UploadRepositoryImpl @Inject constructor(
 
         const val DEFAULT_HOST = "device.waliot.com"
         const val DEFAULT_PORT = 30032
-        const val DEFAULT_TIMEOUT = 10_000
+        const val CONNECT_TIMEOUT = 5_000
+        const val SEND_TIMEOUT = 30_000
 
         const val PROTOCOL_VERSION = "2.0"
         const val NO_VALUE = "NA"
@@ -59,8 +60,8 @@ class UploadRepositoryImpl @Inject constructor(
             val (host, port) = getServerAddress()
 
             Socket().use { socket ->
-                socket.connect(InetSocketAddress(host, port), DEFAULT_TIMEOUT)
-                socket.soTimeout = DEFAULT_TIMEOUT
+                socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT)
+                socket.soTimeout = SEND_TIMEOUT
 
                 val output = socket.getOutputStream()
                 val input = socket.getInputStream().bufferedReader()
@@ -69,8 +70,10 @@ class UploadRepositoryImpl @Inject constructor(
                 val loginPacket = createPacket("#L#$PROTOCOL_VERSION;$trackerIdentifier;$DEFAULT_PASSWORD")
                 Timber.tag(TAG).d("Sending login packet: $loginPacket")
                 output.write(loginPacket.toByteArray(Charsets.UTF_8))
+                output.flush()
 
                 val loginResponse = input.readLine()
+                Timber.tag(TAG).d("Login response: $loginResponse")
                 if (loginResponse?.startsWith("#AL#1") != true) {
                     throw IllegalStateException("Login failed: $loginResponse")
                 }
@@ -80,8 +83,10 @@ class UploadRepositoryImpl @Inject constructor(
                 val dataPacket = createPacket("#D#$dataPayload")
                 Timber.tag(TAG).d("Sending data packet: $dataPacket")
                 output.write(dataPacket.toByteArray(Charsets.UTF_8))
+                output.flush()
 
                 val dataResponse = input.readLine()
+                Timber.tag(TAG).d("Data response: $dataResponse")
                 if (dataResponse?.startsWith("#AD#1") != true) {
                     throw IllegalStateException("Upload failed: $dataResponse")
                 }
