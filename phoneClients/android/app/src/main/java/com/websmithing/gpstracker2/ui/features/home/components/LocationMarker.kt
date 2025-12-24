@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -17,9 +18,9 @@ import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 
 enum class LocationMarkerState {
-    Active,
-    Inactive,
-    Error
+    ACTIVE,
+    INACTIVE,
+    ERROR
 }
 
 val LocationMarkerSize = 48.dp
@@ -27,7 +28,8 @@ val LocationMarkerSize = 48.dp
 @Composable
 fun LocationMarker(
     modifier: Modifier = Modifier,
-    state: LocationMarkerState = LocationMarkerState.Inactive,
+    state: LocationMarkerState = LocationMarkerState.INACTIVE,
+    rotation: Float = 0f,
     onClick: () -> Unit,
 ) {
     val teardropShape = RoundedCornerShape(
@@ -39,22 +41,30 @@ fun LocationMarker(
 
     CustomFloatingButton(
         color = when (state) {
-            LocationMarkerState.Active -> MaterialTheme.colorScheme.primary
-            LocationMarkerState.Inactive -> MaterialTheme.extendedColors.fab
-            LocationMarkerState.Error -> MaterialTheme.colorScheme.error
+            LocationMarkerState.ACTIVE -> MaterialTheme.colorScheme.primary
+            LocationMarkerState.INACTIVE -> MaterialTheme.extendedColors.fab
+            LocationMarkerState.ERROR -> MaterialTheme.colorScheme.error
         },
         contentColor = when (state) {
-            LocationMarkerState.Active, LocationMarkerState.Error -> Color.White
-            LocationMarkerState.Inactive -> MaterialTheme.extendedColors.onFab
+            LocationMarkerState.ACTIVE, LocationMarkerState.ERROR -> Color.White
+            LocationMarkerState.INACTIVE -> MaterialTheme.extendedColors.onFab
         },
         shape = teardropShape,
         onClick = onClick,
-        modifier = modifier.size(LocationMarkerSize)
+        modifier = modifier
+            .size(LocationMarkerSize)
+            .graphicsLayer {
+                rotationZ = rotation
+            }
     ) {
         Icon(
             painterResource(R.drawable.ic_person_32),
-            contentDescription = "Текущая локация",
-            modifier = Modifier.requiredSize(32.dp)
+            contentDescription = null,
+            modifier = Modifier
+                .requiredSize(32.dp)
+                .graphicsLayer {
+                    rotationZ = -rotation
+                }
         )
     }
 }
@@ -71,7 +81,7 @@ private fun LocationMarkerPreview() {
 @Composable
 private fun LocationMarkerActivePreview() {
     WaliotTheme {
-        LocationMarker(onClick = {}, state = LocationMarkerState.Active)
+        LocationMarker(onClick = {}, state = LocationMarkerState.ACTIVE)
     }
 }
 
@@ -79,6 +89,6 @@ private fun LocationMarkerActivePreview() {
 @Composable
 private fun LocationMarkerErrorPreview() {
     WaliotTheme {
-        LocationMarker(onClick = {}, state = LocationMarkerState.Error)
+        LocationMarker(onClick = {}, state = LocationMarkerState.ERROR)
     }
 }

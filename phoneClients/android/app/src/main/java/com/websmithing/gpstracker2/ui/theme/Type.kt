@@ -16,7 +16,6 @@ val LabGrotesqueFontFamily = FontFamily(
     )
 )
 
-// Set of Material typography styles to start with
 private val defaultTypography = Typography()
 val Typography = Typography(
     displayMedium = defaultTypography.displayMedium.copy(

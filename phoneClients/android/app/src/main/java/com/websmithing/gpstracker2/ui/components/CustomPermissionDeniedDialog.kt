@@ -9,11 +9,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import com.websmithing.gpstracker2.R
+import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 
 @Composable
-fun PermissionDeniedDialog(
-    modifier: Modifier = Modifier.Companion,
+fun CustomPermissionDeniedDialog(
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     text: String
 ) {
@@ -38,4 +40,15 @@ fun PermissionDeniedDialog(
         },
         modifier = modifier,
     )
+}
+
+@Preview
+@Composable
+private fun CustomPermissionDeniedDialogPreview() {
+    WaliotTheme {
+        CustomPermissionDeniedDialog(
+            onDismissRequest = {},
+            text = "This is a dialog"
+        )
+    }
 }

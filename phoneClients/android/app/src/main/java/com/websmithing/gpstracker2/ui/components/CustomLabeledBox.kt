@@ -6,11 +6,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 
 @Composable
-fun LabeledBox(
-    modifier: Modifier = Modifier.Companion,
+fun CustomLabeledBox(
+    modifier: Modifier = Modifier,
     label: String,
     content: @Composable () -> Unit
 ) {
@@ -25,5 +27,15 @@ fun LabeledBox(
             modifier = modifier
         )
         content()
+    }
+}
+
+@Preview
+@Composable
+private fun CustomLabeledBoxPreview() {
+    WaliotTheme {
+        CustomLabeledBox(label = "Label") {
+            Text("Content")
+        }
     }
 }

@@ -21,8 +21,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,37 +30,33 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.data.repository.UploadStatus
-import com.websmithing.gpstracker2.ui.components.DragHandle
+import com.websmithing.gpstracker2.repository.upload.UploadStatus
+import com.websmithing.gpstracker2.ui.components.CustomDragHandle
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
-import kotlinx.coroutines.flow.StateFlow
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-private val coordinateFormatter = DecimalFormat("0.00000")
-private val distanceFormatter = DecimalFormat("0.0")
+private val coordinateFormatter = DecimalFormat("0.000000")
+private val timeFormatter = SimpleDateFormat("HH:mm:ss, dd.MM.yy", Locale.US)
 
 @Composable
 fun TrackingInfoSheet(
-    userName: String?,
+    trackerIdentifier: String?,
     location: Location?,
-    totalDistance: StateFlow<Float>,
     lastUploadStatus: UploadStatus?,
+    bufferCount: Int,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val totalDistanceValue by totalDistance.collectAsStateWithLifecycle()
-
     Sheet(
         onDismissRequest = onDismissRequest,
-        userName = userName,
+        trackerIdentifier = trackerIdentifier,
         location = location,
-        totalDistance = totalDistanceValue,
         lastUploadStatus = lastUploadStatus,
+        bufferCount = bufferCount,
         modifier = modifier
     )
 }
@@ -70,26 +64,25 @@ fun TrackingInfoSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Sheet(
-    userName: String?,
+    trackerIdentifier: String?,
     location: Location?,
-    totalDistance: Float,
     lastUploadStatus: UploadStatus?,
+    bufferCount: Int,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val timeFormatter = remember { SimpleDateFormat("HH:mm:ss, dd.MM.yy", Locale.getDefault()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         containerColor = MaterialTheme.extendedColors.appBar,
         contentColor = MaterialTheme.colorScheme.onSurface,
         shape = RectangleShape,
-        dragHandle = { DragHandle() },
+        dragHandle = { CustomDragHandle() },
         scrimColor = Color.Transparent,
         modifier = modifier,
     ) {
-        UserNameBadge(value = userName)
+        TrackerIdentifierBadge(value = trackerIdentifier)
 
         ProvideTextStyle(MaterialTheme.typography.labelMedium) {
             Grid(
@@ -104,11 +97,8 @@ private fun Sheet(
 
                 item(span = { GridItemSpan(2) }) {
                     Text(
-                        if (location == null)
-                            context.getString(R.string.search_satellites)
-                        else "${
-                            coordinateFormatter.format(location.latitude)
-                        }, ${coordinateFormatter.format(location.longitude)}"
+                        if (location == null) context.getString(R.string.search_satellites)
+                        else "${coordinateFormatter.format(location.latitude)}; ${coordinateFormatter.format(location.longitude)}"
                     )
                 }
 
@@ -170,8 +160,7 @@ private fun Sheet(
                                 is UploadStatus.Failure -> context.getString(
                                     R.string.upload_status_failure,
                                     timeFormatter.format(location.time),
-                                    lastUploadStatus.errorMessage
-                                        ?: stringResource(R.string.unknown_error)
+                                    lastUploadStatus.errorMessage ?: stringResource(R.string.unknown_error)
                                 )
                             }
                         }
@@ -179,7 +168,7 @@ private fun Sheet(
                 }
             }
 
-            ExtraInfo(context, location, totalDistance)
+            ExtraInfo(context, location, bufferCount)
         }
     }
 }
@@ -188,7 +177,7 @@ private fun Sheet(
 private fun ExtraInfo(
     context: Context,
     location: Location?,
-    totalDistance: Float
+    bufferCount: Int
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(5.dp),
@@ -214,36 +203,28 @@ private fun ExtraInfo(
             )
 
             ChipItem(
-                label = context.getString(R.string.distance),
-                value = if (totalDistance == 0f)
-                    context.getString(R.string.no_data_placeholder)
-                else
-                    context.getString(
-                        R.string.distance_format_km,
-                        distanceFormatter.format(totalDistance / 1000f)
-                    )
-            )
-
-            // TODO
-            ChipItem(
                 label = stringResource(R.string.data_buffer),
-                value = context.getString(R.string.no_data_placeholder)
+                value = if (bufferCount > 0) {
+                    bufferCount.toString()
+                } else {
+                    context.getString(R.string.no_data_placeholder)
+                }
             )
         }
     }
 }
 
 @Composable
-fun UserNameBadge(modifier: Modifier = Modifier, value: String?) {
-    val noUserName = value == null || value.isEmpty()
+fun TrackerIdentifierBadge(modifier: Modifier = Modifier, value: String?) {
+    val noValue = value.isNullOrBlank()
     Text(
-        if (noUserName) stringResource(R.string.provide_identifier) else value,
+        if (noValue) stringResource(R.string.provide_identifier) else value,
         style = MaterialTheme.typography.labelLarge,
         modifier = modifier
             .padding(vertical = 12.dp, horizontal = 16.dp)
             .clip(shape = MaterialTheme.shapes.extraSmall)
             .background(
-                color = if (noUserName)
+                color = if (noValue)
                     MaterialTheme.colorScheme.error
                 else
                     MaterialTheme.colorScheme.primary
@@ -294,18 +275,12 @@ private fun ChipItem(
     }
 }
 
-/**
- * Gets a human-readable description of signal strength based on accuracy
- *
- * @param accuracy The accuracy of the location in meters
- * @return A string describing the signal strength
- */
 @Composable
 private fun getSignalStrengthDescription(accuracy: Float): String {
     val context = LocalContext.current
     return when {
-        accuracy <= 0 -> context.getString(R.string.signal_unknown) // Accuracy shouldn't be <= 0
-        accuracy <= 10 -> context.getString(R.string.signal_excellent) // meters
+        accuracy <= 0 -> context.getString(R.string.signal_unknown)
+        accuracy <= 10 -> context.getString(R.string.signal_excellent)
         accuracy <= 25 -> context.getString(R.string.signal_good)
         accuracy <= 50 -> context.getString(R.string.signal_fair)
         else -> context.getString(R.string.signal_poor)
@@ -314,28 +289,28 @@ private fun getSignalStrengthDescription(accuracy: Float): String {
 
 @Preview
 @Composable
-private fun TrackingInfoSheetPreview() {
+private fun SheetPreview() {
     WaliotTheme {
         Sheet(
             onDismissRequest = {},
-            userName = null,
-            location = null,
-            totalDistance = 0f,
-            lastUploadStatus = null
+            trackerIdentifier = "89181201004",
+            location = Location(""),
+            lastUploadStatus = UploadStatus.Success,
+            bufferCount = 7
         )
     }
 }
 
 @Preview
 @Composable
-private fun TrackingInfoSheetEmpty() {
+private fun EmptySheetPreview() {
     WaliotTheme {
         Sheet(
             onDismissRequest = {},
-            userName = "89181201004",
-            location = Location(""),
-            totalDistance = 7000f,
-            lastUploadStatus = null
+            trackerIdentifier = null,
+            location = null,
+            lastUploadStatus = null,
+            bufferCount = 0
         )
     }
 }

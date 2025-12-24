@@ -8,14 +8,15 @@ import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.OrnamentOptions
 import org.maplibre.compose.style.BaseStyle
 
-private const val mapStyleUri = "https://tiles.openfreemap.org/styles/liberty"
+const val MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+const val DEFAULT_MAP_ZOOM = 15.0
 
 @Composable
 fun MapView(modifier: Modifier = Modifier, cameraState: CameraState) {
     MaplibreMap(
-        baseStyle = BaseStyle.Uri(mapStyleUri),
+        baseStyle = BaseStyle.Uri(MAP_STYLE_URL),
         cameraState = cameraState,
         options = MapOptions(ornamentOptions = OrnamentOptions.AllDisabled),
-        modifier = modifier,
+        modifier = modifier
     )
 }

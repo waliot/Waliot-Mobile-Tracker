@@ -1,6 +1,7 @@
 package com.websmithing.gpstracker2.ui.features.home
 
 import android.annotation.SuppressLint
+import android.location.Location
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +16,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -36,13 +36,14 @@ import androidx.compose.ui.unit.isSpecified
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.data.repository.UploadStatus
+import com.websmithing.gpstracker2.repository.upload.UploadStatus
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.activityHiltViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
+import com.websmithing.gpstracker2.ui.components.CustomPermissionDeniedDialog
 import com.websmithing.gpstracker2.ui.components.CustomSnackbar
 import com.websmithing.gpstracker2.ui.components.CustomSnackbarType
-import com.websmithing.gpstracker2.ui.components.PermissionDeniedDialog
+import com.websmithing.gpstracker2.ui.features.home.components.DEFAULT_MAP_ZOOM
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarker
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerSize
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerState
@@ -53,13 +54,13 @@ import com.websmithing.gpstracker2.ui.features.home.components.TrackingButtonSta
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingInfoSheet
 import com.websmithing.gpstracker2.ui.isBackgroundLocationPermissionGranted
 import com.websmithing.gpstracker2.ui.router.AppDestination
-import com.websmithing.gpstracker2.ui.toPosition
 import kotlinx.coroutines.launch
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
+import org.maplibre.spatialk.geojson.Position
 import kotlin.time.Duration.Companion.milliseconds
 
-private const val defaultZoom = 15.0
+private fun Location.toPosition() = Position(longitude = longitude, latitude = latitude, altitude = altitude)
 
 @Composable
 fun HomePage(
@@ -69,10 +70,10 @@ fun HomePage(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    var showBackgroundDeniedDialog by remember { mutableStateOf(false) }
 
     val cameraState = rememberCameraState()
-    val latestLocation by viewModel.latestForegroundLocation.collectAsStateWithLifecycle()
+    val latestLocation by viewModel.latestLocation.collectAsStateWithLifecycle()
     val markerPosition by remember(cameraState.position, latestLocation) {
         derivedStateOf {
             latestLocation?.let { location ->
@@ -81,27 +82,34 @@ fun HomePage(
         }
     }
 
-    val isTracking by viewModel.isTracking.observeAsState(false)
-    val userName by viewModel.userName.observeAsState()
-    val websiteUrl by viewModel.websiteUrl.observeAsState()
-    val canRunTracking by remember(userName, websiteUrl) {
-        derivedStateOf {
-            !websiteUrl.isNullOrEmpty() && !userName.isNullOrEmpty()
-        }
-    }
-    val lastUploadStatus by viewModel.lastUploadStatus.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val snackbarMessage by viewModel.snackbarMessage.observeAsState()
 
+    val isTracking by viewModel.isTracking.observeAsState(false)
+    val lastUploadStatus by viewModel.lastUploadStatus.collectAsStateWithLifecycle()
+    val bufferCount by viewModel.bufferCount.collectAsStateWithLifecycle()
     var showTrackingInfoSheet by remember { mutableStateOf(false) }
-    var showBackgroundDeniedDialog by remember { mutableStateOf(false) }
+
+    val trackerIdentifier by viewModel.trackerIdentifier.observeAsState()
+    val uploadServer by viewModel.uploadServer.observeAsState()
+    val canRunTracking by remember(trackerIdentifier, uploadServer) {
+        derivedStateOf {
+            !uploadServer.isNullOrBlank() && !trackerIdentifier.isNullOrBlank()
+        }
+    }
+
+    LocationPermissionFlow(
+        onAllow = { viewModel.startForegroundLocation() },
+        onDeny = { viewModel.stopForegroundLocation() }
+    )
 
     LaunchedEffect(latestLocation) {
-        val oldZoom = cameraState.position.zoom
+        val curZoom = cameraState.position.zoom
         latestLocation?.let {
             cameraState.animateTo(
                 CameraPosition(
                     target = it.toPosition(),
-                    zoom = if (oldZoom == 1.0) defaultZoom else oldZoom,
+                    zoom = if (curZoom == 1.0) DEFAULT_MAP_ZOOM else curZoom,
                 ),
                 duration = 500.milliseconds,
             )
@@ -113,7 +121,19 @@ fun HomePage(
             scope.launch {
                 snackbarHostState.showSnackbar(
                     it,
-                    actionLabel = CustomSnackbarType.success.name,
+                    actionLabel = CustomSnackbarType.SUCCESS.name,
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(isTracking) {
+        if (isTracking) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    context.getString(R.string.tracking_enabled),
+                    actionLabel = CustomSnackbarType.SUCCESS.name,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -128,7 +148,7 @@ fun HomePage(
                         R.string.error_format,
                         status.errorMessage ?: context.getString(R.string.unknown_error)
                     ),
-                    actionLabel = CustomSnackbarType.warning.name,
+                    actionLabel = CustomSnackbarType.WARNING.name,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -137,44 +157,23 @@ fun HomePage(
         }
     }
 
-    LaunchedEffect(isTracking) {
-        if (isTracking) {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    context.getString(R.string.tracking_enabled),
-                    actionLabel = CustomSnackbarType.success.name,
-                    duration = SnackbarDuration.Short
-                )
-            }
-        }
-    }
-
-    DisposableEffect(true) {
-        onDispose {
-            viewModel.stopForegroundLocation()
-        }
-    }
-
-    LocationPermissionFlow(
-        onAllow = { viewModel.startForegroundLocation() },
-        onDeny = { viewModel.stopForegroundLocation() }
-    )
-
     fun switchTracking() {
         if (!canRunTracking) {
             return
         }
+
         if (!isBackgroundLocationPermissionGranted(context)) {
             showBackgroundDeniedDialog = true
             return
         }
+
         try {
             viewModel.switchTrackingState()
         } catch (e: Exception) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    context.getString(R.string.error_format, e.message ?: e.toString()),
-                    actionLabel = CustomSnackbarType.warning.name,
+                    context.getString(R.string.error_format, e.localizedMessage ?: R.string.unknown_error),
+                    actionLabel = CustomSnackbarType.WARNING.name,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -185,11 +184,11 @@ fun HomePage(
         floatingActionButton = {
             TrackingButton(
                 state = if (!canRunTracking) {
-                    TrackingButtonState.Stop
+                    TrackingButtonState.STOP
                 } else if (isTracking) {
-                    TrackingButtonState.Pause
+                    TrackingButtonState.PAUSE
                 } else {
-                    TrackingButtonState.Play
+                    TrackingButtonState.PLAY
                 }
             ) {
                 switchTracking()
@@ -224,10 +223,11 @@ fun HomePage(
                 LocationMarker(
                     onClick = { showTrackingInfoSheet = true },
                     state = when {
-                        !showTrackingInfoSheet -> LocationMarkerState.Inactive
-                        userName.isNullOrEmpty() -> LocationMarkerState.Error
-                        else -> LocationMarkerState.Active
+                        !showTrackingInfoSheet -> LocationMarkerState.INACTIVE
+                        trackerIdentifier.isNullOrEmpty() -> LocationMarkerState.ERROR
+                        else -> LocationMarkerState.ACTIVE
                     },
+                    rotation = (latestLocation?.bearing ?: 0f) - 45f,
                     modifier = Modifier.offset(
                         x = markerPosition.x - LocationMarkerSize / 2,
                         y = markerPosition.y - LocationMarkerSize / 2
@@ -240,15 +240,15 @@ fun HomePage(
     if (showTrackingInfoSheet) {
         TrackingInfoSheet(
             onDismissRequest = { showTrackingInfoSheet = false },
-            userName = userName,
+            trackerIdentifier = trackerIdentifier,
             location = latestLocation,
-            totalDistance = viewModel.totalDistance,
-            lastUploadStatus = lastUploadStatus
+            lastUploadStatus = lastUploadStatus,
+            bufferCount = bufferCount
         )
     }
 
     if (showBackgroundDeniedDialog) {
-        PermissionDeniedDialog(
+        CustomPermissionDeniedDialog(
             text = context.getString(R.string.permission_denied_background_location),
             onDismissRequest = { showBackgroundDeniedDialog = false }
         )

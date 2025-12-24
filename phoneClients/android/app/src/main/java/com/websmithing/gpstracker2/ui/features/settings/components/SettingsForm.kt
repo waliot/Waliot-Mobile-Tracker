@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -36,7 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.BuildConfig
 import com.websmithing.gpstracker2.R
-import com.websmithing.gpstracker2.ui.components.LabeledBox
+import com.websmithing.gpstracker2.ui.components.CustomLabeledBox
 import com.websmithing.gpstracker2.ui.features.settings.model.SettingsFormState
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.customOutlinedTextFieldColors
@@ -58,14 +57,14 @@ fun SettingsForm(
             .verticalScroll(rememberScrollState())
             .padding(vertical = 13.dp, horizontal = 16.dp)
     ) {
-        LabeledBox(label = stringResource(R.string.user_name)) {
+        CustomLabeledBox(label = stringResource(R.string.tracker_identifier)) {
             OutlinedTextField(
-                value = state.userName,
+                value = state.trackerIdentifier,
                 onValueChange = { value ->
-                    onChange(state.copy(userName = value.filter { it.isDigit() }))
+                    onChange(state.copy(trackerIdentifier = value.filter { it.isDigit() }))
                 },
-                isError = state.userNameError != null,
-                supportingText = { state.userNameError?.let { Text(it) } },
+                isError = state.trackerIdentifierError != null,
+                supportingText = { state.trackerIdentifierError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number
@@ -75,26 +74,26 @@ fun SettingsForm(
             )
         }
 
-        LabeledBox(label = stringResource(R.string.upload_website)) {
+        CustomLabeledBox(label = stringResource(R.string.upload_server)) {
             OutlinedTextField(
-                value = state.websiteUrl,
-                onValueChange = { onChange(state.copy(websiteUrl = it)) },
-                isError = state.websiteUrlError != null,
-                supportingText = { state.websiteUrlError?.let { Text(it) } },
+                value = state.uploadServer,
+                onValueChange = { onChange(state.copy(uploadServer = it)) },
+                isError = state.uploadServerError != null,
+                supportingText = { state.uploadServerError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
             )
         }
 
-        LabeledBox(label = stringResource(R.string.upload_frequency)) {
+        CustomLabeledBox(label = stringResource(R.string.upload_time_interval)) {
             OutlinedTextField(
-                value = state.intervalTime,
+                value = state.uploadTimeInterval,
                 onValueChange = { value ->
-                    onChange(state.copy(intervalTime = value.filter { it.isDigit() }))
+                    onChange(state.copy(uploadTimeInterval = value.filter { it.isDigit() }))
                 },
-                isError = state.intervalTimeError != null,
-                supportingText = { state.intervalTimeError?.let { Text(it) } },
+                isError = state.uploadTimeIntervalError != null,
+                supportingText = { state.uploadTimeIntervalError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number
@@ -104,14 +103,14 @@ fun SettingsForm(
             )
         }
 
-        LabeledBox(label = stringResource(R.string.upload_distance)) {
+        CustomLabeledBox(label = stringResource(R.string.upload_distance_interval)) {
             OutlinedTextField(
-                value = state.intervalDistance,
+                value = state.uploadDistanceInterval,
                 onValueChange = { value ->
-                    onChange(state.copy(intervalTime = value.filter { it.isDigit() }))
+                    onChange(state.copy(uploadDistanceInterval = value.filter { it.isDigit() }))
                 },
-                isError = state.intervalDistanceError != null,
-                supportingText = { state.intervalDistanceError?.let { Text(it) } },
+                isError = state.uploadDistanceIntervalError != null,
+                supportingText = { state.uploadDistanceIntervalError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number
@@ -121,7 +120,7 @@ fun SettingsForm(
             )
         }
 
-        LabeledBox(label = stringResource(R.string.language)) {
+        CustomLabeledBox(label = stringResource(R.string.language)) {
             SelectLanguage(
                 selected = state.languageCode,
                 onSelect = { onChange(state.copy(languageCode = it)) }
@@ -202,14 +201,9 @@ private fun Logo(modifier: Modifier = Modifier) {
 @Preview
 @Composable
 private fun SettingsFormPreview() {
-    val context = LocalContext.current
-
     WaliotTheme {
         SettingsForm(
-            state = SettingsFormState(
-                websiteUrl = context.getString(R.string.default_upload_website),
-                languageCode = "ru"
-            ),
+            state = SettingsFormState(),
             onChange = {},
         )
     }

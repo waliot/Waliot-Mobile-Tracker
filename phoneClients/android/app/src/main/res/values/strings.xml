@@ -1,24 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WALIOT.Tracker</string>
-    <string name="default_upload_website">device.waliot.com:30032</string>
-
-    <string name="tracking_is_off">Start Tracking</string>
-    <string name="tracking_is_on">Stop Tracking</string>
-    <string name="textfields_empty_or_spaces">Please check the highlighted fields. Inputs cannot be empty or contain spaces.</string> <!-- Updated -->
-    <string name="google_play_services_unavailable">Please go into Settings > Apps and enable Google Play Services.</string>
-
-    <!-- Input Validation -->
-    <string name="username_error_spaces">The tracker number can only contain digits.</string>
-    <string name="username_error_empty">Tracker number cannot be empty.</string>
-    <string name="website_error_empty">Server address cannot be empty.</string>
-    <string name="website_error_spaces">Server address cannot contain spaces.</string>
-    <string name="interval_error">The interval must be greater than 0</string>
+    <string name="splash_logo_text">tracker</string>
 
     <!-- Permissions -->
-    <string name="permission_rationale_foreground_location_title">Location Permission Needed</string>
-    <string name="permission_rationale_foreground_location_message">This app needs access to your location to track your position.</string>
-    <string name="permission_rationale_background_location_title">Background Location Permission Needed</string>
+    <string name="google_play_services_unavailable">Please go into Settings > Apps and enable Google Play Services</string>
+    <string name="permission_rationale_foreground_location_title">Location permission is needed</string>
+    <string name="permission_rationale_foreground_location_message">This app needs access to your location to track your position</string>
+    <string name="permission_rationale_background_location_title">Background location permission is needed</string>
     <string name="permission_rationale_background_location_pre_request">This app collects location data to enable tracking even when the app is closed or not in use. This requires the "Allow all the time" location permission. Please grant this on the next screen.</string>
     <string name="permission_denied_foreground_location">Foreground location permission denied. Tracking cannot start.</string>
     <string name="permission_denied_background_location">Background location permission denied. Tracking may stop when the app is closed.</string>
@@ -28,58 +17,66 @@
     <string name="permission_button_continue">Continue</string>
     <string name="permission_button_cancel">Cancel</string>
 
-    <!-- Other UI Messages -->
-    <!-- Added -->
-    <string name="user_name">Identifier</string>
-    <string name="upload_website">Server address and port</string>
-    <string name="upload_frequency">Send data every minutes</string>
-    <string name="upload_distance">Send data every meters</string>
-    <string name="one_minute">1</string>
-    <string name="five_minutes">5</string>
-    <string name="fifteen_minutes">15</string>
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="close">Close</string>
+    <string name="save">Save</string>
+    <string name="tracker_identifier">Identifier</string>
+    <string name="upload_server">Server address</string>
+    <string name="upload_time_interval">Send data every minutes</string>
+    <string name="upload_distance_interval">Send data every meters</string>
+    <string name="language">Language</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ru">Russian</string>
+    <string name="app_version_format">Version:</string>
 
-    <!-- New UI Display Strings -->
+    <string name="text_fields_empty_or_spaces">Please check the highlighted fields. Inputs cannot be empty or contain spaces</string>
+    <string name="tracker_identifier_error">The tracker number cannot be empty and must contain digits only</string>
+    <string name="upload_server_error">Server address cannot be empty or contain spaces</string>
+    <string name="interval_error">The interval must be greater than 0</string>
+    <string name="interval_updated">Interval updated. Restarting tracking service.</string>
+
+    <!-- UI -->
+    <string name="no_data_placeholder">—</string>
+    <string name="provide_identifier">Please provide an identifier</string>
+    <string name="error_format">Error: %1$s</string>
+    <string name="unknown_error">Unknown error</string>
+
+    <string name="tracking_is_off">Start tracking</string>
+    <string name="tracking_is_on">Stop tracking</string>
+    <string name="notification_text">Actively tracking location…</string>
+    <string name="tracking_enabled">Tracking enabled</string>
+
+    <string name="coordinates">Coordinates</string>
+
+    <string name="altitude">Altitude</string>
+    <string name="altitude_format">%.0f m</string>
+
     <string name="speed">Speed</string>
     <string name="speed_format_kmh">%.1f km/h</string>
-    <string name="coordinates">Coordinates</string>
-    <string name="altitude_format">%.0f m</string>
-    <string name="accuracy_format">%.0f m</string>
-    <string name="bearing_format">%.0f°</string>
-    <string name="distance_format_km">%s km</string>
-    <string name="signal_strength">GPS Signal</string>
-    <string name="no_data_placeholder">—</string>
-    <string name="update_time">Update</string>
-    <string name="extra_data">Extra data</string>
-    <string name="accuracy">Accuracy</string>
-    <string name="distance">Distance</string>
-    <string name="altitude">Altitude</string>
+
     <string name="bearing">Bearing</string>
+    <string name="bearing_format">%.0f°</string>
 
+    <string name="accuracy">Accuracy</string>
+    <string name="accuracy_format">%.0f m</string>
+
+    <string name="distance">Distance</string>
+    <string name="distance_format_km">%s km</string>
+
+    <string name="data_buffer">Buffer</string>
+
+    <string name="signal_strength">GPS Signal</string>
     <string name="search_satellites">Search satellites…</string>
-
-    <string name="upload_status_success">%1$s (Success)</string>
-    <string name="upload_status_failure">%1$s (Failed: %2$s)</string>
-
     <string name="signal_unknown">Unknown</string>
     <string name="signal_excellent">Excellent</string>
     <string name="signal_good">Good</string>
     <string name="signal_fair">Fair</string>
     <string name="signal_poor">Poor</string>
 
-    <string name="notification_text">Actively tracking location...</string>
+    <string name="update_time">Update</string>
+    <string name="extra_data">Extra data</string>
 
-    <string name="language">Language</string>
-    <string name="lang_en">English</string>
-    <string name="lang_ru">Russian</string>
-    <string name="splash_logo_text">tracker</string>
-    <string name="settings">Settings</string>
-    <string name="close">Close</string>
-    <string name="app_version_format">App version:</string>
-    <string name="save">Save</string>
-    <string name="tracking_enabled">Tracking enabled</string>
-    <string name="interval_updated">Interval updated. Restarting tracking service.</string>
-    <string name="error_format">Error: %1$s</string>
-    <string name="unknown_error">Unknown error</string>
-    <string name="provide_identifier">Please provide an identifier</string>
-    <string name="data_buffer">Data buffer</string>
+    <string name="upload_status_success">%1$s (Success)</string>
+    <string name="upload_status_failure">%1$s (Failed: %2$s)</string>
 </resources>

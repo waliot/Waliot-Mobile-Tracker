@@ -18,9 +18,9 @@ import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 
 enum class TrackingButtonState {
-    Stop,
-    Play,
-    Pause,
+    STOP,
+    PLAY,
+    PAUSE
 }
 
 val TrackingButtonSize = 56.dp
@@ -28,18 +28,18 @@ val TrackingButtonSize = 56.dp
 @Composable
 fun TrackingButton(
     modifier: Modifier = Modifier,
-    state: TrackingButtonState = TrackingButtonState.Stop,
+    state: TrackingButtonState = TrackingButtonState.STOP,
     onClick: () -> Unit,
 ) {
     CustomFloatingButton(
         color = when (state) {
-            TrackingButtonState.Play -> MaterialTheme.extendedColors.ok
-            TrackingButtonState.Stop -> MaterialTheme.extendedColors.fab
-            TrackingButtonState.Pause -> MaterialTheme.colorScheme.error
+            TrackingButtonState.PLAY -> MaterialTheme.extendedColors.ok
+            TrackingButtonState.STOP -> MaterialTheme.extendedColors.fab
+            TrackingButtonState.PAUSE -> MaterialTheme.colorScheme.error
         },
         contentColor = when (state) {
-            TrackingButtonState.Play, TrackingButtonState.Pause -> Color.White
-            TrackingButtonState.Stop -> MaterialTheme.extendedColors.onFab
+            TrackingButtonState.PLAY, TrackingButtonState.PAUSE -> Color.White
+            TrackingButtonState.STOP -> MaterialTheme.extendedColors.onFab
         },
         elevation = 12.dp,
         onClick = debounced(
@@ -50,19 +50,19 @@ fun TrackingButton(
         modifier = modifier.size(TrackingButtonSize)
     ) {
         when (state) {
-            TrackingButtonState.Play -> Icon(
+            TrackingButtonState.PLAY -> Icon(
                 painterResource(R.drawable.ic_play_24),
                 contentDescription = stringResource(R.string.tracking_is_off),
                 modifier = Modifier.requiredSize(24.dp)
             )
 
-            TrackingButtonState.Stop -> Icon(
+            TrackingButtonState.STOP -> Icon(
                 painterResource(R.drawable.ic_stop_24),
                 contentDescription = stringResource(R.string.tracking_is_off),
                 modifier = Modifier.requiredSize(24.dp)
             )
 
-            TrackingButtonState.Pause -> Icon(
+            TrackingButtonState.PAUSE -> Icon(
                 painterResource(R.drawable.ic_pause_24),
                 contentDescription = stringResource(R.string.tracking_is_on),
                 modifier = Modifier.requiredSize(24.dp)
@@ -83,7 +83,7 @@ private fun TrackingButtonPreview() {
 @Composable
 private fun TrackingButtonStartPreview() {
     WaliotTheme {
-        TrackingButton(onClick = {}, state = TrackingButtonState.Play)
+        TrackingButton(onClick = {}, state = TrackingButtonState.PLAY)
     }
 }
 
@@ -91,6 +91,6 @@ private fun TrackingButtonStartPreview() {
 @Composable
 private fun TrackingButtonStopPreview() {
     WaliotTheme {
-        TrackingButton(onClick = {}, state = TrackingButtonState.Pause)
+        TrackingButton(onClick = {}, state = TrackingButtonState.PAUSE)
     }
 }

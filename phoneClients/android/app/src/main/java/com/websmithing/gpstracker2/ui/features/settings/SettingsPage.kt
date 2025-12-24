@@ -33,12 +33,16 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_LANGUAGE
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_TRACKER_IDENTIFIER
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_UPLOAD_DISTANCE_INTERVAL
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_UPLOAD_SERVER
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_UPLOAD_TIME_INTERVAL
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.activityHiltViewModel
 import com.websmithing.gpstracker2.ui.components.CustomBackButton
 import com.websmithing.gpstracker2.ui.features.settings.components.SettingsForm
 import com.websmithing.gpstracker2.ui.features.settings.model.SettingsFormState
-import com.websmithing.gpstracker2.ui.hasSpaces
 import com.websmithing.gpstracker2.ui.modifiers.unfocus
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.customButtonColors
@@ -56,17 +60,18 @@ fun SettingsPage(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
-    val userName by viewModel.userName.observeAsState()
-    val websiteUrl by viewModel.websiteUrl.observeAsState()
+    val trackerIdentifier by viewModel.trackerIdentifier.observeAsState()
+    val uploadServer by viewModel.uploadServer.observeAsState()
+    val uploadTimeInterval by viewModel.uploadTimeInterval.observeAsState()
+    val uploadDistanceInterval by viewModel.uploadDistanceInterval.observeAsState()
     val language by viewModel.language.observeAsState()
-    val intervalTime by viewModel.trackingInterval.observeAsState()
 
     var initialState = SettingsFormState(
-        userName = userName ?: "",
-        websiteUrl = websiteUrl ?: context.getString(R.string.default_upload_website),
-        intervalTime = intervalTime?.toString() ?: "1",
-        intervalDistance = "100",
-        languageCode = language ?: "ru"
+        trackerIdentifier = trackerIdentifier ?: DEFAULT_TRACKER_IDENTIFIER,
+        uploadServer = uploadServer ?: DEFAULT_UPLOAD_SERVER,
+        uploadTimeInterval = uploadTimeInterval?.toString() ?: DEFAULT_UPLOAD_TIME_INTERVAL.toString(),
+        uploadDistanceInterval = uploadDistanceInterval?.toString() ?: DEFAULT_UPLOAD_DISTANCE_INTERVAL.toString(),
+        languageCode = language ?: DEFAULT_LANGUAGE
     )
     var state by remember { mutableStateOf(initialState) }
     val canSave by remember(state, initialState) {
@@ -76,76 +81,69 @@ fun SettingsPage(
     }
 
     fun saveAndValidate(): Boolean {
-        val name = state.userName.trim()
-        val website = state.websiteUrl.trim()
-        val intervalTime = state.intervalTime.trim().let { if (it.isEmpty()) 0 else it.toInt() }
-        val intervalDistance =
-            state.intervalDistance.trim().let { if (it.isEmpty()) 0 else it.toInt() }
+        val identifier = state.trackerIdentifier.trim()
+        val serverAddress = state.uploadServer.trim()
+        val timeInterval = state.uploadTimeInterval.trim().let { if (it.isEmpty()) 0 else it.toInt() }
+        val distanceInterval = state.uploadDistanceInterval.trim().let { if (it.isEmpty()) 0 else it.toInt() }
 
-        val isNameValid = name.isEmpty() || name.isDigitsOnly()
-        val isWebsiteValid = website.isNotBlank() && !hasSpaces(website)
-        val isIntervalTimeValid = intervalTime > 0
-        val isIntervalDistanceValid = intervalDistance > 0
+        val isIdentifierValid = identifier.isEmpty() || identifier.isDigitsOnly()
+        val isServerAddressValid = serverAddress.isNotBlank() && !serverAddress.contains(' ')
+        val isTimeIntervalValid = timeInterval > 0
+        val isDistanceIntervalValid = distanceInterval > 0
 
-        state = if (!isNameValid) {
-            state.copy(userNameError = context.getString(R.string.username_error_spaces))
+        state = if (!isIdentifierValid) {
+            state.copy(trackerIdentifierError = context.getString(R.string.tracker_identifier_error))
         } else {
-            state.copy(userNameError = null)
+            state.copy(trackerIdentifierError = null)
         }
 
-        if (!isWebsiteValid) {
-            if (website.isBlank()) {
-                state =
-                    state.copy(websiteUrlError = context.getString(R.string.website_error_empty))
-            } else if (hasSpaces(website)) {
-                state =
-                    state.copy(websiteUrlError = context.getString(R.string.website_error_spaces))
-            }
+        state = if (!isServerAddressValid) {
+            state.copy(uploadServerError = context.getString(R.string.upload_server_error))
         } else {
-            state = state.copy(websiteUrlError = null)
+            state.copy(uploadServerError = null)
         }
 
-        state = if (!isIntervalTimeValid) {
-            state.copy(intervalTimeError = context.getString(R.string.interval_error))
+        state = if (!isTimeIntervalValid) {
+            state.copy(uploadTimeIntervalError = context.getString(R.string.interval_error))
         } else {
-            state.copy(intervalTimeError = null)
+            state.copy(uploadTimeIntervalError = null)
         }
 
-        state = if (!isIntervalDistanceValid) {
-            state.copy(intervalDistanceError = context.getString(R.string.interval_error))
+        state = if (!isDistanceIntervalValid) {
+            state.copy(uploadDistanceIntervalError = context.getString(R.string.interval_error))
         } else {
-            state.copy(intervalDistanceError = null)
+            state.copy(uploadDistanceIntervalError = null)
         }
 
         focusManager.clearFocus(true)
 
-        if (isNameValid && isWebsiteValid && isIntervalDistanceValid && isIntervalTimeValid) {
-            val userNameChanged = initialState.userName != state.userName
+        if (isIdentifierValid && isServerAddressValid && isDistanceIntervalValid && isTimeIntervalValid) {
+            val trackerIdentifierChanged = initialState.trackerIdentifier != state.trackerIdentifier
+            val uploadServerChanged = initialState.uploadServer != state.uploadServer
+            val timeIntervalChanged = initialState.uploadTimeInterval != state.uploadTimeInterval
+            val distanceIntervalChanged = initialState.uploadDistanceInterval != state.uploadDistanceInterval
             val languageChanged = initialState.languageCode != state.languageCode
-            val websiteUrlChanged = initialState.websiteUrl != state.websiteUrl
-            val intervalTimeChanged = initialState.intervalTime != state.intervalTime
-            val intervalDistanceChanged = initialState.intervalDistance != state.intervalDistance
 
-            if (userNameChanged) {
-                viewModel.onUserNameChanged(state.userName.trim())
+            if (trackerIdentifierChanged) {
+                viewModel.onTrackerIdentifierChanged(state.trackerIdentifier.trim())
             }
-            if (websiteUrlChanged) {
-                viewModel.onWebsiteUrlChanged(state.websiteUrl.trim())
+            if (uploadServerChanged) {
+                viewModel.onUploadServerChanged(state.uploadServer.trim())
             }
-            if (intervalTimeChanged) {
-                viewModel.onIntervalChanged(intervalTime)
+            if (timeIntervalChanged) {
+                viewModel.onTimeIntervalChanged(state.uploadTimeInterval.trim())
             }
-            if (intervalDistanceChanged) {
-                // TODO
+            if (distanceIntervalChanged) {
+                viewModel.onDistanceIntervalChanged(state.uploadDistanceInterval.trim())
             }
             if (languageChanged) {
-                viewModel.onLanguageChanged(state.languageCode)
+                viewModel.onLanguageChanged(state.languageCode.trim())
             }
 
             initialState = state
             return true
         } else {
-            Toast.makeText(context, R.string.textfields_empty_or_spaces, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, R.string.text_fields_empty_or_spaces, Toast.LENGTH_LONG).show()
             return false
         }
     }
@@ -231,14 +229,9 @@ private fun SaveButton(
 @Preview
 @Composable
 private fun PagePreview() {
-    val context = LocalContext.current
-
     WaliotTheme {
         Page(
-            state = SettingsFormState(
-                websiteUrl = context.getString(R.string.default_upload_website),
-                languageCode = "ru"
-            ),
+            state = SettingsFormState(),
             canSave = true,
             onChange = {},
             onBack = {},

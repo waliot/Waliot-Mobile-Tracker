@@ -1,0 +1,143 @@
+package com.websmithing.gpstracker2.repository.upload
+
+import android.location.Location
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.DEFAULT_UPLOAD_SERVER
+import com.websmithing.gpstracker2.util.CrcUtils
+import com.websmithing.gpstracker2.util.NmeaUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import timber.log.Timber
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.math.roundToInt
+
+@Singleton
+class UploadRepositoryImpl @Inject constructor(
+    private val settingsRepository: SettingsRepository
+) : UploadRepository {
+
+    private val _lastUploadStatus = MutableStateFlow<UploadStatus>(UploadStatus.Idle)
+    override val lastUploadStatus: StateFlow<UploadStatus> = _lastUploadStatus.asStateFlow()
+
+    private val dateFormatter = SimpleDateFormat("ddMMyy", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+    private val timeFormatter = SimpleDateFormat("HHmmss", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+
+    private companion object {
+        const val TAG = "UploadRepository"
+
+        const val DEFAULT_HOST = "device.waliot.com"
+        const val DEFAULT_PORT = 30032
+        const val CONNECT_TIMEOUT = 5_000
+        const val SEND_TIMEOUT = 30_000
+
+        const val PROTOCOL_VERSION = "2.0"
+        const val NO_VALUE = "NA"
+        const val DEFAULT_PASSWORD = NO_VALUE
+    }
+
+    override suspend fun resetUploadStatus() = withContext(Dispatchers.IO) {
+        _lastUploadStatus.value = UploadStatus.Idle
+    }
+
+    override suspend fun uploadData(trackerIdentifier: String, location: Location): Boolean = withContext(Dispatchers.IO) {
+        var success = false
+        var errorMessage: String? = null
+        try {
+            Timber.tag(TAG).i("\uD83C\uDF00 Starting location upload process...")
+            val (host, port) = getServerAddress()
+
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT)
+                socket.soTimeout = SEND_TIMEOUT
+
+                val output = socket.getOutputStream()
+                val input = socket.getInputStream().bufferedReader()
+
+                // Login
+                val loginPacket = createPacket("#L#$PROTOCOL_VERSION;$trackerIdentifier;$DEFAULT_PASSWORD")
+                Timber.tag(TAG).d("Sending login packet: $loginPacket")
+                output.write(loginPacket.toByteArray(Charsets.UTF_8))
+                output.flush()
+
+                val loginResponse = input.readLine()
+                Timber.tag(TAG).d("Login response: $loginResponse")
+                if (loginResponse?.startsWith("#AL#1") != true) {
+                    throw IllegalStateException("Login failed: $loginResponse")
+                }
+
+                // Data
+                val dataPayload = buildPayload(location)
+                val dataPacket = createPacket("#D#$dataPayload")
+                Timber.tag(TAG).d("Sending data packet: $dataPacket")
+                output.write(dataPacket.toByteArray(Charsets.UTF_8))
+                output.flush()
+
+                val dataResponse = input.readLine()
+                Timber.tag(TAG).d("Data response: $dataResponse")
+                if (dataResponse?.startsWith("#AD#1") != true) {
+                    throw IllegalStateException("Upload failed: $dataResponse")
+                }
+
+                success = true
+            }
+            Timber.tag(TAG).i("✅ Location upload process is done successfully!")
+
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "❌ Upload process error")
+            errorMessage = e.localizedMessage ?: "—"
+            success = false
+
+        } finally {
+            Timber.tag(TAG).d("Finally block: success=$success, errorMessage='$errorMessage'")
+            _lastUploadStatus.value = if (success) UploadStatus.Success else UploadStatus.Failure(errorMessage)
+        }
+
+        success
+    }
+
+    private suspend fun getServerAddress(): Pair<String, Int> {
+        var serverAddress = settingsRepository.getUploadServer()
+        if (serverAddress.isBlank()) {
+            Timber.tag(TAG).w("Server address is blank. Using default...")
+            serverAddress = DEFAULT_UPLOAD_SERVER
+        }
+        val parts = serverAddress.split(":")
+        val host = parts.getOrNull(0) ?: DEFAULT_HOST
+        val port = parts.getOrNull(1)?.toIntOrNull() ?: DEFAULT_PORT
+        return host to port
+    }
+
+    private fun createPacket(message: String): String {
+        val crc = CrcUtils.formatCrcToHex(CrcUtils.calculateCrc16(message.toByteArray(Charsets.UTF_8)))
+        return "$message;$crc\r\n"
+    }
+
+    private fun buildPayload(location: Location): String {
+        return listOf(
+            dateFormatter.format(location.time),
+            timeFormatter.format(location.time),
+            NmeaUtils.latitudeToDdm(location.latitude, ";"),
+            NmeaUtils.longitudeToDdm(location.longitude, ";"),
+            (location.speed * 3.6).roundToInt(),
+            location.bearing.roundToInt(),
+            location.altitude.roundToInt(),
+            location.extras?.getInt("satellites")?.takeIf { it != 0 } ?: NO_VALUE,
+            location.extras?.getDouble("hdop")?.takeIf { it != 0.0 } ?: NO_VALUE,
+            NO_VALUE, NO_VALUE, NO_VALUE, NO_VALUE, // inputs, outputs, adc, iButton
+            "accuracy:2:${location.accuracy},provider:3:${location.provider}"
+        ).joinToString(";")
+    }
+}

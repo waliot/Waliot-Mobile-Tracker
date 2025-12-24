@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -15,26 +14,15 @@ import androidx.lifecycle.ViewModelStoreOwner
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.websmithing.gpstracker2.R
-import org.maplibre.spatialk.geojson.Position
 import timber.log.Timber
-import java.util.UUID
 
-// Constants needed for SharedPreferences checkFirstTimeLoading
-private const val PREFS_NAME = "com.websmithing.gpstracker.prefs"
-private const val KEY_FIRST_TIME_LOADING = "firstTimeLoadingApp"
-private const val KEY_APP_ID = "appID"
+@Composable
+inline fun <reified VM : ViewModel> activityHiltViewModel(): VM {
+    val context = LocalContext.current
+    val viewModelStoreOwner = context as? ViewModelStoreOwner ?: error("Context is not a ViewModelStoreOwner")
+    return hiltViewModel(viewModelStoreOwner)
+}
 
-fun Location.toPosition() =
-    Position(longitude = longitude, latitude = latitude, altitude = altitude)
-
-/**
- * Checks if Google Play Services is available and enabled
- *
- * Shows an appropriate error dialog if Google Play Services is unavailable
- * or needs to be updated.
- *
- * @return True if Google Play Services is available and up-to-date
- */
 fun Activity.checkIfGooglePlayEnabled(): Boolean {
     val googleApiAvailability = GoogleApiAvailability.getInstance()
     val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(this)
@@ -55,39 +43,6 @@ fun Activity.checkIfGooglePlayEnabled(): Boolean {
     }
 }
 
-/**
- * Performs first-time app setup
- *
- * Generates a unique app ID and stores it in SharedPreferences along with
- * a flag indicating the app has been run at least once.
- */
-fun Activity.checkFirstTimeLoading() {
-    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    val firstTimeLoadingApp = prefs.getBoolean(KEY_FIRST_TIME_LOADING, true)
-    if (firstTimeLoadingApp) {
-        prefs.edit().apply {
-            putBoolean(KEY_FIRST_TIME_LOADING, false)
-            putString(KEY_APP_ID, UUID.randomUUID().toString())
-            apply()
-        }
-        Timber.d("First time loading setup complete.")
-    }
-}
-
-
-@Composable
-inline fun <reified VM : ViewModel> activityHiltViewModel(): VM {
-    val context = LocalContext.current
-    val viewModelStoreOwner = context as? ViewModelStoreOwner
-        ?: error("Context is not a ViewModelStoreOwner")
-    return hiltViewModel(viewModelStoreOwner)
-}
-
-fun hasSpaces(str: String) = str.contains(' ')
-
 fun isBackgroundLocationPermissionGranted(context: Context): Boolean {
-    return ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
 }
