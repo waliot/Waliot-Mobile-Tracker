@@ -4,7 +4,6 @@
     <string name="splash_logo_text">трекер</string>
 
     <!-- Permissions -->
-    <string name="google_play_services_unavailable">Перейдите в Настройки > Приложения и включите Сервисы Google Play</string>
     <string name="permission_rationale_foreground_location_title">Требуется разрешение на определение местоположения</string>
     <string name="permission_rationale_foreground_location_message">Приложению требуется доступ к местоположению для отслеживания</string>
     <string name="permission_rationale_background_location_title">Требуется разрешение на фоновое определение местоположения</string>
@@ -16,6 +15,8 @@
     <string name="permission_button_settings">Настройки</string>
     <string name="permission_button_continue">Продолжить</string>
     <string name="permission_button_cancel">Отмена</string>
+    <string name="battery_optimization_warning_title">Оптимизация батареи может прервать отслеживание</string>
+    <string name="battery_optimization_warning_message">Фоновое отслеживание работает надёжнее, когда приложение исключено из оптимизации батареи. Можно открыть системные настройки сейчас или продолжить без исключения.</string>
 
     <!-- Settings -->
     <string name="settings">Настройки</string>
@@ -23,18 +24,17 @@
     <string name="save">Сохранить</string>
     <string name="tracker_identifier">Идентификатор</string>
     <string name="upload_server">Адрес сервера</string>
-    <string name="upload_time_interval">Отправлять данные каждые, минут</string>
-    <string name="upload_distance_interval">Отправлять данные каждые, метров</string>
+    <string name="upload_time_interval">Интервал выгрузки буфера (минуты)</string>
+    <string name="buffer_time_interval">Интервал фиксации точки по времени (минуты)</string>
+    <string name="buffer_distance_interval">Интервал фиксации точки по расстоянию (метры)</string>
     <string name="language">Язык</string>
     <string name="lang_en">Английский</string>
     <string name="lang_ru">Русский</string>
     <string name="app_version_format">Версия:</string>
 
-    <string name="text_fields_empty_or_spaces">Проверьте выделенные поля. Поля не могут быть пустыми или содержать пробелы</string>
-    <string name="tracker_identifier_error">Номер трекера не может быть пустым и должен состоять только из цифр</string>
-    <string name="upload_server_error">Адрес сервера не может быть пустым или содержать пробелы</string>
+    <string name="tracker_identifier_error">Идентификатор не может быть пустым и не должен содержать пробелы, точки с запятой или переводы строки</string>
+    <string name="upload_server_error">Введите корректный адрес сервера в формате host[:port] или tcp://host[:port] / tls://host[:port] без пробелов</string>
     <string name="interval_error">Интервал должен быть больше 0</string>
-    <string name="interval_updated">Интервал обновлён. Перезапуск службы отслеживания.</string>
 
     <!-- UI -->
     <string name="no_data_placeholder">—</string>
@@ -53,7 +53,7 @@
     <string name="altitude_format">%.0f м</string>
 
     <string name="speed">Скорость</string>
-    <string name="speed_format_kmh">%.1f км/ч</string>
+    <string name="speed_format_kmh">%.0f км/ч</string>
 
     <string name="bearing">Направление</string>
     <string name="bearing_format">%.0f°</string>
@@ -66,17 +66,37 @@
 
     <string name="data_buffer">Буфер</string>
 
-    <string name="signal_strength">Сигнал GPS</string>
+    <string name="location_status">Статус местоположения</string>
     <string name="search_satellites">Поиск спутников…</string>
-    <string name="signal_unknown">Неизвестно</string>
-    <string name="signal_excellent">Отлично</string>
-    <string name="signal_good">Хорошо</string>
-    <string name="signal_fair">Удовлетворительно</string>
-    <string name="signal_poor">Плохо</string>
+    <string name="location_state_no_fix">Местоположение не определено</string>
+    <string name="location_state_fresh_gps">Актуальное местоположение</string>
+    <string name="location_state_fresh_degraded">Актуальное альтернативное местоположение</string>
+    <string name="location_state_stale_gps">Устаревшее местоположение</string>
+    <string name="location_state_stale_degraded">Устаревшее альтернативное местоположение</string>
+    <string name="location_state_suspect">Недостоверное местоположение</string>
+    <string name="location_warning_mock">Искусственное местоположение</string>
+    <string name="location_warning_impossible_jump">Неправдоподобное перемещние</string>
+    <string name="location_warning_timestamp_regression">Отставание по времени</string>
+    <string name="location_warning_stale">Устаревшая локация отклонена</string>
+    <string name="location_warning_unknown">Предупреждение о качестве локации</string>
+    <string name="provider">Провайдер</string>
+    <string name="provider_gps">GPS</string>
+    <string name="provider_network">LBS</string>
+    <string name="provider_fused">GPS+LBS</string>
+    <string name="provider_passive">Пассивный провайдер</string>
+    <string name="provider_buffered">Буферизированная точка</string>
+    <string name="fix_age">Актуальность</string>
+    <string name="fix_age_just_now">Только что</string>
+    <string name="fix_age_seconds_format">%1$d с</string>
+    <string name="fix_age_minutes_seconds_format">%1$d мин %2$d с</string>
+    <string name="warning">Предупреждение</string>
 
-    <string name="update_time">Обновление</string>
+    <string name="update_time">Последняя выгрузка</string>
     <string name="extra_data">Дополнительные данные</string>
 
     <string name="upload_status_success">%1$s (успешно)</string>
-    <string name="upload_status_failure">%1$s (ошибка: %2$s)</string>
+    <string name="upload_status_failure">%1$s (нет подключения к серверу)</string>
+    <string name="upload_status_offline">Нет сети: точки буферизуются</string>
+    <string name="upload_status_offline_snackbar">Нет сетевого соединения. Точки буферизуются локально.</string>
+    <string name="upload_status_failure_snackbar">Не удалось подключиться к серверу. Точки остаются в буфере.</string>
 </resources>

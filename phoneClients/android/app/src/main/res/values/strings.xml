@@ -4,7 +4,6 @@
     <string name="splash_logo_text">tracker</string>
 
     <!-- Permissions -->
-    <string name="google_play_services_unavailable">Please go into Settings > Apps and enable Google Play Services</string>
     <string name="permission_rationale_foreground_location_title">Location permission is needed</string>
     <string name="permission_rationale_foreground_location_message">This app needs access to your location to track your position</string>
     <string name="permission_rationale_background_location_title">Background location permission is needed</string>
@@ -16,6 +15,8 @@
     <string name="permission_button_settings">Settings</string>
     <string name="permission_button_continue">Continue</string>
     <string name="permission_button_cancel">Cancel</string>
+    <string name="battery_optimization_warning_title">Battery optimization may interrupt tracking</string>
+    <string name="battery_optimization_warning_message">Background tracking is more reliable when this app is excluded from battery optimization. You can open system settings now or continue without the exemption.</string>
 
     <!-- Settings -->
     <string name="settings">Settings</string>
@@ -23,18 +24,17 @@
     <string name="save">Save</string>
     <string name="tracker_identifier">Identifier</string>
     <string name="upload_server">Server address</string>
-    <string name="upload_time_interval">Send data every minutes</string>
-    <string name="upload_distance_interval">Send data every meters</string>
+    <string name="upload_time_interval">Upload buffer interval (minutes)</string>
+    <string name="buffer_time_interval">Buffer point interval by time (minutes)</string>
+    <string name="buffer_distance_interval">Buffer point interval by distance (meters)</string>
     <string name="language">Language</string>
     <string name="lang_en">English</string>
     <string name="lang_ru">Russian</string>
     <string name="app_version_format">Version:</string>
 
-    <string name="text_fields_empty_or_spaces">Please check the highlighted fields. Inputs cannot be empty or contain spaces</string>
-    <string name="tracker_identifier_error">The tracker number cannot be empty and must contain digits only</string>
-    <string name="upload_server_error">Server address cannot be empty or contain spaces</string>
+    <string name="tracker_identifier_error">The identifier cannot be empty or contain spaces, semicolons, or line breaks</string>
+    <string name="upload_server_error">Enter a valid server address in the form host[:port] or tcp://host[:port] / tls://host[:port], without spaces</string>
     <string name="interval_error">The interval must be greater than 0</string>
-    <string name="interval_updated">Interval updated. Restarting tracking service.</string>
 
     <!-- UI -->
     <string name="no_data_placeholder">—</string>
@@ -53,7 +53,7 @@
     <string name="altitude_format">%.0f m</string>
 
     <string name="speed">Speed</string>
-    <string name="speed_format_kmh">%.1f km/h</string>
+    <string name="speed_format_kmh">%.0f km/h</string>
 
     <string name="bearing">Bearing</string>
     <string name="bearing_format">%.0f°</string>
@@ -66,17 +66,37 @@
 
     <string name="data_buffer">Buffer</string>
 
-    <string name="signal_strength">GPS Signal</string>
+    <string name="location_status">Location status</string>
     <string name="search_satellites">Search satellites…</string>
-    <string name="signal_unknown">Unknown</string>
-    <string name="signal_excellent">Excellent</string>
-    <string name="signal_good">Good</string>
-    <string name="signal_fair">Fair</string>
-    <string name="signal_poor">Poor</string>
+    <string name="location_state_no_fix">Location unavailable</string>
+    <string name="location_state_fresh_gps">Current location</string>
+    <string name="location_state_fresh_degraded">Current fallback location</string>
+    <string name="location_state_stale_gps">Stale location</string>
+    <string name="location_state_stale_degraded">Stale fallback location</string>
+    <string name="location_state_suspect">Untrusted location</string>
+    <string name="location_warning_mock">Artificial location</string>
+    <string name="location_warning_impossible_jump">Implausible movement</string>
+    <string name="location_warning_timestamp_regression">Timestamp lag</string>
+    <string name="location_warning_stale">Stale location rejected</string>
+    <string name="location_warning_unknown">Location quality warning</string>
+    <string name="provider">Provider</string>
+    <string name="provider_gps">GPS</string>
+    <string name="provider_network">LBS</string>
+    <string name="provider_fused">GPS+LBS</string>
+    <string name="provider_passive">Passive provider</string>
+    <string name="provider_buffered">Buffered point</string>
+    <string name="fix_age">Freshness</string>
+    <string name="fix_age_just_now">Just now</string>
+    <string name="fix_age_seconds_format">%1$d sec</string>
+    <string name="fix_age_minutes_seconds_format">%1$d min %2$d sec</string>
+    <string name="warning">Warning</string>
 
-    <string name="update_time">Update</string>
+    <string name="update_time">Last upload</string>
     <string name="extra_data">Extra data</string>
 
     <string name="upload_status_success">%1$s (Success)</string>
-    <string name="upload_status_failure">%1$s (Failed: %2$s)</string>
+    <string name="upload_status_failure">%1$s (No connection to server)</string>
+    <string name="upload_status_offline">Offline: buffering pending points</string>
+    <string name="upload_status_offline_snackbar">No network connection. Buffering points locally.</string>
+    <string name="upload_status_failure_snackbar">Could not connect to server. Points remain buffered.</string>
 </resources>

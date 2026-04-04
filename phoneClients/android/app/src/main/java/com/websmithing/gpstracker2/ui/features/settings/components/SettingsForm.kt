@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -43,6 +45,12 @@ import com.websmithing.gpstracker2.ui.theme.customSegmentedButtonColors
 import com.websmithing.gpstracker2.ui.theme.customSegmentedButtonShape
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 
+internal fun sanitizeSingleLineInput(value: String): String =
+    value.replace("\r", "").replace("\n", "")
+
+private val SettingsInputMinHeight = 48.dp
+private val SettingsSegmentedButtonHeight = 44.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsForm(
@@ -51,25 +59,28 @@ fun SettingsForm(
     onChange: (SettingsFormState) -> Unit,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 13.dp, horizontal = 16.dp)
+            .padding(vertical = 8.dp, horizontal = 16.dp)
     ) {
         CustomLabeledBox(label = stringResource(R.string.tracker_identifier)) {
             OutlinedTextField(
                 value = state.trackerIdentifier,
                 onValueChange = { value ->
-                    onChange(state.copy(trackerIdentifier = value.filter { it.isDigit() }))
+                    onChange(state.copy(trackerIdentifier = sanitizeSingleLineInput(value)))
                 },
                 isError = state.trackerIdentifierError != null,
                 supportingText = { state.trackerIdentifierError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
+                    keyboardType = KeyboardType.Ascii
                 ),
+                singleLine = true,
+                maxLines = 1,
                 modifier = Modifier
+                    .heightIn(min = SettingsInputMinHeight)
                     .fillMaxWidth()
             )
         }
@@ -77,11 +88,16 @@ fun SettingsForm(
         CustomLabeledBox(label = stringResource(R.string.upload_server)) {
             OutlinedTextField(
                 value = state.uploadServer,
-                onValueChange = { onChange(state.copy(uploadServer = it)) },
+                onValueChange = {
+                    onChange(state.copy(uploadServer = sanitizeSingleLineInput(it)))
+                },
                 isError = state.uploadServerError != null,
                 supportingText = { state.uploadServerError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
+                singleLine = true,
+                maxLines = 1,
                 modifier = Modifier
+                    .heightIn(min = SettingsInputMinHeight)
                     .fillMaxWidth()
             )
         }
@@ -98,24 +114,50 @@ fun SettingsForm(
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number
                 ),
+                singleLine = true,
+                maxLines = 1,
                 modifier = Modifier
+                    .heightIn(min = SettingsInputMinHeight)
                     .fillMaxWidth()
             )
         }
 
-        CustomLabeledBox(label = stringResource(R.string.upload_distance_interval)) {
+        CustomLabeledBox(label = stringResource(R.string.buffer_time_interval)) {
             OutlinedTextField(
-                value = state.uploadDistanceInterval,
+                value = state.bufferTimeInterval,
                 onValueChange = { value ->
-                    onChange(state.copy(uploadDistanceInterval = value.filter { it.isDigit() }))
+                    onChange(state.copy(bufferTimeInterval = value.filter { it.isDigit() }))
                 },
-                isError = state.uploadDistanceIntervalError != null,
-                supportingText = { state.uploadDistanceIntervalError?.let { Text(it) } },
+                isError = state.bufferTimeIntervalError != null,
+                supportingText = { state.bufferTimeIntervalError?.let { Text(it) } },
                 colors = customOutlinedTextFieldColors(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number
                 ),
+                singleLine = true,
+                maxLines = 1,
                 modifier = Modifier
+                    .heightIn(min = SettingsInputMinHeight)
+                    .fillMaxWidth()
+            )
+        }
+
+        CustomLabeledBox(label = stringResource(R.string.buffer_distance_interval)) {
+            OutlinedTextField(
+                value = state.bufferDistanceInterval,
+                onValueChange = { value ->
+                    onChange(state.copy(bufferDistanceInterval = value.filter { it.isDigit() }))
+                },
+                isError = state.bufferDistanceIntervalError != null,
+                supportingText = { state.bufferDistanceIntervalError?.let { Text(it) } },
+                colors = customOutlinedTextFieldColors(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                ),
+                singleLine = true,
+                maxLines = 1,
+                modifier = Modifier
+                    .heightIn(min = SettingsInputMinHeight)
                     .fillMaxWidth()
             )
         }
@@ -127,7 +169,7 @@ fun SettingsForm(
             )
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(8.dp))
 
         Logo(modifier = Modifier.fillMaxWidth())
     }
@@ -163,8 +205,8 @@ private fun SelectLanguage(
                     )
                 },
                 label = { Text(stringResource(label)) },
-                contentPadding = PaddingValues(vertical = 16.dp, horizontal = 8.dp),
-                modifier = modifier
+                contentPadding = PaddingValues(vertical = 8.dp, horizontal = 8.dp),
+                modifier = modifier.heightIn(min = SettingsSegmentedButtonHeight)
             )
         }
     }
@@ -173,7 +215,7 @@ private fun SelectLanguage(
 @Composable
 private fun Logo(modifier: Modifier = Modifier) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
@@ -181,7 +223,7 @@ private fun Logo(modifier: Modifier = Modifier) {
             painterResource(R.drawable.logo_full),
             contentDescription = stringResource(R.string.app_name),
             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
-            modifier = Modifier.width(140.dp)
+            modifier = Modifier.width(132.dp)
         )
 
         Text(

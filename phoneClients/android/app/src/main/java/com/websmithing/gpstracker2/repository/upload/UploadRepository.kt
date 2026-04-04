@@ -12,6 +12,7 @@ interface UploadRepository {
 
 sealed class UploadStatus {
     object Idle : UploadStatus()
-    object Success : UploadStatus()
+    data class Success(val uploadedAtMillis: Long) : UploadStatus()
+    object Offline : UploadStatus()
     data class Failure(val errorMessage: String?) : UploadStatus()
 }

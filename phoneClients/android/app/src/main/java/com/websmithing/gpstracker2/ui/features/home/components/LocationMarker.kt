@@ -20,6 +20,7 @@ import com.websmithing.gpstracker2.ui.theme.extendedColors
 enum class LocationMarkerState {
     ACTIVE,
     INACTIVE,
+    WARNING,
     ERROR
 }
 
@@ -43,10 +44,11 @@ fun LocationMarker(
         color = when (state) {
             LocationMarkerState.ACTIVE -> MaterialTheme.colorScheme.primary
             LocationMarkerState.INACTIVE -> MaterialTheme.extendedColors.fab
+            LocationMarkerState.WARNING -> MaterialTheme.colorScheme.error
             LocationMarkerState.ERROR -> MaterialTheme.colorScheme.error
         },
         contentColor = when (state) {
-            LocationMarkerState.ACTIVE, LocationMarkerState.ERROR -> Color.White
+            LocationMarkerState.ACTIVE, LocationMarkerState.WARNING, LocationMarkerState.ERROR -> Color.White
             LocationMarkerState.INACTIVE -> MaterialTheme.extendedColors.onFab
         },
         shape = teardropShape,
@@ -90,5 +92,13 @@ private fun LocationMarkerActivePreview() {
 private fun LocationMarkerErrorPreview() {
     WaliotTheme {
         LocationMarker(onClick = {}, state = LocationMarkerState.ERROR)
+    }
+}
+
+@Preview
+@Composable
+private fun LocationMarkerWarningPreview() {
+    WaliotTheme {
+        LocationMarker(onClick = {}, state = LocationMarkerState.WARNING)
     }
 }

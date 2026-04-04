@@ -2,6 +2,7 @@ package com.websmithing.gpstracker2.ui.features.home.components
 
 import android.content.Context
 import android.location.Location
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -32,20 +33,24 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.repository.upload.UploadStatus
+import com.websmithing.gpstracker2.ui.features.home.TrackingLocationPresentation
+import com.websmithing.gpstracker2.ui.features.home.TrackingLocationUiState
 import com.websmithing.gpstracker2.ui.components.CustomDragHandle
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
 import com.websmithing.gpstracker2.ui.theme.extendedColors
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 private val coordinateFormatter = DecimalFormat("0.000000")
-private val timeFormatter = SimpleDateFormat("HH:mm:ss, dd.MM.yy", Locale.US)
 
 @Composable
 fun TrackingInfoSheet(
     trackerIdentifier: String?,
     location: Location?,
+    locationPresentation: TrackingLocationPresentation,
     lastUploadStatus: UploadStatus?,
     bufferCount: Int,
     onDismissRequest: () -> Unit,
@@ -55,6 +60,7 @@ fun TrackingInfoSheet(
         onDismissRequest = onDismissRequest,
         trackerIdentifier = trackerIdentifier,
         location = location,
+        locationPresentation = locationPresentation,
         lastUploadStatus = lastUploadStatus,
         bufferCount = bufferCount,
         modifier = modifier
@@ -66,6 +72,7 @@ fun TrackingInfoSheet(
 private fun Sheet(
     trackerIdentifier: String?,
     location: Location?,
+    locationPresentation: TrackingLocationPresentation,
     lastUploadStatus: UploadStatus?,
     bufferCount: Int,
     onDismissRequest: () -> Unit,
@@ -125,7 +132,7 @@ private fun Sheet(
             ) {
                 item {
                     Text(
-                        context.getString(R.string.signal_strength),
+                        context.getString(R.string.location_status),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -134,7 +141,7 @@ private fun Sheet(
                     Text(
                         if (location == null)
                             context.getString(R.string.no_data_placeholder)
-                        else getSignalStrengthDescription(location.accuracy)
+                        else getLocationStatusDescription(locationPresentation)
                     )
                 }
 
@@ -154,13 +161,16 @@ private fun Sheet(
                                 null, is UploadStatus.Idle -> context.getString(R.string.no_data_placeholder)
                                 is UploadStatus.Success -> context.getString(
                                     R.string.upload_status_success,
-                                    timeFormatter.format(location.time)
+                                    formatUpdateTime(context, lastUploadStatus.uploadedAtMillis)
+                                )
+
+                                is UploadStatus.Offline -> context.getString(
+                                    R.string.upload_status_offline
                                 )
 
                                 is UploadStatus.Failure -> context.getString(
                                     R.string.upload_status_failure,
-                                    timeFormatter.format(location.time),
-                                    lastUploadStatus.errorMessage ?: stringResource(R.string.unknown_error)
+                                    context.getString(R.string.no_data_placeholder)
                                 )
                             }
                         }
@@ -168,7 +178,7 @@ private fun Sheet(
                 }
             }
 
-            ExtraInfo(context, location, bufferCount)
+            ExtraInfo(context, locationPresentation, bufferCount)
         }
     }
 }
@@ -176,9 +186,10 @@ private fun Sheet(
 @Composable
 private fun ExtraInfo(
     context: Context,
-    location: Location?,
+    locationPresentation: TrackingLocationPresentation,
     bufferCount: Int
 ) {
+    val location = locationPresentation.trustedLocation
     Column(
         verticalArrangement = Arrangement.spacedBy(5.dp),
         modifier = Modifier
@@ -196,10 +207,21 @@ private fun ExtraInfo(
         ) {
             ChipItem(
                 label = context.getString(R.string.accuracy),
-                value = if (location == null)
+                value = if (locationPresentation.accuracyMeters == null)
                     context.getString(R.string.no_data_placeholder)
                 else
-                    context.getString(R.string.accuracy_format, location.accuracy)
+                    context.getString(R.string.accuracy_format, locationPresentation.accuracyMeters)
+            )
+
+            ChipItem(
+                label = context.getString(R.string.provider),
+                value = describeLocationProvider(context, locationPresentation.provider)
+            )
+
+            ChipItem(
+                label = context.getString(R.string.fix_age),
+                value = locationPresentation.fixAgeMillis?.let { formatFixAge(context, it) }
+                    ?: context.getString(R.string.no_data_placeholder)
             )
 
             ChipItem(
@@ -210,6 +232,13 @@ private fun ExtraInfo(
                     context.getString(R.string.no_data_placeholder)
                 }
             )
+
+            if (locationPresentation.state == TrackingLocationUiState.Suspect) {
+                ChipItem(
+                    label = context.getString(R.string.warning),
+                    value = getLocationWarningDescription(locationPresentation)
+                )
+            }
         }
     }
 }
@@ -276,15 +305,65 @@ private fun ChipItem(
 }
 
 @Composable
-private fun getSignalStrengthDescription(accuracy: Float): String {
+private fun getLocationStatusDescription(locationPresentation: TrackingLocationPresentation): String {
     val context = LocalContext.current
-    return when {
-        accuracy <= 0 -> context.getString(R.string.signal_unknown)
-        accuracy <= 10 -> context.getString(R.string.signal_excellent)
-        accuracy <= 25 -> context.getString(R.string.signal_good)
-        accuracy <= 50 -> context.getString(R.string.signal_fair)
-        else -> context.getString(R.string.signal_poor)
+    return when (locationPresentation.state) {
+        TrackingLocationUiState.NoFix -> context.getString(R.string.location_state_no_fix)
+        TrackingLocationUiState.FreshGps -> context.getString(R.string.location_state_fresh_gps)
+        TrackingLocationUiState.FreshDegraded -> context.getString(R.string.location_state_fresh_degraded)
+        TrackingLocationUiState.StaleGps -> context.getString(R.string.location_state_stale_gps)
+        TrackingLocationUiState.StaleDegraded -> context.getString(R.string.location_state_stale_degraded)
+        TrackingLocationUiState.Suspect -> context.getString(R.string.location_state_suspect)
     }
+}
+
+@Composable
+private fun getLocationWarningDescription(locationPresentation: TrackingLocationPresentation): String {
+    val context = LocalContext.current
+    return when (locationPresentation.issue) {
+        com.websmithing.gpstracker2.repository.location.LocationFixIssue.MockFix ->
+            context.getString(R.string.location_warning_mock)
+        com.websmithing.gpstracker2.repository.location.LocationFixIssue.ImpossibleJump ->
+            context.getString(R.string.location_warning_impossible_jump)
+        com.websmithing.gpstracker2.repository.location.LocationFixIssue.TimestampRegression ->
+            context.getString(R.string.location_warning_timestamp_regression)
+        com.websmithing.gpstracker2.repository.location.LocationFixIssue.StaleFix ->
+            context.getString(R.string.location_warning_stale)
+        com.websmithing.gpstracker2.repository.location.LocationFixIssue.NoProviders,
+        null -> context.getString(R.string.location_warning_unknown)
+    }
+}
+
+private fun formatFixAge(context: Context, ageMillis: Long): String {
+    val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(ageMillis)
+    if (totalSeconds <= 0) {
+        return context.getString(R.string.fix_age_just_now)
+    }
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return if (minutes > 0) {
+        context.getString(R.string.fix_age_minutes_seconds_format, minutes, seconds)
+    } else {
+        context.getString(R.string.fix_age_seconds_format, seconds)
+    }
+}
+
+private fun describeLocationProvider(context: Context, provider: String?): String {
+    return when (provider?.lowercase(Locale.ROOT)) {
+        null -> context.getString(R.string.no_data_placeholder)
+        "gps" -> context.getString(R.string.provider_gps)
+        "network" -> context.getString(R.string.provider_network)
+        "fused" -> context.getString(R.string.provider_fused)
+        "passive" -> context.getString(R.string.provider_passive)
+        "persisted" -> context.getString(R.string.provider_buffered)
+        else -> provider
+    }
+}
+
+private fun formatUpdateTime(context: Context, timeMillis: Long): String {
+    val locale = context.resources.configuration.locales[0] ?: Locale.getDefault()
+    val pattern = DateFormat.getBestDateTimePattern(locale, "HHmmssddMMyy")
+    return SimpleDateFormat(pattern, locale).format(Date(timeMillis))
 }
 
 @Preview
@@ -295,7 +374,14 @@ private fun SheetPreview() {
             onDismissRequest = {},
             trackerIdentifier = "89181201004",
             location = Location(""),
-            lastUploadStatus = UploadStatus.Success,
+            locationPresentation = TrackingLocationPresentation(
+                state = TrackingLocationUiState.FreshGps,
+                trustedLocation = Location("gps"),
+                provider = "gps",
+                accuracyMeters = 5f,
+                fixAgeMillis = 15_000L,
+            ),
+            lastUploadStatus = UploadStatus.Success(uploadedAtMillis = 1_700_000_000_000L),
             bufferCount = 7
         )
     }
@@ -309,6 +395,7 @@ private fun EmptySheetPreview() {
             onDismissRequest = {},
             trackerIdentifier = null,
             location = null,
+            locationPresentation = TrackingLocationPresentation(),
             lastUploadStatus = null,
             bufferCount = 0
         )

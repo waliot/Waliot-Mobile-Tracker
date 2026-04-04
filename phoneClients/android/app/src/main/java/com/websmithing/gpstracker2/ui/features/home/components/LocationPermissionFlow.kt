@@ -72,27 +72,24 @@ fun ForegroundLocation(
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { result ->
-
-            val anyGranted = result[Manifest.permission.ACCESS_FINE_LOCATION] == true
-                || result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-            if (anyGranted) {
-                if (isBackgroundLocationRequired) {
-                    if (isBackgroundLocationPermissionGranted(context)) {
-                        onAllow()
-                    } else {
-                        onShowBackgroundDialog()
-                    }
-                } else {
-                    onAllow()
-                }
-            } else {
-                val anyShouldShow = result.entries.any { (permission, granted) ->
+            val decision = decideForegroundPermissionResult(
+                fineLocationGranted = result[Manifest.permission.ACCESS_FINE_LOCATION] == true,
+                coarseLocationGranted = result[Manifest.permission.ACCESS_COARSE_LOCATION] == true,
+                isBackgroundLocationRequired = isBackgroundLocationRequired,
+                hasBackgroundLocationPermission = isBackgroundLocationPermissionGranted(context),
+                anyShouldShowRationale = result.entries.any { (permission, granted) ->
                     !granted && shouldShowRationale(context, permission)
                 }
+            )
 
-                if (anyShouldShow) {
+            when (decision) {
+                ForegroundPermissionDecision.Allow -> onAllow()
+                ForegroundPermissionDecision.RequestBackgroundPermission -> onShowBackgroundDialog()
+                ForegroundPermissionDecision.ShowRationale -> {
                     showForegroundRationaleDialog = true
-                } else {
+                }
+
+                ForegroundPermissionDecision.Deny -> {
                     onDeny()
                     showForegroundDeniedDialog = true
                 }
@@ -152,17 +149,12 @@ private fun BackgroundLocation(
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-
-            if (granted) {
-                onAllow()
-            } else {
-                val shouldShow = shouldShowRationale(
-                    context,
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                )
-
-                onDeny()
-                showBackgroundDeniedDialog = true
+            when (decideBackgroundPermissionResult(granted)) {
+                BackgroundPermissionDecision.Allow -> onAllow()
+                BackgroundPermissionDecision.Deny -> {
+                    onDeny()
+                    showBackgroundDeniedDialog = true
+                }
             }
         }
 
