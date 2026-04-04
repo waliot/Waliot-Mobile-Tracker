@@ -1,6 +1,11 @@
 .gradle
+.kotlin/
 /local.properties
-/.idea/workspace.xml
-.DS_Store
+/.idea/
+/.codex/
+/docs/
+**/.DS_Store
 /app/release
 build/
+hs_err_pid*
+replay_pid*
