@@ -5,8 +5,6 @@ interface SettingsRepository {
     companion object {
         const val PREFS_NAME = "com.waliot.tracker"
 
-        const val KEY_APP_ID = "appID"
-
         const val KEY_TRACKING_STATE = "trackingState"
         const val DEFAULT_TRACKING_STATE = false
 
@@ -19,16 +17,20 @@ interface SettingsRepository {
         const val KEY_UPLOAD_TIME_INTERVAL = "uploadTimeInterval"
         const val DEFAULT_UPLOAD_TIME_INTERVAL = 5
 
-        const val KEY_UPLOAD_DISTANCE_INTERVAL = "uploadDistanceInterval"
-        const val DEFAULT_UPLOAD_DISTANCE_INTERVAL = 100
+        const val KEY_BUFFER_TIME_INTERVAL = "bufferTimeInterval"
+        const val DEFAULT_BUFFER_TIME_INTERVAL = 1
+
+        const val KEY_BUFFER_DISTANCE_INTERVAL = "bufferDistanceInterval"
+        const val DEFAULT_BUFFER_DISTANCE_INTERVAL = 100
 
         const val KEY_LANGUAGE = "language"
         const val DEFAULT_LANGUAGE = "ru"
+
+        const val KEY_BATTERY_OPTIMIZATION_WARNING_SHOWN = "batteryOptimizationWarningShown"
+        const val DEFAULT_BATTERY_OPTIMIZATION_WARNING_SHOWN = false
     }
 
-    suspend fun getAppId(): String
-    suspend fun generateAndSaveAppId(): String
-
+    fun peekTrackingState(): Boolean
     suspend fun getTrackingState(): Boolean
     suspend fun setTrackingState(isTracking: Boolean)
 
@@ -41,12 +43,17 @@ interface SettingsRepository {
     suspend fun getUploadTimeInterval(): Int
     suspend fun setUploadTimeInterval(intervalMinutes: Int)
 
-    suspend fun getUploadDistanceInterval(): Int
-    suspend fun setUploadDistanceInterval(intervalMeters: Int)
+    suspend fun getBufferTimeInterval(): Int
+    suspend fun setBufferTimeInterval(intervalMinutes: Int)
 
+    suspend fun getBufferDistanceInterval(): Int
+    suspend fun setBufferDistanceInterval(intervalMeters: Int)
+
+    fun peekLanguage(): String
     suspend fun getLanguage(): String
     suspend fun setLanguage(language: String)
 
-    suspend fun isFirstTimeLoading(): Boolean
-    suspend fun setFirstTimeLoading(isFirst: Boolean)
+    fun peekBatteryOptimizationWarningShown(): Boolean
+    suspend fun getBatteryOptimizationWarningShown(): Boolean
+    suspend fun setBatteryOptimizationWarningShown(shown: Boolean)
 }

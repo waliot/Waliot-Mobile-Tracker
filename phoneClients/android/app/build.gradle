@@ -5,18 +5,21 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'jacoco'
 }
 
 android {
-    namespace "com.websmithing.gpstracker2"
+    // Legacy source namespace. Changing it safely requires a coordinated package migration.
+    namespace = "com.websmithing.gpstracker2"
     compileSdk = 36
 
     defaultConfig {
+        // Product-facing application id used for the installed app package.
         applicationId "com.waliot.tracker"
         minSdk 26
         targetSdk 35
-        versionCode 7
-        versionName "2.0.0"
+        versionCode 8
+        versionName "2.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -35,20 +38,22 @@ android {
         jvmTarget = '11'
     }
     buildFeatures {
-        buildConfig true
-        compose true
+        buildConfig = true
+        compose = true
     }
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+    lint {
+        checkTestSources = false
+    }
 }
 
 dependencies {
     // Kotlin Standard Library
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     // Compose
     def composeBom = platform('androidx.compose:compose-bom:2025.11.01')
@@ -88,12 +93,6 @@ dependencies {
     implementation 'org.maplibre.compose:maplibre-compose:0.12.1'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-    // Networking
-    implementation 'com.squareup.retrofit2:retrofit:3.0.0'
-    implementation 'com.squareup.retrofit2:converter-gson:3.0.0'
-    implementation 'com.squareup.okhttp3:okhttp:5.3.2'
-    implementation 'com.squareup.okhttp3:logging-interceptor:5.3.2'
-
     // Hilt for Dependency Injection
     implementation "com.google.dagger:hilt-android:2.57.2"
     kapt "com.google.dagger:hilt-compiler:2.57.2"
@@ -110,12 +109,192 @@ dependencies {
     testImplementation 'org.mockito:mockito-inline:5.2.0'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
     testImplementation 'androidx.test:core-ktx:1.7.0'
-    kaptTest 'com.google.dagger:hilt-compiler:2.57.2'
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    androidTestImplementation 'androidx.test:rules:1.7.0'
     androidTestImplementation composeBom
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 }
 
 kapt {
-    correctErrorTypes true
+    correctErrorTypes = true
+}
+
+jacoco {
+    toolVersion = '0.8.13'
+}
+
+def coverageExclusions = [
+    '**/R.class',
+    '**/R$*.class',
+    '**/BuildConfig.*',
+    '**/Manifest*.*',
+    '**/*Test*.*',
+    '**/*$Lambda$*.*',
+    '**/*$inlined$*.*',
+    '**/*Companion*.*',
+    '**/*_Factory*.*',
+    '**/*_Provide*Factory*.*',
+    '**/*_MembersInjector*.*',
+    '**/*_HiltModules*.*',
+    '**/*_HiltComponents*.*',
+    '**/Hilt_*.*',
+    '**/hilt_aggregated_deps/**',
+    '**/dagger/hilt/internal/**',
+    '**/di/**',
+    '**/*Preview*.*',
+    '**/*ComposableSingletons*.*',
+]
+
+def debugClassDirectories = files(
+    fileTree(
+        dir: "$buildDir/tmp/kotlin-classes/debug",
+        excludes: coverageExclusions
+    ),
+    fileTree(
+        dir: "$buildDir/intermediates/javac/debug/compileDebugJavaWithJavac/classes",
+        excludes: coverageExclusions
+    )
+)
+
+def debugSourceDirectories = files(
+    'src/main/java'
+)
+
+def maintainedUnitCoverageIncludes = [
+    '**/repository/location/LocationRepositoryImpl*.class',
+    '**/repository/settings/SettingsRepositoryImpl*.class',
+    '**/repository/upload/UploadRepositoryImpl*.class',
+    '**/service/TrackingRuntimeController*.class',
+    '**/service/TrackingPermissionChecker*.class',
+    '**/service/TrackingRecoveryCoordinator*.class',
+    '**/service/TrackingRestartReceiverKt*.class',
+    '**/service/TrackingRestartAlarmMode*.class',
+    '**/service/DefaultTrackingServiceController*.class',
+    '**/ui/TrackingViewModel*.class',
+    '**/ui/features/home/TrackingToggleDecisionKt*.class',
+    '**/ui/features/home/components/LocationPermissionDecisionKt*.class',
+    '**/util/CrcUtils*.class',
+    '**/util/NmeaUtils*.class',
+]
+
+def debugMaintainedCoverageClassDirectories = files(
+    fileTree(
+        dir: "$buildDir/tmp/kotlin-classes/debug",
+        includes: maintainedUnitCoverageIncludes,
+        excludes: coverageExclusions
+    ),
+    fileTree(
+        dir: "$buildDir/intermediates/javac/debug/compileDebugJavaWithJavac/classes",
+        includes: maintainedUnitCoverageIncludes,
+        excludes: coverageExclusions
+    )
+)
+
+def criticalRuntimeCoverageIncludes = [
+    '**/repository/location/LocationRepositoryImpl*.class',
+    '**/repository/upload/UploadRepositoryImpl*.class',
+    '**/service/TrackingRuntimeController*.class',
+    '**/service/TrackingPermissionChecker*.class',
+    '**/service/TrackingRecoveryCoordinator*.class',
+    '**/service/TrackingRestartReceiverKt*.class',
+    '**/service/DefaultTrackingServiceController*.class',
+    '**/ui/TrackingViewModel*.class',
+    '**/ui/features/home/TrackingToggleDecisionKt*.class',
+]
+
+def debugCriticalRuntimeClassDirectories = files(
+    fileTree(
+        dir: "$buildDir/tmp/kotlin-classes/debug",
+        includes: criticalRuntimeCoverageIncludes,
+        excludes: coverageExclusions
+    ),
+    fileTree(
+        dir: "$buildDir/intermediates/javac/debug/compileDebugJavaWithJavac/classes",
+        includes: criticalRuntimeCoverageIncludes,
+        excludes: coverageExclusions
+    )
+)
+
+def debugExecutionData = fileTree(
+    dir: buildDir,
+    includes: [
+        'jacoco/testDebugUnitTest.exec',
+        'outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec',
+    ]
+)
+
+tasks.register('jacocoDebugUnitTestReport', JacocoReport) {
+    group = 'verification'
+    description = 'Generates JaCoCo coverage reports for debug unit tests.'
+    dependsOn('testDebugUnitTest')
+
+    classDirectories.setFrom(debugClassDirectories)
+    sourceDirectories.setFrom(debugSourceDirectories)
+    executionData.setFrom(debugExecutionData)
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+}
+
+tasks.register('jacocoDebugUnitTestCoverageVerification', JacocoCoverageVerification) {
+    group = 'verification'
+    description = 'Verifies the minimum JaCoCo coverage baseline for maintained unit-testable production logic.'
+    dependsOn('jacocoDebugUnitTestReport')
+
+    classDirectories.setFrom(debugMaintainedCoverageClassDirectories)
+    sourceDirectories.setFrom(debugSourceDirectories)
+    executionData.setFrom(debugExecutionData)
+
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+    }
+}
+
+tasks.register('jacocoCriticalRuntimeCoverageVerification', JacocoCoverageVerification) {
+    group = 'verification'
+    description = 'Verifies coverage for critical tracking/runtime code paths.'
+    dependsOn('jacocoDebugUnitTestReport')
+
+    classDirectories.setFrom(debugCriticalRuntimeClassDirectories)
+    sourceDirectories.setFrom(debugSourceDirectories)
+    executionData.setFrom(debugExecutionData)
+
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.85
+            }
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    def taskNameLower = task.name.toLowerCase(java.util.Locale.ROOT)
+
+    if (
+        task.name.startsWith('kapt') &&
+        (task.name.contains('UnitTest') || task.name.contains('AndroidTest'))
+    ) {
+        task.enabled = false
+    }
+
+    if (
+        taskNameLower.contains('lint') &&
+        !taskNameLower.contains('lintmodel') &&
+        !taskNameLower.contains('lintreportmodel') &&
+        (task.name.contains('UnitTest') || task.name.contains('AndroidTest'))
+    ) {
+        task.enabled = false
+    }
 }

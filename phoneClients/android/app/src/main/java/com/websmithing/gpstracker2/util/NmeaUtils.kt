@@ -49,20 +49,16 @@ object NmeaUtils {
     private fun buildDdm(value: Double): IntArray {
         val absValue = abs(value)
 
-        val degrees = floor(absValue).toInt()
-        var minutes = (absValue - degrees) * NMEA_MINUTES_MAX_VALUE
+        var degrees = floor(absValue).toInt()
+        var totalMinutes = ((absValue - degrees) * NMEA_MINUTES_MAX_VALUE * NMEA_MINUTES_DIVIDER).roundToInt()
 
-        minutes = (minutes * NMEA_MINUTES_DIVIDER).roundToInt() / NMEA_MINUTES_DIVIDER
-        if (minutes >= NMEA_MINUTES_MAX_VALUE) {
-            minutes = 0.0
+        if (totalMinutes >= (NMEA_MINUTES_MAX_VALUE * NMEA_MINUTES_DIVIDER).toInt()) {
+            degrees += 1
+            totalMinutes = 0
         }
 
-        var wholeMinutes = minutes.toInt()
-        var fracMinutes = ((minutes - wholeMinutes) * NMEA_MINUTES_DIVIDER).roundToInt()
-        if (fracMinutes == NMEA_MINUTES_DIVIDER.toInt()) {
-            fracMinutes = 0
-            wholeMinutes += 1
-        }
+        val wholeMinutes = totalMinutes / NMEA_MINUTES_DIVIDER.toInt()
+        val fracMinutes = totalMinutes % NMEA_MINUTES_DIVIDER.toInt()
 
         return intArrayOf(degrees, wholeMinutes, fracMinutes)
     }

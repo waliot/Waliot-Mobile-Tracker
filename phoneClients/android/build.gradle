@@ -17,4 +17,33 @@ buildscript {
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+    delete file('app/release')
+}
+
+tasks.register('verifyFast') {
+    group = 'verification'
+    description = 'Runs the fast verification profile for the Android app.'
+    dependsOn(
+        ':app:assembleDebug',
+        ':app:testDebugUnitTest',
+        ':app:jacocoDebugUnitTestCoverageVerification',
+        ':app:jacocoCriticalRuntimeCoverageVerification',
+        ':app:lintDebug'
+    )
+}
+
+tasks.register('verifyRelease') {
+    group = 'verification'
+    description = 'Runs the release verification profile for the Android app.'
+    dependsOn(':app:assembleRelease')
+}
+
+tasks.register('verifyQualityGates') {
+    group = 'verification'
+    description = 'Runs the full local verification profile used by CI build gates.'
+    dependsOn(
+        'verifyFast',
+        'verifyRelease',
+        ':app:assembleDebugAndroidTest'
+    )
 }

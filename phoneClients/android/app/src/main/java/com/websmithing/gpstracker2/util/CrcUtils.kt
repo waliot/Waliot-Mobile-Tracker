@@ -37,8 +37,8 @@ object CrcUtils {
         0x8201, 0x42C0, 0x4380, 0x8341, 0x4100, 0x81C1, 0x8081, 0x4040
     )
 
-    fun calculateCrc16(data: ByteArray): Int {
-        var crc = 0xFFFF
+    fun calculateCrc16(data: ByteArray, initialValue: Int = 0): Int {
+        var crc = initialValue and 0xFFFF
         for (b in data) {
             val index = (crc xor (b.toInt() and 0xFF)) and 0xFF
             crc = (crc shr 8) xor CRC16_TABLE[index]

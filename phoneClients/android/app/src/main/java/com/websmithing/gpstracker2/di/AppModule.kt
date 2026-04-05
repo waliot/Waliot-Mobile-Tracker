@@ -2,6 +2,7 @@ package com.websmithing.gpstracker2.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.location.LocationManager
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Companion.PREFS_NAME
@@ -27,4 +28,10 @@ object AppModule {
     fun provideFusedLocationProviderClient(
         @ApplicationContext ctx: Context
     ): FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(ctx)
+
+    @Provides
+    @Singleton
+    fun provideLocationManager(
+        @ApplicationContext ctx: Context
+    ): LocationManager = requireNotNull(ctx.getSystemService(LocationManager::class.java))
 }

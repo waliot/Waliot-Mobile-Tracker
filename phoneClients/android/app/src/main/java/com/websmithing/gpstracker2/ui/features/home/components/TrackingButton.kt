@@ -7,11 +7,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.R
+import com.websmithing.gpstracker2.ui.UiTestTags
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
 import com.websmithing.gpstracker2.ui.modifiers.debounced
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
@@ -47,7 +49,15 @@ fun TrackingButton(
                 onClick()
             }
         ),
-        modifier = modifier.size(TrackingButtonSize)
+        modifier = modifier
+            .size(TrackingButtonSize)
+            .testTag(
+                when (state) {
+                    TrackingButtonState.PLAY -> UiTestTags.TRACKING_BUTTON_PLAY
+                    TrackingButtonState.STOP -> UiTestTags.TRACKING_BUTTON_STOP
+                    TrackingButtonState.PAUSE -> UiTestTags.TRACKING_BUTTON_PAUSE
+                }
+            )
     ) {
         when (state) {
             TrackingButtonState.PLAY -> Icon(

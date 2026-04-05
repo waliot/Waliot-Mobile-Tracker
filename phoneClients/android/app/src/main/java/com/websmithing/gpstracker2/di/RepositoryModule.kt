@@ -6,6 +6,10 @@ import com.websmithing.gpstracker2.repository.settings.SettingsRepository
 import com.websmithing.gpstracker2.repository.settings.SettingsRepositoryImpl
 import com.websmithing.gpstracker2.repository.upload.UploadRepository
 import com.websmithing.gpstracker2.repository.upload.UploadRepositoryImpl
+import com.websmithing.gpstracker2.service.DefaultTrackingServiceController
+import com.websmithing.gpstracker2.service.SQLiteTrackingBufferStore
+import com.websmithing.gpstracker2.service.TrackingBufferStore
+import com.websmithing.gpstracker2.service.TrackingServiceController
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -27,4 +31,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindUploadRepository(impl: UploadRepositoryImpl): UploadRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTrackingBufferStore(impl: SQLiteTrackingBufferStore): TrackingBufferStore
+
+    @Binds
+    @Singleton
+    abstract fun bindTrackingServiceController(impl: DefaultTrackingServiceController): TrackingServiceController
 }
