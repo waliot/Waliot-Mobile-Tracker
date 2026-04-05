@@ -20,6 +20,7 @@ internal class TrackingRuntimeController(
     private val trackingBufferStore: TrackingBufferStore,
     private val serviceScope: CoroutineScope,
     private val onBufferCountChanged: (Int) -> Unit = {},
+    private val onUploadBacklogDrained: () -> Unit = {},
     private val awaitNextUpload: suspend (Long) -> Unit = { intervalMinutes ->
         delay(TimeUnit.MINUTES.toMillis(intervalMinutes))
     },
@@ -36,6 +37,8 @@ internal class TrackingRuntimeController(
     private var lastBufferLocation: Location? = null
     private var locationCollectionJob: Job? = null
     private var uploadJob: Job? = null
+    private var currentBufferCount: Int = 0
+    private var isInitialized: Boolean = false
 
     var isTrackingActive: Boolean = false
         private set
@@ -43,9 +46,10 @@ internal class TrackingRuntimeController(
     fun start(): Boolean {
         if (isTrackingActive) return false
 
-        restoreBufferState()
+        restoreBufferStateIfNeeded()
         isTrackingActive = true
-        startTrackingWorkers()
+        startLocationCollectionWorker()
+        reconcileUploadWorker()
         return true
     }
 
@@ -53,27 +57,38 @@ internal class TrackingRuntimeController(
         if (!isTrackingActive) return false
 
         isTrackingActive = false
-        stopTrackingWorkers()
+        stopLocationCollectionWorker()
         persistStoppedBufferState()
         locationRepository.stop(LocationConsumer.TrackingService)
+        reconcileUploadWorker()
         return true
     }
 
     fun refresh(): Boolean {
-        if (!isTrackingActive) return false
+        restoreBufferStateIfNeeded()
+        if (!shouldKeepServiceRunning()) return false
 
-        startTrackingWorkers()
+        if (isTrackingActive) {
+            startLocationCollectionWorker()
+        }
+        reconcileUploadWorker(forceRestart = true)
         return true
     }
 
     fun destroy() {
-        stopTrackingWorkers()
+        stopLocationCollectionWorker()
+        stopUploadWorker()
         isTrackingActive = false
+        isInitialized = false
         locationRepository.stop(LocationConsumer.TrackingService)
     }
 
-    private fun startTrackingWorkers() {
-        stopTrackingWorkers()
+    fun hasPendingBufferedLocations(): Boolean = currentBufferCount > 0
+
+    fun shouldKeepServiceRunning(): Boolean = isTrackingActive || hasPendingBufferedLocations()
+
+    private fun startLocationCollectionWorker() {
+        stopLocationCollectionWorker()
         locationRepository.start(LocationConsumer.TrackingService)
 
         locationCollectionJob = serviceScope.launch {
@@ -88,24 +103,57 @@ internal class TrackingRuntimeController(
                 }
             }
         }
-
-        uploadJob = serviceScope.launch {
-            while (true) {
-                val uploadTimeInterval = settingsRepository.getUploadTimeInterval().toLong()
-                awaitNextUpload(uploadTimeInterval)
-
-                val trackerId = settingsRepository.getTrackerIdentifier()
-                uploadBuffer(trackerId)
-            }
-        }
     }
 
-    private fun stopTrackingWorkers() {
+    private fun stopLocationCollectionWorker() {
         locationCollectionJob?.cancel()
         locationCollectionJob = null
+    }
 
+    private fun stopUploadWorker() {
         uploadJob?.cancel()
         uploadJob = null
+    }
+
+    private fun reconcileUploadWorker(forceRestart: Boolean = false) {
+        if (forceRestart) {
+            stopUploadWorker()
+        }
+
+        if (!shouldKeepServiceRunning()) {
+            stopUploadWorker()
+            return
+        }
+
+        if (uploadJob?.isActive == true) {
+            return
+        }
+
+        lateinit var job: Job
+        job = serviceScope.launch {
+            var backlogDrainedWhileUploadOnly = false
+
+            try {
+                while (shouldKeepServiceRunning()) {
+                    val uploadTimeInterval = settingsRepository.getUploadTimeInterval().toLong()
+                    awaitNextUpload(uploadTimeInterval)
+
+                    val trackerId = settingsRepository.getTrackerIdentifier()
+                    uploadBuffer(trackerId)
+                }
+
+                backlogDrainedWhileUploadOnly = !isTrackingActive && !hasPendingBufferedLocations()
+            } finally {
+                if (uploadJob === job) {
+                    uploadJob = null
+                }
+                if (backlogDrainedWhileUploadOnly) {
+                    onUploadBacklogDrained()
+                }
+            }
+        }
+
+        uploadJob = job
     }
 
     private fun shouldAddToBuffer(location: Location, bufferTimeInterval: Long, bufferDistanceInterval: Long): Boolean {
@@ -162,13 +210,16 @@ internal class TrackingRuntimeController(
         }
     }
 
-    private fun restoreBufferState() {
+    private fun restoreBufferStateIfNeeded() {
+        if (isInitialized) return
+
         val restoredState = trackingBufferStore.loadState()
         val trimmedBuffer = restoredState.bufferedLocations.takeLast(MAX_BUFFERED_LOCATIONS)
         locationBuffer.clear()
         locationBuffer.addAll(trimmedBuffer)
         lastBufferLocation = restoredState.lastBufferedLocation
         updateBufferCount(locationBuffer.size)
+        isInitialized = true
 
         if (trimmedBuffer.size != restoredState.bufferedLocations.size) {
             trackingBufferStore.saveState(locationBuffer.toList(), lastBufferLocation)
@@ -181,12 +232,8 @@ internal class TrackingRuntimeController(
         updateBufferCount(locationBuffer.size)
     }
 
-    private fun persistBufferStateLocked() {
-        trackingBufferStore.saveState(locationBuffer.toList(), lastBufferLocation)
-        updateBufferCount(locationBuffer.size)
-    }
-
     private fun updateBufferCount(size: Int) {
+        currentBufferCount = size
         onBufferCountChanged(size)
     }
 

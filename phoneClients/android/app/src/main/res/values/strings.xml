@@ -45,6 +45,7 @@
     <string name="tracking_is_off">Start tracking</string>
     <string name="tracking_is_on">Stop tracking</string>
     <string name="notification_text">Actively tracking location…</string>
+    <string name="notification_text_upload_buffer">Uploading buffered points…</string>
     <string name="tracking_enabled">Tracking enabled</string>
 
     <string name="coordinates">Coordinates</string>

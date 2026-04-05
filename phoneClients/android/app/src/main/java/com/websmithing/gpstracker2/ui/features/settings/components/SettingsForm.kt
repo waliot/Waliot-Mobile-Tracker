@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -37,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.websmithing.gpstracker2.BuildConfig
 import com.websmithing.gpstracker2.R
+import com.websmithing.gpstracker2.ui.UiTestTags
 import com.websmithing.gpstracker2.ui.components.CustomLabeledBox
 import com.websmithing.gpstracker2.ui.features.settings.model.SettingsFormState
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
@@ -189,6 +191,11 @@ private fun SelectLanguage(
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         languages.forEachIndexed { index, (pair, icon) ->
             val (code, label) = pair
+            val testTag = when (code) {
+                "ru" -> UiTestTags.SETTINGS_LANGUAGE_RU
+                "en" -> UiTestTags.SETTINGS_LANGUAGE_EN
+                else -> code
+            }
             SegmentedButton(
                 shape = customSegmentedButtonShape(
                     index = index,
@@ -206,7 +213,9 @@ private fun SelectLanguage(
                 },
                 label = { Text(stringResource(label)) },
                 contentPadding = PaddingValues(vertical = 8.dp, horizontal = 8.dp),
-                modifier = modifier.heightIn(min = SettingsSegmentedButtonHeight)
+                modifier = modifier
+                    .heightIn(min = SettingsSegmentedButtonHeight)
+                    .testTag(testTag)
             )
         }
     }

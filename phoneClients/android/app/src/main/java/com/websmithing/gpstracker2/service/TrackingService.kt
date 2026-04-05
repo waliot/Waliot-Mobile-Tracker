@@ -35,6 +35,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class TrackingService : Service() {
 
+    private enum class NotificationMode {
+        Tracking,
+        UploadBuffer,
+    }
+
     @Inject
     lateinit var settingsRepository: SettingsRepository
 
@@ -78,7 +83,8 @@ class TrackingService : Service() {
             uploadRepository = uploadRepository,
             trackingBufferStore = trackingBufferStore,
             serviceScope = serviceScope,
-            onBufferCountChanged = { count -> _bufferCount.value = count }
+            onBufferCountChanged = { count -> _bufferCount.value = count },
+            onUploadBacklogDrained = { stopUploadOnlyServiceIfIdle() }
         )
     }
 
@@ -135,29 +141,27 @@ class TrackingService : Service() {
             return
         }
 
-        acquireWakeLock()
-        startForeground(NOTIFICATION_ID, createNotification())
+        syncServiceLifecycleWithRuntime()
     }
 
     private fun handleStopService() {
         if (!trackingRuntime.stop()) {
-            Timber.tag(TAG).d("Tracking already inactive. Stopping service")
-            stopSelf()
+            Timber.tag(TAG).d("Tracking already inactive. Ignoring duplicate stop command")
+            syncServiceLifecycleWithRuntime()
             return
         }
 
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        releaseWakeLock()
-        stopSelf()
+        syncServiceLifecycleWithRuntime()
     }
 
     private fun handleRefreshService() {
         if (!trackingRuntime.refresh()) {
-            Timber.tag(TAG).d("Ignoring refresh command because tracking is not active")
+            Timber.tag(TAG).d("Ignoring refresh command because service has no active tracking or pending uploads")
             return
         }
 
         Timber.tag(TAG).d("Refreshing tracking workers with latest settings")
+        syncServiceLifecycleWithRuntime()
     }
 
     private fun handleDefaultAction() {
@@ -170,7 +174,7 @@ class TrackingService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        if (trackingRuntime.isTrackingActive) {
+        if (trackingRuntime.shouldKeepServiceRunning()) {
             scheduleServiceRestart()
         }
     }
@@ -270,15 +274,46 @@ class TrackingService : Service() {
         }
     }
 
-    private fun createNotification(): Notification {
+    private fun createNotification(mode: NotificationMode): Notification {
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notification_text))
+            .setContentText(
+                getString(
+                    when (mode) {
+                        NotificationMode.Tracking -> R.string.notification_text
+                        NotificationMode.UploadBuffer -> R.string.notification_text_upload_buffer
+                    }
+                )
+            )
             .setSmallIcon(R.drawable.ic_notification_tracking)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
+    }
+
+    private fun syncServiceLifecycleWithRuntime() {
+        when {
+            trackingRuntime.isTrackingActive -> {
+                acquireWakeLock()
+                startForeground(NOTIFICATION_ID, createNotification(NotificationMode.Tracking))
+            }
+
+            trackingRuntime.hasPendingBufferedLocations() -> {
+                acquireWakeLock()
+                startForeground(NOTIFICATION_ID, createNotification(NotificationMode.UploadBuffer))
+            }
+
+            else -> stopUploadOnlyServiceIfIdle()
+        }
+    }
+
+    private fun stopUploadOnlyServiceIfIdle() {
+        if (trackingRuntime.shouldKeepServiceRunning()) return
+
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        releaseWakeLock()
+        stopSelf()
     }
 
     //endregion NOTIFICATION

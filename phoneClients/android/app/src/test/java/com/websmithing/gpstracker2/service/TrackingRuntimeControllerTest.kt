@@ -126,6 +126,133 @@ class TrackingRuntimeControllerTest {
     }
 
     @Test
+    fun `locations emitted after stop are not appended to the buffer`() = runTest(mainDispatcherRule.dispatcher) {
+        val settingsRepository = FakeSettingsRepository()
+        val locationRepository = FakeLocationRepository()
+        val uploadRepository = FakeUploadRepository()
+        val trackingBufferStore = FakeTrackingBufferStore()
+        val controller = createController(
+            scope = this,
+            settingsRepository = settingsRepository,
+            locationRepository = locationRepository,
+            uploadRepository = uploadRepository,
+            trackingBufferStore = trackingBufferStore,
+        )
+        val first = mockLocation(distanceToOther = 150f)
+        val second = mockLocation(distanceToOther = 150f)
+
+        try {
+            controller.start()
+            locationRepository.emit(first)
+            advanceUntilIdle()
+
+            assertTrue(controller.stop())
+            advanceUntilIdle()
+
+            locationRepository.emit(second)
+            advanceUntilIdle()
+
+            assertFalse(controller.isTrackingActive)
+            assertEquals(1, trackingBufferStore.snapshot.bufferedLocations.size)
+            assertSame(first, trackingBufferStore.snapshot.bufferedLocations.single())
+            assertEquals(1, trackingBufferStore.appendCalls)
+        } finally {
+            controller.destroy()
+            advanceUntilIdle()
+        }
+    }
+
+    @Test
+    fun `stop keeps upload loop active until buffered points are drained`() = runTest(mainDispatcherRule.dispatcher) {
+        val gate = UploadGate()
+        val settingsRepository = FakeSettingsRepository(
+            trackerIdentifier = "drain-after-stop",
+            uploadTimeInterval = 5,
+        )
+        val locationRepository = FakeLocationRepository()
+        val uploadRepository = FakeUploadRepository()
+        val trackingBufferStore = FakeTrackingBufferStore()
+        val controller = createController(
+            scope = this,
+            settingsRepository = settingsRepository,
+            locationRepository = locationRepository,
+            uploadRepository = uploadRepository,
+            trackingBufferStore = trackingBufferStore,
+            awaitNextUpload = gate::await,
+        )
+        val location = mockLocation(distanceToOther = 150f)
+
+        try {
+            controller.start()
+            locationRepository.emit(location)
+            advanceUntilIdle()
+
+            assertTrue(controller.stop())
+            advanceUntilIdle()
+
+            gate.tick()
+            advanceUntilIdle()
+
+            assertFalse(controller.isTrackingActive)
+            assertEquals(listOf("drain-after-stop"), uploadRepository.uploadedTrackerIds)
+            assertSame(location, uploadRepository.uploadedLocations.single())
+            assertTrue(trackingBufferStore.snapshot.bufferedLocations.isEmpty())
+        } finally {
+            controller.destroy()
+            advanceUntilIdle()
+        }
+    }
+
+    @Test
+    fun `failed upload after stop is retried on the next interval without restarting tracking`() = runTest(mainDispatcherRule.dispatcher) {
+        val gate = UploadGate()
+        val settingsRepository = FakeSettingsRepository(
+            trackerIdentifier = "retry-after-stop",
+            uploadTimeInterval = 5,
+        )
+        val locationRepository = FakeLocationRepository()
+        val uploadRepository = FakeUploadRepository().apply {
+            enqueueUploadResults(false, true)
+        }
+        val trackingBufferStore = FakeTrackingBufferStore()
+        val controller = createController(
+            scope = this,
+            settingsRepository = settingsRepository,
+            locationRepository = locationRepository,
+            uploadRepository = uploadRepository,
+            trackingBufferStore = trackingBufferStore,
+            awaitNextUpload = gate::await,
+        )
+        val location = mockLocation(distanceToOther = 150f)
+
+        try {
+            controller.start()
+            locationRepository.emit(location)
+            advanceUntilIdle()
+
+            assertTrue(controller.stop())
+            advanceUntilIdle()
+
+            gate.tick()
+            advanceUntilIdle()
+
+            assertFalse(controller.isTrackingActive)
+            assertEquals(1, trackingBufferStore.snapshot.bufferedLocations.size)
+
+            gate.tick()
+            advanceUntilIdle()
+
+            assertEquals(listOf("retry-after-stop", "retry-after-stop"), uploadRepository.uploadedTrackerIds)
+            assertSame(location, uploadRepository.uploadedLocations[0])
+            assertSame(location, uploadRepository.uploadedLocations[1])
+            assertTrue(trackingBufferStore.snapshot.bufferedLocations.isEmpty())
+        } finally {
+            controller.destroy()
+            advanceUntilIdle()
+        }
+    }
+
+    @Test
     fun `upload loop uses the latest tracker identifier on each cycle`() = runTest(mainDispatcherRule.dispatcher) {
         val gate = UploadGate()
         val settingsRepository = FakeSettingsRepository(

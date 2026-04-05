@@ -45,6 +45,7 @@
     <string name="tracking_is_off">Начать отслеживание</string>
     <string name="tracking_is_on">Остановить отслеживание</string>
     <string name="notification_text">Идёт отслеживание местоположения…</string>
+    <string name="notification_text_upload_buffer">Идёт выгрузка точек из буфера…</string>
     <string name="tracking_enabled">Отслеживание включено</string>
 
     <string name="coordinates">Координаты</string>

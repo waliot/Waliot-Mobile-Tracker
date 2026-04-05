@@ -233,7 +233,7 @@ class TrackingViewModel @Inject constructor(
     }
 
     private fun refreshTrackingServiceIfRequired() {
-        if (_isTracking.value != true) return
+        if (_isTracking.value != true && bufferCount.value <= 0) return
 
         trackingServiceController.refreshTracking()
     }

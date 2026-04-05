@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -39,6 +40,7 @@ import com.websmithing.gpstracker2.repository.settings.SettingsRepository.Compan
 import com.websmithing.gpstracker2.repository.settings.isTrackerIdentifierSettingValid
 import com.websmithing.gpstracker2.repository.settings.isUploadServerSettingValid
 import com.websmithing.gpstracker2.ui.TrackingViewModel
+import com.websmithing.gpstracker2.ui.UiTestTags
 import com.websmithing.gpstracker2.ui.activityHiltViewModel
 import com.websmithing.gpstracker2.ui.components.CustomBackButton
 import com.websmithing.gpstracker2.ui.features.settings.components.SettingsForm
@@ -248,6 +250,7 @@ private fun SaveButton(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(52.dp)
+            .testTag(UiTestTags.SETTINGS_SAVE_BUTTON)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(painterResource(R.drawable.ic_check_16), contentDescription = null)

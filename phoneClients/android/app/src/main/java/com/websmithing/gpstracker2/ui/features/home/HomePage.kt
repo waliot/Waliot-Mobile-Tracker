@@ -61,11 +61,14 @@ import com.websmithing.gpstracker2.ui.features.home.components.MapView
 import com.websmithing.gpstracker2.ui.features.home.components.INITIAL_TRACKING_MAP_ZOOM
 import com.websmithing.gpstracker2.ui.features.home.components.buildTrackingCameraPosition
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButton
+import com.websmithing.gpstracker2.ui.features.home.components.TrackingButtonSize
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButtonState
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingInfoSheet
 import com.websmithing.gpstracker2.ui.isBackgroundLocationPermissionGranted
 import com.websmithing.gpstracker2.ui.openBatteryOptimizationSettings
 import com.websmithing.gpstracker2.ui.router.AppDestination
+import com.websmithing.gpstracker2.ui.UiTestTags
+import androidx.compose.ui.platform.testTag
 import kotlinx.coroutines.launch
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
@@ -272,7 +275,8 @@ fun HomePage(
                 onClick = { navController.navigate(AppDestination.Settings) },
                 modifier = Modifier
                     .padding(16.dp)
-                    .size(40.dp)
+                    .size(TrackingButtonSize)
+                    .testTag(UiTestTags.HOME_SETTINGS_BUTTON)
                     .align(Alignment.TopEnd)
             ) {
                 Icon(
