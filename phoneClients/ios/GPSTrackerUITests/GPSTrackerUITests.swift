@@ -14,18 +14,18 @@ final class GPSTrackerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["home.open.stats"].exists)
         let toggle = app.buttons["home.toggle.tracking"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["home.upload.status"].exists)
+        let uploadStatus = app.staticTexts["home.upload.status"]
+        XCTAssertTrue(uploadStatus.exists)
+        let initialUploadStatusLabel = uploadStatus.label
 
         let initialLabel = toggle.label
         toggle.tap()
         XCTAssertNotEqual(toggle.label, initialLabel)
-
-        let uploadStatus = app.staticTexts["home.upload.status"]
         XCTAssertTrue(uploadStatus.waitForExistence(timeout: 5))
         XCTAssertTrue(
-            waitForLabelPrefix(
+            waitForLabelChange(
                 of: uploadStatus,
-                prefix: "Точек в буфере:",
+                initialLabel: initialUploadStatusLabel,
                 timeout: 8
             )
         )
@@ -38,6 +38,13 @@ final class GPSTrackerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["stats.value.collected"].exists)
         XCTAssertTrue(app.staticTexts["stats.value.uploaded"].exists)
         XCTAssertTrue(app.staticTexts["stats.value.lastUpload"].exists)
+        XCTAssertTrue(
+            waitForNumericLabel(
+                of: app.staticTexts["stats.value.collected"],
+                predicate: { $0 > 0 },
+                timeout: 5
+            )
+        )
 
         let done = app.buttons["stats.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 5))
@@ -153,11 +160,14 @@ final class GPSTrackerUITests: XCTestCase {
         if resetState {
             app.launchArguments += ["UITEST_RESET_STATE"]
         }
+        app.launchArguments += ["-AppleLanguages", "(ru)"]
+        app.launchArguments += ["-AppleLocale", "ru_RU"]
         app.launchEnvironment["UITEST_MODE"] = "1"
         if resetState {
             app.launchEnvironment["UITEST_RESET_STATE"] = "1"
         }
         app.launchEnvironment["UITEST_UPLOAD_MODE"] = uploadMode
+        app.launchEnvironment["UITEST_APP_LANG"] = "ru"
         if let locationAuth {
             app.launchEnvironment["UITEST_LOCATION_AUTH"] = locationAuth
         }
@@ -213,16 +223,32 @@ final class GPSTrackerUITests: XCTestCase {
         element.value as? String ?? ""
     }
 
-    private func waitForLabelPrefix(
+    private func waitForLabelChange(
         of element: XCUIElement,
-        prefix: String,
+        initialLabel: String,
         timeout: TimeInterval
     ) -> Bool {
         let predicate = NSPredicate { _, _ in
             guard element.exists else { return false }
-            return element.label.hasPrefix(prefix)
+            return !element.label.isEmpty && element.label != initialLabel
         }
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    private func waitForNumericLabel(
+        of element: XCUIElement,
+        predicate: @escaping (Int) -> Bool,
+        timeout: TimeInterval
+    ) -> Bool {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                guard element.exists else { return false }
+                let value = Int(element.label) ?? -1
+                return predicate(value)
+            },
+            object: element
+        )
         return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
     }
 }
