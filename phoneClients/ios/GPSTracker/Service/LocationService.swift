@@ -41,6 +41,15 @@ protocol LocationServiceProtocol {
     func requestWhenInUsePermissions()
     
     func requestAlwaysPermissions()
+    
+    /// Updates whether background tracking should stay enabled while a tracking session is active.
+    func setBackgroundTrackingEnabled(_ enabled: Bool)
+
+    /// Starts foreground-only location updates used to present live navigation state in the UI.
+    func startObservingNavigationStatus()
+
+    /// Stops foreground-only location updates used to present live navigation state in the UI.
+    func stopObservingNavigationStatus()
 
     /// Starts the location update process
     ///
@@ -56,6 +65,9 @@ protocol LocationServiceProtocol {
     ///
     /// - Returns: The current location authorization status
     func getCurrentAuthorizationStatus() -> CLAuthorizationStatus
+    
+    /// Returns the current accuracy authorization level used by Core Location.
+    func getCurrentAccuracyAuthorization() -> CLAccuracyAuthorization
 }
 
 /// Implementation of the LocationServiceProtocol using Core Location
@@ -77,6 +89,9 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
     
     /// Logger for diagnostic information
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "LocationService")
+    private var backgroundTrackingEnabled = true
+    private var isUpdatingLocation = false
+    private var isObservingNavigationStatus = false
 
     // MARK: - Publishers
     
@@ -112,9 +127,9 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
         super.init()
         self.locationManager.delegate = self
         self.locationManager.desiredAccuracy = kCLLocationAccuracyBest // High accuracy needed for tracking
-        self.locationManager.allowsBackgroundLocationUpdates = true // Enable background updates
         self.locationManager.pausesLocationUpdatesAutomatically = false // Prevent system from pausing updates
         self.locationManager.activityType = .other // General tracking
+        reconcileLocationDelivery()
 
         // Enable battery monitoring for reporting to server
         UIDevice.current.isBatteryMonitoringEnabled = true
@@ -134,6 +149,38 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
         log("Requesting 'Always' location permissions.", level: .info, logger: logger)
         locationManager.requestAlwaysAuthorization()
     }
+    
+    func setBackgroundTrackingEnabled(_ enabled: Bool) {
+        backgroundTrackingEnabled = enabled
+        reconcileLocationDelivery()
+        log("Background tracking preference updated to \(enabled)", level: .info, logger: logger)
+    }
+
+    func startObservingNavigationStatus() {
+        let status = getCurrentAuthorizationStatus()
+        guard status == .authorizedAlways || status == .authorizedWhenInUse else {
+            log("Cannot start navigation status updates. Authorization status: \(status.description)", level: .info, logger: logger)
+            return
+        }
+
+        guard !isObservingNavigationStatus else { return }
+
+        log("Starting foreground navigation status updates.", level: .info, logger: logger)
+        isObservingNavigationStatus = true
+        locationManager.startUpdatingLocation()
+        reconcileLocationDelivery()
+    }
+
+    func stopObservingNavigationStatus() {
+        guard isObservingNavigationStatus else { return }
+
+        log("Stopping foreground navigation status updates.", level: .info, logger: logger)
+        isObservingNavigationStatus = false
+        if !isUpdatingLocation {
+            locationManager.stopUpdatingLocation()
+        }
+        reconcileLocationDelivery()
+    }
 
     /// Starts the location update process
     ///
@@ -152,8 +199,9 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
         }
 
         log("Starting location updates.", level: .info, logger: logger)
+        isUpdatingLocation = true
         locationManager.startUpdatingLocation()
-        locationManager.showsBackgroundLocationIndicator = true
+        reconcileLocationDelivery()
     }
 
     /// Stops the location update process
@@ -161,8 +209,11 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
     /// Halts continuous location monitoring to conserve battery.
     func stopUpdatingLocation() {
         log("Stopping location updates.", level: .info, logger: logger)
-        locationManager.stopUpdatingLocation()
-        locationManager.showsBackgroundLocationIndicator = false
+        isUpdatingLocation = false
+        if !isObservingNavigationStatus {
+            locationManager.stopUpdatingLocation()
+        }
+        reconcileLocationDelivery()
     }
 
     /// Gets the current authorization status
@@ -170,6 +221,10 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
     /// - Returns: The current location permissions status
     func getCurrentAuthorizationStatus() -> CLAuthorizationStatus {
         return locationManager.authorizationStatus
+    }
+    
+    func getCurrentAccuracyAuthorization() -> CLAccuracyAuthorization {
+        locationManager.accuracyAuthorization
     }
 
     // MARK: - CLLocationManagerDelegate Methods
@@ -185,7 +240,7 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
             log("Received empty locations array in didUpdateLocations.", level: .error, logger: logger)
             return
         }
-        log("Received location update: \(location.coordinate.latitude), \(location.coordinate.longitude) (Accuracy: \(location.horizontalAccuracy)m)", logger: logger)
+        log("Received location update from Core Location", logger: logger)
         // Publish the location
         _locationSubject.send(location)
     }
@@ -209,6 +264,7 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
         log("Location authorization status changed to: \(newStatus.description)", level: .info, logger: logger)
         // Publish the new status
         _authorizationStatusSubject.send(newStatus)
+        reconcileLocationDelivery()
 
         // Handle status changes
         switch newStatus {
@@ -216,11 +272,32 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
             log("Authorization granted.", logger: logger)
         case .denied, .restricted:
             log("Location access denied or restricted. Stopping updates.", level: .error, logger: logger)
+            isObservingNavigationStatus = false
             stopUpdatingLocation() // Ensure updates are stopped if permissions revoked
         case .notDetermined:
             log("Authorization status is not determined.", level: .info, logger: logger)
         @unknown default:
             log("Unknown location authorization status encountered.", level: .fault, logger: logger)
+        }
+    }
+
+    private func reconcileLocationDelivery() {
+        let authorizationStatus = getCurrentAuthorizationStatus()
+        let shouldAllowBackgroundUpdates = isUpdatingLocation && backgroundTrackingEnabled
+        let shouldMonitorSignificantChanges = isUpdatingLocation &&
+            backgroundTrackingEnabled &&
+            authorizationStatus == .authorizedAlways &&
+            CLLocationManager.significantLocationChangeMonitoringAvailable()
+
+        locationManager.allowsBackgroundLocationUpdates = shouldAllowBackgroundUpdates
+        locationManager.showsBackgroundLocationIndicator = isUpdatingLocation &&
+            backgroundTrackingEnabled &&
+            authorizationStatus == .authorizedAlways
+
+        if shouldMonitorSignificantChanges {
+            locationManager.startMonitoringSignificantLocationChanges()
+        } else if CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            locationManager.stopMonitoringSignificantLocationChanges()
         }
     }
 }

@@ -1,8 +1,27 @@
 .idea/
 .vscode/
+.DS_Store
 
 project.xcworkspace/
 xcuserdata/
 
 .swiftpm/
 .build/
+
+# AI / vibe-coding artifacts
+/.codex/
+/docs/
+/AGENTS.md
+/CLAUDE.md
+/.claude/
+/.cursor/
+/.cursorrules
+/.cursorignore
+/.aider
+/.aider*
+/.windsurf/
+/.roo/
+/.roo-code/
+/.augment/
+/GEMINI.md
+/WARP.md

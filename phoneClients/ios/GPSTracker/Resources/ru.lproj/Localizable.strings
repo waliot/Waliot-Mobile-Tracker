@@ -1,74 +1,121 @@
 "app.name" = "WALIOT.Трекер";
+"common.placeholder.unavailable" = "—";
 
-"map.location" = "Местоположение:";
-
-"status.title" = "Состояние:";
-"status.tracking" = "Отслеживание";
-"status.idle" = "Ожидание";
-
-"upload.title" = "Выгрузка:";
-"upload.status.idle" = "Нет активности";
-"upload.status.uploading" = "Отправка...";
-"upload.status.success.prefix" = "Успешно";
-"upload.status.failure.prefix" = "Ошибка";
+"action.settings" = "Настройки";
+"action.startTracking" = "Старт";
+"action.stopTracking" = "Стоп";
+"status.tracking" = "Трекинг включён";
+"status.idle" = "Трекинг выключен";
+"upload.status.idle" = "Буфер пуст";
+"upload.status.buffered" = "Точек в буфере: %d";
+"upload.status.uploading" = "Выгрузка буфера: %d";
+"upload.status.success" = "Последняя успешная выгрузка: %@";
+"upload.status.offline" = "Нет сети, буфер будет отправлен позже";
+"upload.failure.offline" = "Нет сети. Буфер сохранён и будет отправлен позже.";
+"upload.failure.invalidConfiguration" = "Проверьте идентификатор трекера и адрес сервера.";
+"upload.failure.timeout" = "Сервер не ответил вовремя. Повторим позже.";
+"upload.failure.serverRejected" = "Сервер отклонил данные. Проверьте настройки подключения.";
+"upload.failure.transport" = "Не удалось отправить буфер. Повторим позже.";
+"upload.card.lastUpload" = "Последняя выгрузка";
+"upload.card.never" = "Ещё не было";
 
 "location.status.authorizedAlways" = "Разрешено всегда";
 "location.status.authorizedWhenInUse" = "Разрешено при использовании";
 "location.status.denied" = "Запрещено";
 "location.status.restricted" = "Ограничено";
-"location.status.notDetermined" = "Не запрошено";
-"location.status.unknown" = "Неизвестно";
+"location.status.notDetermined" = "Ещё не запрошено";
+
+"location.provider.gps" = "GPS";
+"location.provider.approximate" = "LBS";
+"location.provider.simulated" = "Симуляция";
+"location.provider.accessory" = "Аксессуар";
+"location.provider.unknown" = "Нет данных";
+
+"location.issue.stale" = "Данные устарели";
+"location.issue.simulated" = "Данные недостоверны";
+"location.issue.jump" = "Обнаружен резкий скачок координат";
+"location.issue.timestampRegression" = "Получена более старая точка";
+"location.issue.lowAccuracy" = "Низкая точность";
+"location.issue.noFix" = "Нет данных";
+
+"location.state.noFix" = "Нет данных";
+"location.state.freshGps" = "Актуальное местоположение";
+"location.state.freshDegraded" = "Актуальное альтернативное местоположение";
+"location.state.staleGps" = "Устаревшее местоположение";
+"location.state.staleDegraded" = "Устаревшее альтернативное местоположение";
+"location.state.suspect" = "Недостоверные данные";
+
+"location.age.none" = "Нет данных";
+"location.age.justNow" = "Только что";
+
+"location.card.state" = "Статус";
+"location.card.provider" = "Источник";
+"location.card.age" = "Актуальность";
+"location.card.accuracy" = "Точность";
+"location.permission.pending.state" = "Нет доступа к геолокации";
+"location.permission.pending.provider" = "Ожидается разрешение";
+"location.permission.denied.state" = "Доступ к геолокации отключён";
+"location.permission.denied.provider" = "Откройте системные настройки";
 
 "api.error.invalidResponse" = "Сервер вернул некорректный ответ";
-"api.error.serverError"     = "Ошибка сервера (код: %d)";
-"api.error.networkError"    = "Сетевая ошибка: %@";
-"api.error.encodingError"   = "Не удалось сформировать запрос: %@";
+"api.error.serverError" = "Ошибка сервера (код: %d)";
+"api.error.networkError" = "Не удалось выполнить сетевой запрос.";
+"api.error.encodingError" = "Не удалось сформировать запрос.";
 
 "settings.title" = "Настройки";
-"settings.done" = "Готово";
+"settings.actions.cancel" = "Отмена";
+"settings.actions.save" = "Сохранить";
 
 "settings.lang.header" = "Язык";
+"settings.language.russian" = "Русский";
+"settings.language.english" = "English";
 
-"settings.user.header" = "Идентификация (опционально)";
-"settings.user.username" = "Номер трекера";
+"settings.user.header" = "Трекер";
+"settings.user.username" = "Идентификатор трекера";
 
-"settings.server.header" = "Конфигурация сервера (опционально)";
+"settings.server.header" = "Сервер";
 "settings.server.url" = "Адрес сервера";
 
-"settings.tracking.header" = "Параметры трекинга";
-"settings.tracking.updateInterval" = "Интервал обновления";
-"settings.tracking.distanceFilter" = "Фильтр расстояния";
-"settings.tracking.trackInBackground" = "Отслеживать в фоне";
+"settings.tracking.header" = "Трекинг";
+"settings.tracking.uploadInterval" = "Интервал выгрузки буфера (мин)";
+"settings.tracking.bufferTimeInterval" = "Интервал фиксации по времени (мин)";
+"settings.tracking.bufferDistanceInterval" = "Интервал фиксации по расстоянию (метры)";
+"settings.tracking.trackInBackground" = "Продолжать трекинг в фоне";
+
+"settings.validation.trackerIdentifier" = "Укажите идентификатор трекера: только латинские буквы и цифры, без пробелов";
+"settings.validation.uploadServer" = "Укажите корректный адрес сервера";
+"settings.validation.interval" = "Введите число больше нуля";
 
 "settings.permissions.header" = "Разрешения";
-"settings.permissions.location.title" = "Местоположение";
-"settings.permissions.open" = "Открыть настройки";
-"settings.permissions.request" = "Запросить разрешение";
+"settings.permissions.location.title" = "Доступ к геолокации";
+"settings.permissions.openSettings" = "Открыть системные настройки";
+"settings.permissions.requestWhenInUse" = "Разрешить при использовании";
+"settings.permissions.requestAlways" = "Разрешить всегда";
+"settings.permissions.backgroundHint" = "Для стабильного фонового трекинга на iOS нужен доступ «Всегда».";
+
+"permissions.onboarding.title" = "Разрешите доступ к геолокации";
+"permissions.onboarding.message" = "Чтобы приложение сразу показывало текущее местоположение и могло стабильно вести трекинг в фоне, разрешите доступ к геолокации. При необходимости это всегда можно изменить позже в системных настройках.";
+"permissions.onboarding.allowAlways" = "Продолжить и разрешить всегда";
+"permissions.onboarding.allowWhenInUse" = "Продолжить и разрешить при использовании";
 
 "settings.about.header" = "О приложении";
 "settings.about.version" = "Версия";
 "settings.about.build" = "Сборка";
 
-"units.minutes" = "%d мин";
-"units.meters"  = "%d м";
+"units.meters.precise" = "%d м";
+"units.kilometers.precise" = "%.2f км";
+"units.speed.kmh.precise" = "%.1f км/ч";
 
 "stats.title" = "Статистика";
 "stats.done" = "Готово";
-
-"stats.distanceAndDuration" = "Расстояние и длительность";
-"stats.totalDistance" = "Общее расстояние";
-"stats.totalDuration" = "Общая длительность";
-
+"stats.distanceAndDuration" = "Дистанция и длительность";
+"stats.totalDistance" = "Пройдено";
+"stats.totalDuration" = "Длительность";
+"stats.duration.zero" = "0:00";
 "stats.speed" = "Скорость";
 "stats.current" = "Текущая";
 "stats.average" = "Средняя";
-"stats.maximum" = "Максимальная";
-
-"stats.data" = "Данные";
-"stats.data.collected" = "Точек зафиксировано";
-"stats.data.uploaded" = "Точек отправлено";
-
-"stats.charts.title" = "Графики";
-"stats.charts.line" = "Линейные";
-"stats.charts.bar" = "Столбчатые";
-"stats.charts.legend" = "Скорость (км/ч) / Время";
+"stats.maximum" = "Максимум";
+"stats.data" = "Буфер и выгрузка";
+"stats.data.collected" = "Точек в буфере";
+"stats.data.uploaded" = "Точек выгружено";

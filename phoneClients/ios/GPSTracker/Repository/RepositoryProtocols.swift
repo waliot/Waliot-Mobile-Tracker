@@ -38,68 +38,112 @@ protocol LocationRepositoryProtocol {
 ///
 /// ## Topics
 /// ### User Identification
-/// - ``getUsername()``
-/// - ``saveUsername(_:)``
+/// - ``getTrackerIdentifier()``
+/// - ``saveTrackerIdentifier(_:)``
 /// - ``getAppId()``
 /// - ``saveAppId(_:)``
 ///
 /// ### Server Configuration
-/// - ``getServerUrl()``
-/// - ``saveServerUrl(_:)``
+/// - ``getUploadServer()``
+/// - ``saveUploadServer(_:)``
 ///
 /// ### Tracking Settings
-/// - ``getTrackingInterval()``
-/// - ``saveTrackingInterval(_:)``
-/// - ``getDistanceFilter()``
-/// - ``saveDistanceFilter(_:)``
+/// - ``getUploadTimeInterval()``
+/// - ``saveUploadTimeInterval(_:)``
+/// - ``getBufferTimeInterval()``
+/// - ``saveBufferTimeInterval(_:)``
+/// - ``getBufferDistanceInterval()``
+/// - ``saveBufferDistanceInterval(_:)``
 /// - ``getTrackInBackground()``
 /// - ``saveTrackInBackground(_:)``
 protocol SettingsRepositoryProtocol {
-    /// Retrieves the username for identifying this device
-    /// - Returns: The stored username or a default value
-    func getUsername() -> String
+    /// Retrieves the tracker identifier used for this device on the server.
+    func getTrackerIdentifier() -> String
     
-    /// Stores a new username
-    /// - Parameter username: The username to save
-    func saveUsername(_ username: String)
+    /// Stores a new tracker identifier.
+    func saveTrackerIdentifier(_ trackerIdentifier: String)
     
-    /// Retrieves the server URL for uploading tracking data
-    /// - Returns: The stored server URL or a default value
-    func getServerUrl() -> String
+    /// Retrieves the upload server address for tracking data.
+    func getUploadServer() -> String
     
-    /// Stores a new server URL
-    /// - Parameter url: The server URL to save
-    func saveServerUrl(_ url: String)
+    /// Stores a new upload server address.
+    func saveUploadServer(_ url: String)
     
-    /// Retrieves the tracking interval in seconds
-    /// - Returns: The stored tracking interval or a default value
-    func getTrackingInterval() -> Int
+    /// Retrieves the upload retry cadence in minutes.
+    func getUploadTimeInterval() -> Int
     
-    /// Stores a new tracking interval
-    /// - Parameter interval: The tracking interval in seconds
-    func saveTrackingInterval(_ interval: Int)
+    /// Stores a new upload retry cadence in minutes.
+    func saveUploadTimeInterval(_ interval: Int)
     
-    /// Retrieves the minimum distance between updates in meters
-    /// - Returns: The stored distance filter or a default value
-    func getDistanceFilter() -> Int
+    /// Retrieves the time-based buffer sampling interval in minutes.
+    func getBufferTimeInterval() -> Int
     
-    /// Stores a new distance filter
-    /// - Parameter distance: The minimum distance between updates in meters
-    func saveDistanceFilter(_ distance: Int)
+    /// Stores a new time-based buffer sampling interval in minutes.
+    func saveBufferTimeInterval(_ interval: Int)
+    
+    /// Retrieves the distance-based buffer sampling interval in meters.
+    func getBufferDistanceInterval() -> Int
+    
+    /// Stores a new distance-based buffer sampling interval in meters.
+    func saveBufferDistanceInterval(_ distance: Int)
     
     /// Retrieves the background tracking preference
-    /// - Returns: Whether background tracking is enabled
     func getTrackInBackground() -> Bool
     
     /// Stores a new background tracking preference
-    /// - Parameter enabled: Whether background tracking should be enabled
     func saveTrackInBackground(_ enabled: Bool)
+
+    /// Retrieves the last user-selected tracking runtime state.
+    func getTrackingState() -> Bool
+
+    /// Stores the last user-selected tracking runtime state.
+    func saveTrackingState(_ isTracking: Bool)
     
     /// Retrieves the app installation identifier
-    /// - Returns: The stored app ID or generates a new one
     func getAppId() -> String
     
     /// Stores a new app installation identifier
-    /// - Parameter appId: The app ID to save
     func saveAppId(_ appId: String)
+}
+
+extension SettingsRepositoryProtocol {
+    @available(*, deprecated, message: "Use getTrackerIdentifier() instead.")
+    func getUsername() -> String {
+        getTrackerIdentifier()
+    }
+    
+    @available(*, deprecated, message: "Use saveTrackerIdentifier(_:) instead.")
+    func saveUsername(_ username: String) {
+        saveTrackerIdentifier(username)
+    }
+    
+    @available(*, deprecated, message: "Use getUploadServer() instead.")
+    func getServerUrl() -> String {
+        getUploadServer()
+    }
+    
+    @available(*, deprecated, message: "Use saveUploadServer(_:) instead.")
+    func saveServerUrl(_ url: String) {
+        saveUploadServer(url)
+    }
+    
+    @available(*, deprecated, message: "Use getUploadTimeInterval() instead.")
+    func getTrackingInterval() -> Int {
+        getUploadTimeInterval()
+    }
+    
+    @available(*, deprecated, message: "Use saveUploadTimeInterval(_:) instead.")
+    func saveTrackingInterval(_ interval: Int) {
+        saveUploadTimeInterval(interval)
+    }
+    
+    @available(*, deprecated, message: "Use getBufferDistanceInterval() instead.")
+    func getDistanceFilter() -> Int {
+        getBufferDistanceInterval()
+    }
+    
+    @available(*, deprecated, message: "Use saveBufferDistanceInterval(_:) instead.")
+    func saveDistanceFilter(_ distance: Int) {
+        saveBufferDistanceInterval(distance)
+    }
 }

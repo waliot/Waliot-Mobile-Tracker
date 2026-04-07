@@ -1,249 +1,207 @@
 // /Users/nickfox137/Documents/gpstracker-clients/gpstracker-ios/GPSTracker/GPSTracker/View/StatsView.swift
 
 import SwiftUI
-import Charts
 
-/// Statistics view displaying tracking session metrics
-///
-/// This view presents detailed statistics about the current tracking session,
-/// including distance traveled, duration, speed, and other metrics.
-///
-/// ## Overview
-/// StatsView displays:
-/// - Total distance traveled
-/// - Session duration
-/// - Current, average, and maximum speed
-/// - Altitude changes
-/// - Data points collected and uploaded
-///
-/// ## Topics
-/// ### Statistics Display
-/// - ``distanceSection``
-/// - ``speedSection``
-/// - ``dataSection``
 struct StatsView: View {
-    /// The view model that manages tracking data
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var viewModel: TrackingViewModel
-    
-    /// Environment object to dismiss this view
     @Environment(\.dismiss) private var dismiss
-    
-    /// Selected tab for the statistics display
-    @State private var selectedTab = 0
-    
-    /// The body of the view defining its content and layout
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Distance and duration statistics
-                    distanceSection
-                    
-                    // Speed statistics
-                    speedSection
-                    
-                    // Data collection statistics
-                    dataSection
-                    
-                    // Speed over time chart
-//                    if #available(iOS 16.0, *) {
-//                        if !viewModel.speedData.isEmpty {
-//                            chartSection
-//                        }
-//                    }
+                VStack(spacing: 16) {
+                    statSection(
+                        title: String(localized: "stats.distanceAndDuration"),
+                        items: [
+                            StatItem(
+                                title: String(localized: "stats.totalDistance"),
+                                value: distanceText,
+                                icon: "map",
+                                accessibilityIdentifier: "stats.value.totalDistance"
+                            ),
+                            StatItem(
+                                title: String(localized: "stats.totalDuration"),
+                                value: durationText,
+                                icon: "clock",
+                                accessibilityIdentifier: "stats.value.totalDuration"
+                            )
+                        ]
+                    )
+
+                    statSection(
+                        title: String(localized: "stats.speed"),
+                        items: [
+                            StatItem(
+                                title: String(localized: "stats.current"),
+                                value: speedText(viewModel.currentSpeed),
+                                icon: "speedometer",
+                                accessibilityIdentifier: "stats.value.currentSpeed"
+                            ),
+                            StatItem(
+                                title: String(localized: "stats.average"),
+                                value: speedText(viewModel.averageSpeed),
+                                icon: "function",
+                                accessibilityIdentifier: "stats.value.averageSpeed"
+                            ),
+                            StatItem(
+                                title: String(localized: "stats.maximum"),
+                                value: speedText(viewModel.maxSpeed),
+                                icon: "arrow.up",
+                                accessibilityIdentifier: "stats.value.maximumSpeed"
+                            )
+                        ]
+                    )
+
+                    statSection(
+                        title: String(localized: "stats.data"),
+                        items: [
+                            StatItem(
+                                title: String(localized: "stats.data.collected"),
+                                value: "\(viewModel.bufferCount)",
+                                icon: "tray.full",
+                                accessibilityIdentifier: "stats.value.collected"
+                            ),
+                            StatItem(
+                                title: String(localized: "stats.data.uploaded"),
+                                value: "\(viewModel.uploadedCount)",
+                                icon: "arrow.up.to.line",
+                                accessibilityIdentifier: "stats.value.uploaded"
+                            ),
+                            StatItem(
+                                title: String(localized: "upload.card.lastUpload"),
+                                value: lastUploadText,
+                                icon: "icloud.and.arrow.up",
+                                accessibilityIdentifier: "stats.value.lastUpload"
+                            )
+                        ]
+                    )
                 }
                 .padding()
             }
+            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(Text("stats.title"))
-            .navigationBarItems(trailing: Button("stats.done") {
-                dismiss()
-            })
-        }
-    }
-    
-    /// Section displaying distance and duration information
-    private var distanceSection: some View {
-        VStack {
-            Text("stats.distanceAndDuration")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            HStack {
-                StatCard(
-                    title: String(localized: "stats.totalDistance"),
-                    value: String(format: "%.2f km", viewModel.totalDistance / 1000),
-                    icon: "map"
-                )
-                
-                StatCard(
-                    title: String(localized: "stats.totalDuration"),
-                    value: formatDuration(viewModel.sessionDuration),
-                    icon: "clock"
-                )
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
-    }
-    
-    /// Section displaying speed metrics
-    private var speedSection: some View {
-        VStack {
-            Text("stats.speed")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            HStack {
-                StatCard(
-                    title: String(localized: "stats.current"),
-                    value: String(format: "%.1f km/h", viewModel.currentSpeed * 3.6),
-                    icon: "speedometer"
-                )
-                
-                StatCard(
-                    title: String(localized: "stats.average"),
-                    value: String(format: "%.1f km/h", viewModel.averageSpeed * 3.6),
-                    icon: "function"
-                )
-                
-                StatCard(
-                    title: String(localized: "stats.maximum"),
-                    value: String(format: "%.1f km/h", viewModel.maxSpeed * 3.6),
-                    icon: "arrow.up"
-                )
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
-    }
-    
-    /// Section displaying data collection information
-    private var dataSection: some View {
-        VStack {
-            Text("stats.data")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            HStack {
-                StatCard(
-                    title: String(localized: "stats.data.collected"),
-                    value: "\(viewModel.locationCount)",
-                    icon: "location"
-                )
-                
-                StatCard(
-                    title: String(localized: "stats.data.uploaded"),
-                    value: "\(viewModel.uploadedCount)",
-                    icon: "arrow.up.to.line"
-                )
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
-    }
-    
-    /// Section displaying speed charts
-    private var chartSection: some View {
-        VStack {
-            Text("stats.charts.title")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            Picker("Chart Type", selection: $selectedTab) {
-                Text("stats.charts.line").tag(0)
-                Text("stats.charts.bar").tag(1)
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding(.bottom)
-            
-            if selectedTab == 0 {
-                Chart(viewModel.speedData) { dataPoint in
-                    LineMark(
-                        x: .value("Time", dataPoint.timestamp),
-                        y: .value("Speed", dataPoint.speed * 3.6)
-                    )
-                    .foregroundStyle(.blue)
-                }
-                .frame(height: 250)
-                .chartYAxis {
-                    AxisMarks(position: .leading)
-                }
-            } else {
-                Chart(viewModel.speedData) { dataPoint in
-                    BarMark(
-                        x: .value("Time", dataPoint.timestamp),
-                        y: .value("Speed", dataPoint.speed * 3.6)
-                    )
-                    .foregroundStyle(.blue)
-                }
-                .frame(height: 250)
-                .chartYAxis {
-                    AxisMarks(position: .leading)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.regularMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("stats.done") {
+                        dismiss()
+                    }
+                    .accessibilityIdentifier("stats.done")
                 }
             }
-            
-            Text("stats.charts.legend")
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
-    }
-    
-    /// Formats a time interval into a human-readable duration string
-    /// - Parameter interval: The time interval to format
-    /// - Returns: A formatted string (e.g., "1h 23m 45s")
-    private func formatDuration(_ interval: TimeInterval) -> String {
-        let hours = Int(interval) / 3600
-        let minutes = (Int(interval) % 3600) / 60
-        let seconds = Int(interval) % 60
-        
-        if hours > 0 {
-            return String(format: "%dh %dm %ds", hours, minutes, seconds)
-        } else if minutes > 0 {
-            return String(format: "%dm %ds", minutes, seconds)
-        } else {
-            return String(format: "%ds", seconds)
         }
     }
-}
 
-/// A card displaying a statistic with a title, value, and icon
-struct StatCard: View {
-    /// The title of the statistic
-    let title: String
-    
-    /// The value to display
-    let value: String
-    
-    /// SF Symbol name for the icon
-    let icon: String
-    
-    var body: some View {
-        VStack {
-            Image(systemName: icon)
-                .font(.title)
-                .foregroundColor(.blue)
-                .padding(.bottom, 4)
-            
+    private var distanceText: String {
+        String.localizedStringWithFormat(
+            String(localized: "units.kilometers.precise"),
+            viewModel.totalDistance / 1000
+        )
+    }
+
+    private var durationText: String {
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .short
+        formatter.allowedUnits = [.hour, .minute, .second]
+        formatter.zeroFormattingBehavior = [.dropLeading, .pad]
+        return formatter.string(from: viewModel.sessionDuration) ?? String(localized: "stats.duration.zero")
+    }
+
+    private var lastUploadText: String {
+        guard let lastSuccessfulUploadAt = viewModel.lastSuccessfulUploadAt else {
+            return String(localized: "upload.card.never")
+        }
+        return lastSuccessfulUploadAt.formatted(date: .omitted, time: .shortened)
+    }
+
+    private func speedText(_ speed: Double) -> String {
+        String.localizedStringWithFormat(
+            String(localized: "units.speed.kmh.precise"),
+            speed * 3.6
+        )
+    }
+
+    private func statSection(title: String, items: [StatItem]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Text(value)
-                .font(.title3)
-                .bold()
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color(uiColor: .secondaryLabel))
+
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    StatItemRow(item: item)
+
+                    if index < items.count - 1 {
+                        Divider()
+                            .overlay(dividerColor)
+                            .padding(.leading, 52)
+                    }
+                }
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(18)
+        .background(cardBackground)
+    }
+
+    private var dividerColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(
+                        colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.5),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 16, y: 8)
     }
 }
 
-/// Preview provider for displaying StatsView in Xcode previews
+private struct StatItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let value: String
+    let icon: String
+    let accessibilityIdentifier: String
+}
+
+private struct StatItemRow: View {
+    let item: StatItem
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.14))
+                    .frame(width: 34, height: 34)
+
+                Image(systemName: item.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            Text(item.title)
+                .foregroundStyle(Color(uiColor: .secondaryLabel))
+
+            Spacer()
+
+            Text(item.value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color(uiColor: .label))
+                .multilineTextAlignment(.trailing)
+                .accessibilityIdentifier(item.accessibilityIdentifier)
+        }
+        .padding(.vertical, 10)
+    }
+}
+
 struct StatsView_Previews: PreviewProvider {
     static var previews: some View {
         StatsView()

@@ -1,7 +1,6 @@
 
 import SwiftUI
 import os // Import OSLog
-import UIKit // For appearance customization
 
 /// The main entry point for the GPSTracker iOS application.
 ///
@@ -23,45 +22,54 @@ import UIKit // For appearance customization
 /// - ``SettingsRepository``
 @main
 struct GPSTrackerApp: App {
+    private static let processInfo = ProcessInfo.processInfo
     // Logger for the application lifecycle - Use static for access before init if needed elsewhere
     /// Application-wide logger for monitoring and debugging
     private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "GPSTrackerApp")
     
-    /// Initializes the application and configures dark mode appearance
-    ///
-    /// This initializer sets up the application's user interface style to always use dark mode
-    /// for improved visibility of the tracking interface and maps.
-    init() {
-        // Set the app to always use dark mode
-        // For iOS 13+ compatibility
-        if #available(iOS 15.0, *) {
-            let scenes = UIApplication.shared.connectedScenes
-            let windowScenes = scenes.compactMap { $0 as? UIWindowScene }
-            windowScenes.forEach { windowScene in
-                windowScene.windows.forEach { window in
-                    window.overrideUserInterfaceStyle = .dark
-                }
-            }
-        } else {
-            UIApplication.shared.windows.forEach { window in
-                window.overrideUserInterfaceStyle = .dark
-            }
-        }
-    }
+    private static let isUITestMode =
+        processInfo.arguments.contains("UITEST_MODE") ||
+        processInfo.environment["UITEST_MODE"] == "1"
+    private static let shouldResetUITestState =
+        processInfo.arguments.contains("UITEST_RESET_STATE") ||
+        processInfo.environment["UITEST_RESET_STATE"] == "1"
+    private static let uiTestDefaultsSuite = "com.waliot.tracker.uitests"
 
     // MARK: - Dependencies
     
     /// Persistence service for user settings and local data storage
-    private static let persistenceService: PersistenceServiceProtocol = PersistenceService()
+    private static let persistenceService: PersistenceServiceProtocol = {
+        if isUITestMode {
+            let defaults = UserDefaults(suiteName: uiTestDefaultsSuite) ?? .standard
+            if shouldResetUITestState {
+                defaults.removePersistentDomain(forName: uiTestDefaultsSuite)
+                defaults.set("9876543210", forKey: "com.waliot.tracker.tracker_identifier")
+                defaults.set("device.waliot.com:30032", forKey: "com.waliot.tracker.upload_server")
+            }
+            return PersistenceService(userDefaults: defaults)
+        }
+        return PersistenceService()
+    }()
     
     /// Repository for managing user settings and preferences
     private static let settingsRepository: SettingsRepositoryProtocol = SettingsRepository(persistenceService: persistenceService)
     
     /// Service for managing location updates and permissions
-    private static let locationService: LocationServiceProtocol = LocationService()
+    private static let locationService: LocationServiceProtocol = isUITestMode ? MockLocationService() : LocationService()
+    
+    /// Persistent store for buffered tracking points.
+    private static let trackingBufferStore: TrackingBufferStoreProtocol = {
+        let store = TrackingBufferStore()
+        if shouldResetUITestState {
+            store.clear()
+        }
+        return store
+    }()
     
     /// Service for communication with the remote tracking server
-    private static let apiService: APIServiceProtocol = WialonIpsService(settingsRepository: settingsRepository)
+    private static let apiService: APIServiceProtocol = isUITestMode
+        ? UITestAPIService()
+        : WialonIpsService(settingsRepository: settingsRepository)
     
     /// Repository for location data processing and transmission
     private static let locationRepository: LocationRepositoryProtocol = LocationRepository(
@@ -76,7 +84,8 @@ struct GPSTrackerApp: App {
     @StateObject private var viewModel: TrackingViewModel = TrackingViewModel(
         locationRepository: Self.locationRepository,
         settingsRepository: Self.settingsRepository,
-        locationService: Self.locationService
+        locationService: Self.locationService,
+        bufferStore: Self.trackingBufferStore
     )
 
     @StateObject private var lang = LanguageManager()

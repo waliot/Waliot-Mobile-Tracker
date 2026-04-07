@@ -1,148 +1,170 @@
 // /Users/nickfox137/Documents/gpstracker-clients/gpstracker-ios/GPSTracker/GPSTracker/View/SettingsView.swift
 
 import SwiftUI
+import UIKit
 
-/// Settings configuration view for the GPS Tracker app
-///
-/// This view allows users to configure tracking settings, server details,
-/// and manage app permissions.
-///
-/// ## Overview
-/// SettingsView provides interfaces for:
-/// - Setting user identification details
-/// - Configuring server URL and API endpoints
-/// - Adjusting tracking frequency and accuracy
-/// - Managing location permissions
-///
-/// ## Topics
-/// ### User Settings
-/// - ``username``
-/// - ``serverUrl``
-/// - ``trackingInterval``
-///
-/// ### Permissions
-/// - ``requestLocationPermission()``
 struct SettingsView: View {
-    /// The view model that manages app state
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var viewModel: TrackingViewModel
-    
     @EnvironmentObject private var lang: LanguageManager
-    
-    /// Environment object to dismiss this view
     @Environment(\.dismiss) private var dismiss
-    
-    /// Username for identifying the device on the server
-    @State private var username: String = ""
-    
-    /// Server URL for uploading location data
-    @State private var serverUrl: String = "device.waliot.com:30032"
-    
-    /// Tracking frequency in minutes
-    @State private var trackingInterval: Double = 1
-    
-    /// Minimum distance between location updates in meters
-    @State private var distanceFilter: Double = 10
-    
-    /// Flag indicating if the app should continue tracking in background
-    @State private var trackInBackground: Bool = true
-    
-    /// The body of the view defining its content and layout
+
+    @State private var draft = SettingsFormState()
+    @State private var persistedState = SettingsFormState()
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
-                // User identification section
-                Section(header: Text("settings.user.header")) {
-                    TextField("settings.user.username", text: $username)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .keyboardType(.numberPad)
-                }
-                
-                // Server configuration section
-                Section(header: Text("settings.server.header")) {
-                    TextField("settings.server.url", text: $serverUrl)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .keyboardType(.URL)
-                }
-                
-                // Tracking settings section
-                Section(header: Text("settings.tracking.header")) {
-                    HStack {
-                        Text("settings.tracking.updateInterval")
-                        Spacer()
-                        Text(
-                            String.localizedStringWithFormat(
-                                String(localized: "units.minutes", locale: lang.locale),
-                                Int(trackingInterval)
-                            )
-                        )
-                    }
-                    Slider(value: $trackingInterval, in: 1...30, step: 1)
-                    
-                    HStack {
-                        Text("settings.tracking.distanceFilter")
-                        Spacer()
-                        Text(
-                            String.localizedStringWithFormat(
-                                String(localized: "units.meters", locale: lang.locale),
-                                Int(distanceFilter)
-                            )
-                        )
-                    }
-                    Slider(value: $distanceFilter, in: 10...100, step: 1)
-                    
-                    Toggle("settings.tracking.trackInBackground", isOn: $trackInBackground)
-                }
-                
-//                Section(header: Text("settings.lang.header")) {
-//                    Picker("", selection: $lang.code) {
-//                        Text("Русский").tag("ru")
-//                        Text("English").tag("en")
-//                    }
-//                    .pickerStyle(.segmented)
-//                }
-                
-                // Permissions section
-                Section(header: Text("settings.permissions.header")) {
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text("settings.permissions.location.title")
-                            Spacer()
-                            Text(viewModel.locationAuthorizationStatus.description)
-                                .foregroundColor(locationStatusColor)
-                        }
-        
-                        Button("settings.permissions.open") {
-                            viewModel.requestLocationPermissions(always: true)
-                        }
-                        .foregroundColor(.blue)
-                        .padding(.top, 4)
-                    }
-                }
-                
-                // App info section
-                Section(header: Text("settings.about.header")) {
-                    HStack {
-                        Text("settings.about.version")
-                        Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
-                    }
-                }
+                trackerSection
+                serverSection
+                trackingSection
+                languageSection
+                permissionsSection
+                aboutSection
             }
+            .formStyle(.grouped)
+            .listSectionSpacing(20)
+            .scrollContentBackground(.hidden)
+            .background(Color(uiColor: .systemGroupedBackground))
+            .tint(.accentColor)
             .navigationTitle(Text("settings.title"))
-            .navigationBarItems(trailing: Button("settings.done") {
-                saveSettings()
-                dismiss()
-            })
-            .onAppear {
-                // Load current settings when view appears
-                loadSettings()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.regularMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("settings.actions.cancel") {
+                        dismiss()
+                    }
+                    .accessibilityIdentifier("settings.cancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("settings.actions.save") {
+                        saveSettings()
+                    }
+                    .disabled(!canSave)
+                    .accessibilityIdentifier("settings.save")
+                }
             }
+            .onAppear(perform: loadSettings)
         }
     }
-    
-    /// The color to display based on location authorization status
+
+    private var trackerSection: some View {
+        Section {
+            ValidatedTextField(
+                title: String(localized: "settings.user.username"),
+                text: trackerIdentifierBinding,
+                error: draft.trackerIdentifierError,
+                keyboardType: .asciiCapable,
+                textContentType: .username,
+                accessibilityIdentifier: "settings.field.trackerIdentifier"
+            )
+        } header: {
+            sectionHeader("settings.user.header")
+        }
+    }
+
+    private var serverSection: some View {
+        Section {
+            ValidatedTextField(
+                title: String(localized: "settings.server.url"),
+                text: uploadServerBinding,
+                error: draft.uploadServerError,
+                keyboardType: .URL,
+                textContentType: .URL,
+                accessibilityIdentifier: "settings.field.uploadServer"
+            )
+        } header: {
+            sectionHeader("settings.server.header")
+        }
+    }
+
+    private var trackingSection: some View {
+        Section {
+            ValidatedTextField(
+                title: String(localized: "settings.tracking.uploadInterval"),
+                text: uploadIntervalBinding,
+                error: draft.uploadTimeIntervalError,
+                keyboardType: .numberPad,
+                accessibilityIdentifier: "settings.field.uploadInterval"
+            )
+            ValidatedTextField(
+                title: String(localized: "settings.tracking.bufferTimeInterval"),
+                text: bufferTimeIntervalBinding,
+                error: draft.bufferTimeIntervalError,
+                keyboardType: .numberPad,
+                accessibilityIdentifier: "settings.field.bufferTimeInterval"
+            )
+            ValidatedTextField(
+                title: String(localized: "settings.tracking.bufferDistanceInterval"),
+                text: bufferDistanceIntervalBinding,
+                error: draft.bufferDistanceIntervalError,
+                keyboardType: .numberPad,
+                accessibilityIdentifier: "settings.field.bufferDistanceInterval"
+            )
+
+            Toggle("settings.tracking.trackInBackground", isOn: trackInBackgroundBinding)
+                .accessibilityIdentifier("settings.toggle.trackInBackground")
+
+            if draft.trackInBackground && viewModel.locationAuthorizationStatus != .authorizedAlways {
+                Text("settings.permissions.backgroundHint")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            sectionHeader("settings.tracking.header")
+        }
+    }
+
+    private var languageSection: some View {
+        Section {
+            Picker("settings.lang.header", selection: languageBinding) {
+                Text("settings.language.russian").tag("ru")
+                Text("settings.language.english").tag("en")
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            sectionHeader("settings.lang.header")
+        }
+    }
+
+    private var permissionsSection: some View {
+        Section {
+            LabeledContent("settings.permissions.location.title", value: viewModel.locationAuthorizationStatus.description)
+                .foregroundStyle(locationStatusColor)
+                .accessibilityIdentifier("settings.permission.status")
+
+            if permissionActionTitle != nil {
+                Button(permissionActionTitle ?? "") {
+                    handlePermissionAction()
+                }
+                .accessibilityIdentifier("settings.permission.action")
+            }
+        } header: {
+            sectionHeader("settings.permissions.header")
+        }
+    }
+
+    private var aboutSection: some View {
+        Section {
+            LabeledContent(
+                "settings.about.version",
+                value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? String(localized: "common.placeholder.unavailable")
+            )
+            LabeledContent(
+                "settings.about.build",
+                value: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? String(localized: "common.placeholder.unavailable")
+            )
+        } header: {
+            sectionHeader("settings.about.header")
+        }
+    }
+
+    private var canSave: Bool {
+        draft.isValid && !draft.hasSameInputs(as: persistedState)
+    }
+
     private var locationStatusColor: Color {
         switch viewModel.locationAuthorizationStatus {
         case .authorizedAlways:
@@ -152,53 +174,230 @@ struct SettingsView: View {
         case .denied, .restricted:
             return .red
         case .notDetermined:
-            return .gray
+            return Color(uiColor: .secondaryLabel)
         @unknown default:
-            return .gray
+            return Color(uiColor: .secondaryLabel)
         }
     }
-    
-    /// Opens the system settings app to allow changing permissions
+
+    private var permissionActionTitle: String? {
+        switch viewModel.locationAuthorizationStatus {
+        case .notDetermined:
+            return draft.trackInBackground
+                ? String(localized: "settings.permissions.requestAlways")
+                : String(localized: "settings.permissions.requestWhenInUse")
+        case .authorizedWhenInUse:
+            return draft.trackInBackground ? String(localized: "settings.permissions.requestAlways") : nil
+        case .denied, .restricted:
+            return String(localized: "settings.permissions.openSettings")
+        case .authorizedAlways:
+            return nil
+        @unknown default:
+            return String(localized: "settings.permissions.openSettings")
+        }
+    }
+
+    private var validationMessages: SettingsValidationMessages {
+        SettingsValidationMessages(
+            trackerIdentifierError: String(localized: "settings.validation.trackerIdentifier"),
+            uploadServerError: String(localized: "settings.validation.uploadServer"),
+            intervalError: String(localized: "settings.validation.interval")
+        )
+    }
+
+    private var trackerIdentifierBinding: Binding<String> {
+        Binding(
+            get: { draft.trackerIdentifier },
+            set: { newValue in
+                updateDraft { $0.trackerIdentifier = sanitizeSingleLineInput(newValue) }
+            }
+        )
+    }
+
+    private var uploadServerBinding: Binding<String> {
+        Binding(
+            get: { draft.uploadServer },
+            set: { newValue in
+                updateDraft { $0.uploadServer = sanitizeSingleLineInput(newValue) }
+            }
+        )
+    }
+
+    private var uploadIntervalBinding: Binding<String> {
+        Binding(
+            get: { draft.uploadTimeInterval },
+            set: { newValue in
+                updateDraft { $0.uploadTimeInterval = newValue.filter(\.isNumber) }
+            }
+        )
+    }
+
+    private var bufferTimeIntervalBinding: Binding<String> {
+        Binding(
+            get: { draft.bufferTimeInterval },
+            set: { newValue in
+                updateDraft { $0.bufferTimeInterval = newValue.filter(\.isNumber) }
+            }
+        )
+    }
+
+    private var bufferDistanceIntervalBinding: Binding<String> {
+        Binding(
+            get: { draft.bufferDistanceInterval },
+            set: { newValue in
+                updateDraft { $0.bufferDistanceInterval = newValue.filter(\.isNumber) }
+            }
+        )
+    }
+
+    private var trackInBackgroundBinding: Binding<Bool> {
+        Binding(
+            get: { draft.trackInBackground },
+            set: { newValue in
+                updateDraft { $0.trackInBackground = newValue }
+            }
+        )
+    }
+
+    private var languageBinding: Binding<String> {
+        Binding(
+            get: { draft.languageCode },
+            set: { newValue in
+                updateDraft { $0.languageCode = newValue }
+            }
+        )
+    }
+
+    private func loadSettings() {
+        let loaded = validateSettingsFormState(
+            state: SettingsFormState(
+                trackerIdentifier: viewModel.trackerIdentifier,
+                uploadServer: viewModel.uploadServer,
+                uploadTimeInterval: String(viewModel.uploadTimeInterval),
+                bufferTimeInterval: String(viewModel.bufferTimeInterval),
+                bufferDistanceInterval: String(viewModel.bufferDistanceInterval),
+                trackInBackground: viewModel.trackInBackground,
+                languageCode: lang.code
+            ),
+            messages: validationMessages
+        )
+        draft = loaded
+        persistedState = loaded
+    }
+
+    private func saveSettings() {
+        guard canSave else { return }
+
+        viewModel.trackerIdentifier = sanitizeTrackerIdentifier(draft.trackerIdentifier, defaultValue: "")
+        viewModel.uploadServer = sanitizeSingleLineInput(draft.uploadServer).trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.uploadTimeInterval = sanitizePositiveInterval(Int(draft.uploadTimeInterval) ?? 0, defaultValue: 5)
+        viewModel.bufferTimeInterval = sanitizePositiveInterval(Int(draft.bufferTimeInterval) ?? 0, defaultValue: 1)
+        viewModel.bufferDistanceInterval = sanitizePositiveInterval(Int(draft.bufferDistanceInterval) ?? 0, defaultValue: 100)
+        viewModel.trackInBackground = draft.trackInBackground
+        viewModel.saveSettings()
+        lang.code = draft.languageCode
+
+        persistedState = validateSettingsFormState(state: draft, messages: validationMessages)
+        dismiss()
+    }
+
+    private func updateDraft(_ mutate: (inout SettingsFormState) -> Void) {
+        var updated = draft
+        mutate(&updated)
+        draft = validateSettingsFormState(state: updated, messages: validationMessages)
+    }
+
+    private func handlePermissionAction() {
+        switch viewModel.locationAuthorizationStatus {
+        case .notDetermined:
+            viewModel.requestLocationPermissions(always: draft.trackInBackground)
+        case .authorizedWhenInUse:
+            if draft.trackInBackground {
+                viewModel.requestLocationPermissions(always: true)
+            }
+        case .denied, .restricted:
+            openAppSettings()
+        case .authorizedAlways:
+            break
+        @unknown default:
+            openAppSettings()
+        }
+    }
+
     private func openAppSettings() {
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString),
+              UIApplication.shared.canOpenURL(settingsURL) else {
             return
         }
-        
-        if UIApplication.shared.canOpenURL(settingsURL) {
-            UIApplication.shared.open(settingsURL)
-        }
+        UIApplication.shared.open(settingsURL)
     }
-    
-    /// Loads current settings from the view model
-    private func loadSettings() {
-        username = viewModel.username
-        serverUrl = viewModel.serverUrl
-        trackingInterval = Double(viewModel.trackingInterval)
-        distanceFilter = Double(viewModel.distanceFilter)
-        trackInBackground = viewModel.trackInBackground
-    }
-    
-    /// Saves the current settings to the view model
-    private func saveSettings() {
-        viewModel.username = username
-        viewModel.serverUrl = serverUrl
-        viewModel.trackingInterval = Int(trackingInterval)
-        viewModel.distanceFilter = Int(distanceFilter)
-        viewModel.trackInBackground = trackInBackground
-        viewModel.saveSettings()
 
-        // Apply settings to active tracking if currently tracking
-        if viewModel.isTracking {
-            viewModel.applySettings()
+    private func sectionHeader(_ titleKey: LocalizedStringKey) -> some View {
+        Text(titleKey)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color(uiColor: .secondaryLabel))
+            .textCase(nil)
+    }
+}
+
+private struct ValidatedTextField: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let title: String
+    let text: Binding<String>
+    let error: String?
+    var keyboardType: UIKeyboardType = .default
+    var textContentType: UITextContentType? = nil
+    var accessibilityIdentifier: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color(uiColor: .secondaryLabel))
+
+            TextField("", text: text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(keyboardType)
+                .textContentType(textContentType)
+                .lineLimit(1)
+                .submitLabel(.done)
+                .accessibilityLabel(Text(title))
+                .accessibilityIdentifier(accessibilityIdentifier ?? "")
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(
+                            error == nil ? Color(uiColor: .separator).opacity(colorScheme == .dark ? 0.28 : 0.18) : Color.red,
+                            lineWidth: error == nil ? 0.8 : 1.2
+                        )
+                )
+                .shadow(
+                    color: Color.black.opacity(colorScheme == .dark ? 0.08 : 0.03),
+                    radius: 4,
+                    y: 1
+                )
+
+            if let error {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
         }
     }
 }
 
-/// Preview provider for displaying SettingsView in Xcode previews
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView()
             .environmentObject(MockDependencies.previewViewModel)
+            .environmentObject(LanguageManager())
             .preferredColorScheme(.dark)
     }
 }

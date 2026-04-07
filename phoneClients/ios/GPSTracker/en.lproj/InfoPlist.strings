@@ -1,1 +1,3 @@
-
+"CFBundleDisplayName" = "WALIOT.Tracker";
+"NSLocationWhenInUseUsageDescription" = "Location access is needed to show your current position on the map and start recording the route when you tap Start.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Background access is needed to keep recording the route when the screen is locked or the app is in the background.";

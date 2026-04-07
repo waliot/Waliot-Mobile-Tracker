@@ -42,42 +42,50 @@ class MockLocationRepository: LocationRepositoryProtocol {
 class MockSettingsRepository: SettingsRepositoryProtocol {
     /// Mock settings storage
     private var settings: [String: Any] = [
-        "username": "9876543210",
-        "server_url": "device.waliot.com:30032",
-        "tracking_interval": 1,
-        "distance_filter": 10,
+        "tracker_identifier": "9876543210",
+        "upload_server": "device.waliot.com:30032",
+        "upload_time_interval": 5,
+        "buffer_time_interval": 1,
+        "buffer_distance_interval": 100,
         "track_in_background": true,
+        "tracking_state": false,
         "app_id": "mock_app_id_12345"
     ]
     
-    /// Returns the mock username
-    /// - Returns: A predefined username for testing
-    func getUsername() -> String {
-        return settings["username"] as? String ?? ""
+    /// Returns the mock tracker identifier.
+    func getTrackerIdentifier() -> String {
+        return settings["tracker_identifier"] as? String ?? ""
     }
     
     /// Returns the mock server URL
     /// - Returns: A predefined server URL for testing
-    func getServerUrl() -> String {
-        return settings["server_url"] as? String ?? "device.waliot.com:30032"
+    func getUploadServer() -> String {
+        return settings["upload_server"] as? String ?? "device.waliot.com:30032"
     }
     
-    /// Returns the mock tracking interval
-    /// - Returns: A predefined tracking interval in seconds
-    func getTrackingInterval() -> Int {
-        return settings["tracking_interval"] as? Int ?? 1
+    /// Returns the mock upload interval.
+    func getUploadTimeInterval() -> Int {
+        return settings["upload_time_interval"] as? Int ?? 5
     }
     
-    /// Returns the mock distance filter
-    /// - Returns: A predefined distance filter in meters
-    func getDistanceFilter() -> Int {
-        return settings["distance_filter"] as? Int ?? 10
+    /// Returns the mock buffer time interval.
+    func getBufferTimeInterval() -> Int {
+        return settings["buffer_time_interval"] as? Int ?? 1
+    }
+    
+    /// Returns the mock buffer distance interval.
+    func getBufferDistanceInterval() -> Int {
+        return settings["buffer_distance_interval"] as? Int ?? 100
     }
     
     /// Returns the mock background tracking setting
     /// - Returns: A predefined background tracking setting
     func getTrackInBackground() -> Bool {
         return settings["track_in_background"] as? Bool ?? true
+    }
+
+    func getTrackingState() -> Bool {
+        return settings["tracking_state"] as? Bool ?? false
     }
     
     /// Returns the mock app ID
@@ -86,34 +94,40 @@ class MockSettingsRepository: SettingsRepositoryProtocol {
         return settings["app_id"] as? String ?? "mock_app_id_12345"
     }
     
-    /// Stores a username value (mock implementation)
-    /// - Parameter username: The username to store
-    func saveUsername(_ username: String) {
-        settings["username"] = username
+    /// Stores a tracker identifier value (mock implementation).
+    func saveTrackerIdentifier(_ trackerIdentifier: String) {
+        settings["tracker_identifier"] = trackerIdentifier
     }
     
     /// Stores a server URL value (mock implementation)
     /// - Parameter url: The server URL to store
-    func saveServerUrl(_ url: String) {
-        settings["server_url"] = url
+    func saveUploadServer(_ url: String) {
+        settings["upload_server"] = url
     }
     
-    /// Stores a tracking interval value (mock implementation)
-    /// - Parameter interval: The tracking interval to store
-    func saveTrackingInterval(_ interval: Int) {
-        settings["tracking_interval"] = interval
+    /// Stores an upload interval value (mock implementation).
+    func saveUploadTimeInterval(_ interval: Int) {
+        settings["upload_time_interval"] = interval
     }
     
-    /// Stores a distance filter value (mock implementation)
-    /// - Parameter distance: The distance filter to store
-    func saveDistanceFilter(_ distance: Int) {
-        settings["distance_filter"] = distance
+    /// Stores a buffer time interval value (mock implementation).
+    func saveBufferTimeInterval(_ interval: Int) {
+        settings["buffer_time_interval"] = interval
+    }
+    
+    /// Stores a buffer distance interval value (mock implementation).
+    func saveBufferDistanceInterval(_ distance: Int) {
+        settings["buffer_distance_interval"] = distance
     }
     
     /// Stores a background tracking setting (mock implementation)
     /// - Parameter enabled: The background tracking setting to store
     func saveTrackInBackground(_ enabled: Bool) {
         settings["track_in_background"] = enabled
+    }
+
+    func saveTrackingState(_ isTracking: Bool) {
+        settings["tracking_state"] = isTracking
     }
     
     /// Stores an app ID value (mock implementation)
@@ -125,6 +139,19 @@ class MockSettingsRepository: SettingsRepositoryProtocol {
 
 /// A mock implementation of LocationServiceProtocol for testing and previews
 class MockLocationService: LocationServiceProtocol {
+    private static let initialAuthorizationStatus: CLAuthorizationStatus = {
+        switch ProcessInfo.processInfo.environment["UITEST_LOCATION_AUTH"] {
+        case "notDetermined":
+            return .notDetermined
+        case "whenInUse":
+            return .authorizedWhenInUse
+        case "denied":
+            return .denied
+        default:
+            return .authorizedAlways
+        }
+    }()
+
     /// Subject for publishing location updates
     private let locationSubject = PassthroughSubject<CLLocation, Never>()
     
@@ -142,7 +169,7 @@ class MockLocationService: LocationServiceProtocol {
     }
     
     /// Mock authorization status
-    private var authStatus: CLAuthorizationStatus = .authorizedAlways
+    private var authStatus: CLAuthorizationStatus = MockLocationService.initialAuthorizationStatus
     
     /// Timer for generating simulated location updates
     private var timer: Timer?
@@ -157,7 +184,7 @@ class MockLocationService: LocationServiceProtocol {
         // Simulate permission request with delayed response
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self else { return }
-            self.authStatus = .authorizedAlways
+            self.authStatus = .authorizedWhenInUse
             self.authorizationSubject.send(self.authStatus)
         }
     }
@@ -169,6 +196,18 @@ class MockLocationService: LocationServiceProtocol {
             self.authStatus = .authorizedAlways
             self.authorizationSubject.send(self.authStatus)
         }
+    }
+
+    func setBackgroundTrackingEnabled(_ enabled: Bool) {
+        _ = enabled
+    }
+
+    func startObservingNavigationStatus() {
+        startUpdatingLocation()
+    }
+
+    func stopObservingNavigationStatus() {
+        stopUpdatingLocation()
     }
     
     /// Simulates starting location updates
@@ -220,6 +259,43 @@ class MockLocationService: LocationServiceProtocol {
     func getCurrentAuthorizationStatus() -> CLAuthorizationStatus {
         return authStatus
     }
+    
+    func getCurrentAccuracyAuthorization() -> CLAccuracyAuthorization {
+        .fullAccuracy
+    }
+}
+
+final class MockTrackingBufferStore: TrackingBufferStoreProtocol {
+    private var state = TrackingBufferState()
+    
+    func loadState() -> TrackingBufferState {
+        state
+    }
+    
+    func saveState(_ state: TrackingBufferState) {
+        self.state = state
+    }
+    
+    func appendBufferedLocation(_ location: BufferedLocationRecord, maxSize: Int, lastBufferedLocation: LocationSnapshot?) {
+        state.bufferedLocations.append(location)
+        if state.bufferedLocations.count > maxSize {
+            state.bufferedLocations = Array(state.bufferedLocations.suffix(maxSize))
+        }
+        state.lastBufferedLocation = lastBufferedLocation
+    }
+    
+    func removeOldestBufferedLocation() {
+        guard !state.bufferedLocations.isEmpty else { return }
+        state.bufferedLocations.removeFirst()
+    }
+    
+    func replaceLastBufferedLocation(_ location: LocationSnapshot?) {
+        state.lastBufferedLocation = location
+    }
+    
+    func clear() {
+        state = TrackingBufferState()
+    }
 }
 
 /// Factory for mock dependencies to use in SwiftUI previews
@@ -231,11 +307,13 @@ struct MockDependencies {
         let locationService = MockLocationService()
         let settingsRepository = MockSettingsRepository()
         let locationRepository = MockLocationRepository()
+        let bufferStore = MockTrackingBufferStore()
         
         let viewModel = TrackingViewModel(
             locationRepository: locationRepository,
             settingsRepository: settingsRepository,
-            locationService: locationService
+            locationService: locationService,
+            bufferStore: bufferStore
         )
         
         // Add sample data for preview
@@ -247,7 +325,31 @@ struct MockDependencies {
         viewModel.maxSpeed = 5.8
         viewModel.locationCount = 78
         viewModel.uploadedCount = 75
+        viewModel.bufferCount = 3
         viewModel.uploadStatus = .success(Date().addingTimeInterval(-30))
+        viewModel.lastSuccessfulUploadAt = Date().addingTimeInterval(-30)
+        viewModel.isUploadRuntimeActive = true
+        viewModel.trackerIdentifier = "9876543210"
+        viewModel.uploadServer = "device.waliot.com:30032"
+        viewModel.locationPresentation = TrackingLocationPresentation(
+            state: .freshGps,
+            trustedLocation: LocationSnapshot(
+                latitude: 45.040764,
+                longitude: 39.031908,
+                altitude: 25.0,
+                horizontalAccuracy: 8.0,
+                verticalAccuracy: 12.0,
+                speed: 3.2,
+                course: 75.0,
+                timestamp: Date(),
+                provider: .gps,
+                isSimulated: false
+            ),
+            issue: nil,
+            provider: .gps,
+            accuracyMeters: 8,
+            fixAge: 0.5
+        )
         
         // Sample current location
         viewModel.currentLocation = CLLocation(
