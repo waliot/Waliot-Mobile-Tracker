@@ -7,11 +7,11 @@
 	<key>CFBundleName</key>
 	<string>WALIOT.Tracker</string>
 	<key>CFBundleDisplayName</key>
-	<string>WALIOT.Трекер</string>
+		<string>WALIOT.Tracker</string>
 	<key>CFBundleVersion</key>
-	<string>2.0</string>
+		<string>210</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.0</string>
+		<string>2.1.0</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>gps</string>

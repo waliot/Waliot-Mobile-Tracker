@@ -1,1 +1,121 @@
+"app.name" = "WALIOT.Tracker";
+"common.placeholder.unavailable" = "—";
 
+"action.settings" = "Settings";
+"action.startTracking" = "Start";
+"action.stopTracking" = "Stop";
+"status.tracking" = "Tracking enabled";
+"status.idle" = "Tracking disabled";
+"upload.status.idle" = "Buffer is empty";
+"upload.status.buffered" = "Buffered points: %d";
+"upload.status.uploading" = "Uploading buffer: %d";
+"upload.status.success" = "Last successful upload: %@";
+"upload.status.offline" = "Offline, buffered points will be uploaded later";
+"upload.failure.offline" = "No network. The buffer is safe and will be retried later.";
+"upload.failure.invalidConfiguration" = "Check the tracker identifier and server address.";
+"upload.failure.timeout" = "The server did not respond in time. We will retry later.";
+"upload.failure.serverRejected" = "The server rejected the data. Check the connection settings.";
+"upload.failure.transport" = "Could not upload the buffer. We will retry later.";
+"upload.card.lastUpload" = "Last upload";
+"upload.card.never" = "Never";
+
+"location.status.authorizedAlways" = "Always allowed";
+"location.status.authorizedWhenInUse" = "Allowed while in use";
+"location.status.denied" = "Denied";
+"location.status.restricted" = "Restricted";
+"location.status.notDetermined" = "Not requested yet";
+
+"location.provider.gps" = "GPS";
+"location.provider.approximate" = "LBS";
+"location.provider.simulated" = "Simulation";
+"location.provider.accessory" = "Accessory";
+"location.provider.unknown" = "No data";
+
+"location.issue.stale" = "Data is stale";
+"location.issue.simulated" = "Data is unreliable";
+"location.issue.jump" = "A sudden coordinate jump was detected";
+"location.issue.timestampRegression" = "An older point was received";
+"location.issue.lowAccuracy" = "Low accuracy";
+"location.issue.noFix" = "No data";
+
+"location.state.noFix" = "No data";
+"location.state.freshGps" = "Current location";
+"location.state.freshDegraded" = "Current alternative location";
+"location.state.staleGps" = "Stale location";
+"location.state.staleDegraded" = "Stale alternative location";
+"location.state.suspect" = "Unreliable data";
+
+"location.age.none" = "No data";
+"location.age.justNow" = "Just now";
+
+"location.card.state" = "Status";
+"location.card.provider" = "Source";
+"location.card.age" = "Freshness";
+"location.card.accuracy" = "Accuracy";
+"location.permission.pending.state" = "Location access is not granted";
+"location.permission.pending.provider" = "Waiting for permission";
+"location.permission.denied.state" = "Location access is disabled";
+"location.permission.denied.provider" = "Open system settings";
+
+"api.error.invalidResponse" = "The server returned an invalid response";
+"api.error.serverError" = "Server error (code: %d)";
+"api.error.networkError" = "The network request could not be completed.";
+"api.error.encodingError" = "The request could not be created.";
+
+"settings.title" = "Settings";
+"settings.actions.cancel" = "Cancel";
+"settings.actions.save" = "Save";
+
+"settings.lang.header" = "Language";
+"settings.language.russian" = "Russian";
+"settings.language.english" = "English";
+
+"settings.user.header" = "Tracker";
+"settings.user.username" = "Tracker identifier";
+
+"settings.server.header" = "Server";
+"settings.server.url" = "Server address";
+
+"settings.tracking.header" = "Tracking";
+"settings.tracking.uploadInterval" = "Buffer upload interval (min)";
+"settings.tracking.bufferTimeInterval" = "Time-based sampling interval (min)";
+"settings.tracking.bufferDistanceInterval" = "Distance-based capture interval (meters)";
+"settings.tracking.trackInBackground" = "Keep tracking in background";
+
+"settings.validation.trackerIdentifier" = "Enter a tracker identifier using only Latin letters and digits, without spaces.";
+"settings.validation.uploadServer" = "Enter a valid server address";
+"settings.validation.interval" = "Enter a number greater than zero";
+
+"settings.permissions.header" = "Permissions";
+"settings.permissions.location.title" = "Location access";
+"settings.permissions.openSettings" = "Open system settings";
+"settings.permissions.requestWhenInUse" = "Allow while in use";
+"settings.permissions.requestAlways" = "Allow always";
+"settings.permissions.backgroundHint" = "Stable background tracking on iOS requires the \"Always\" permission.";
+
+"permissions.onboarding.title" = "Allow location access";
+"permissions.onboarding.message" = "Allow location access so the app can immediately show the current position and keep tracking reliably in the background. You can always change this later in system settings.";
+"permissions.onboarding.allowAlways" = "Continue and allow always";
+"permissions.onboarding.allowWhenInUse" = "Continue and allow while in use";
+
+"settings.about.header" = "About";
+"settings.about.version" = "Version";
+"settings.about.build" = "Build";
+
+"units.meters.precise" = "%d m";
+"units.kilometers.precise" = "%.2f km";
+"units.speed.kmh.precise" = "%.1f km/h";
+
+"stats.title" = "Statistics";
+"stats.done" = "Done";
+"stats.distanceAndDuration" = "Distance and duration";
+"stats.totalDistance" = "Distance";
+"stats.totalDuration" = "Duration";
+"stats.duration.zero" = "0:00";
+"stats.speed" = "Speed";
+"stats.current" = "Current";
+"stats.average" = "Average";
+"stats.maximum" = "Maximum";
+"stats.data" = "Buffer and upload";
+"stats.data.collected" = "Points buffered";
+"stats.data.uploaded" = "Points uploaded";

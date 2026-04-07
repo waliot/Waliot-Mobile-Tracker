@@ -9,10 +9,35 @@ import Foundation
 import Combine
 import Network
 import OSLog
-import CoreLocation
+
+enum WialonUploadError: LocalizedError, Equatable {
+    case invalidConfiguration
+    case serverRejected
+    case timeout
+    case offline
+    case transport
+
+    var failureReason: UploadFailureReason {
+        switch self {
+        case .invalidConfiguration:
+            return .invalidConfiguration
+        case .serverRejected:
+            return .serverRejected
+        case .timeout:
+            return .timeout
+        case .offline:
+            return .offline
+        case .transport:
+            return .transport
+        }
+    }
+
+    var errorDescription: String? {
+        failureReason.localizedDescription
+    }
+}
 
 final class WialonIpsService: APIServiceProtocol {
-    
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "WialonIPSService")
 
     private let settings: SettingsRepositoryProtocol
@@ -22,6 +47,7 @@ final class WialonIpsService: APIServiceProtocol {
     private let protocolVersion = "2.0"
     private let noValue = "NA"
     private let defaultPassword = "NA"
+    private let connectionTimeout: TimeInterval = 15
 
     init(settingsRepository: SettingsRepositoryProtocol) {
         self.settings = settingsRepository
@@ -30,59 +56,99 @@ final class WialonIpsService: APIServiceProtocol {
     // MARK: - APIServiceProtocol
 
     func uploadLocation(parameters: LocationAPIRequestParameters) -> AnyPublisher<APIResponse, Error> {
-        let (host, port) = parseHostPort(from: settings.getServerUrl())
+        let trackerIdentifier = sanitizeTrackerIdentifier(parameters.username, defaultValue: "")
+        guard !trackerIdentifier.isEmpty else {
+            return Fail(error: WialonUploadError.invalidConfiguration).eraseToAnyPublisher()
+        }
+
+        let target: UploadTarget
+        do {
+            target = try parseUploadServerAddress(
+                settings.getUploadServer(),
+                defaultHost: defaultHost,
+                defaultPort: defaultPort
+            )
+        } catch {
+            return Fail(error: WialonUploadError.invalidConfiguration).eraseToAnyPublisher()
+        }
 
         let now = parameters.gps_timestamp
         let (dateStr, timeStr) = Self.makeDateTimeUTC(now)
-        
+
         let lat = parameters.latitude
         let lon = parameters.longitude
         let latDMM = Self.decimalToDmm(lat, isLon: false)
         let latHem = lat >= 0 ? "N" : "S"
         let lonDMM = Self.decimalToDmm(lon, isLon: true)
         let lonHem = lon >= 0 ? "E" : "W"
-        
-        let speedKmh = Int(round((parameters.speed) * 3.6))
+
+        let speedKmh = Int(round(parameters.speed * 3.6))
         let course = Int(round(parameters.direction))
         let altitude = Int(round(parameters.altitude))
-        
-        let acc = Int(round(parameters.accuracy))
-        let provider = parameters.provider
-        let params = "accuracy:2:\(acc),provider:3:\(provider)"
+        let params = "accuracy:2:\(parameters.accuracy),provider:3:\(parameters.provider)"
 
         let dataPayload = [
-            dateStr, timeStr,            // DDMMYY ; HHMMSS (UTC)
-            latDMM, latHem,              // широта
-            lonDMM, lonHem,              // долгота
-            "\(speedKmh)",               // скорость (км/ч)
-            "\(course)",                 // курс
-            "\(altitude)",               // высота (м)
-            noValue,                     // спутники
-            noValue,                     // HDOP
-            noValue, noValue,            // inputs, outputs
-            noValue,                     // ADC
-            noValue,                     // iButton
-            params                       // params
+            dateStr, timeStr,
+            latDMM, latHem,
+            lonDMM, lonHem,
+            "\(speedKmh)",
+            "\(course)",
+            "\(altitude)",
+            noValue,
+            noValue,
+            noValue,
+            noValue,
+            "",
+            noValue,
+            params
         ].joined(separator: ";")
 
-        let loginMessage = "#L#\(protocolVersion);\(settings.getUsername());\(defaultPassword)"
-        let dataMessage  = "#D#\(dataPayload)"
+        let loginPayload = "\(protocolVersion);\(trackerIdentifier);\(defaultPassword)"
 
-        return Future<APIResponse, Error> { [logger] promise in
-            let connection = NWConnection(host: NWEndpoint.Host(host),
-                                          port: NWEndpoint.Port(rawValue: port)!,
-                                          using: .tcp)
+        return Future<APIResponse, Error> { [logger, connectionTimeout] promise in
+            let connection = NWConnection(
+                host: NWEndpoint.Host(target.host),
+                port: NWEndpoint.Port(rawValue: target.port)!,
+                using: uploadParameters(for: target)
+            )
+            let queue = DispatchQueue(label: "com.waliot.tracker.wialon.upload", qos: .utility)
+            let completionLock = NSLock()
+            var didComplete = false
 
-            func fail(_ error: Error) {
-                logger.error("WialonIPS: failed — \(error.localizedDescription, privacy: .public)")
+            func finish(_ result: Result<APIResponse, Error>) {
+                completionLock.lock()
+                guard !didComplete else {
+                    completionLock.unlock()
+                    return
+                }
+                didComplete = true
+                completionLock.unlock()
                 connection.cancel()
-                promise(.failure(error))
+                promise(result)
             }
 
-            func sendLine(_ text: String, _ next: @escaping () -> Void) {
-                let withCRC = Self.appendCRC(to: text) + "\r\n"
-                connection.send(content: withCRC.data(using: .utf8), completion: .contentProcessed { sendError in
-                    if let sendError = sendError {
+            let timeoutItem = DispatchWorkItem {
+                logger.error("WialonIPS: upload timed out")
+                finish(.failure(WialonUploadError.timeout))
+            }
+
+            queue.asyncAfter(deadline: .now() + connectionTimeout, execute: timeoutItem)
+
+            func complete(_ result: Result<APIResponse, Error>) {
+                timeoutItem.cancel()
+                finish(result)
+            }
+
+            func fail(_ error: Error) {
+                let mappedError = Self.mapUploadError(error)
+                logger.error("WialonIPS: failed - \(mappedError.localizedDescription, privacy: .private)")
+                complete(.failure(mappedError))
+            }
+
+            func sendPacket(_ type: String, payload: String, _ next: @escaping () -> Void) {
+                let line = Self.createPacket(type: type, payload: payload)
+                connection.send(content: line.data(using: .utf8), completion: .contentProcessed { sendError in
+                    if let sendError {
                         fail(sendError)
                     } else {
                         next()
@@ -91,20 +157,24 @@ final class WialonIpsService: APIServiceProtocol {
             }
 
             func receiveLine(_ handler: @escaping (String) -> Void) {
-                connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, isDone, recvError in
-                    if let recvError = recvError {
-                        fail(recvError)
+                connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, isDone, receiveError in
+                    if let receiveError {
+                        fail(receiveError)
                         return
                     }
-                    guard let data = data, let line = String(data: data, encoding: .utf8)?
-                            .trimmingCharacters(in: .whitespacesAndNewlines), !line.isEmpty else {
+
+                    guard let data,
+                          let line = String(data: data, encoding: .utf8)?
+                            .trimmingCharacters(in: .whitespacesAndNewlines),
+                          !line.isEmpty else {
                         if isDone {
-                            fail(APIError.invalidResponse)
+                            fail(WialonUploadError.serverRejected)
                         } else {
                             receiveLine(handler)
                         }
                         return
                     }
+
                     handler(line)
                 }
             }
@@ -112,32 +182,29 @@ final class WialonIpsService: APIServiceProtocol {
             connection.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    logger.debug("WialonIPS: connection ready to \(host):\(port)")
-                    // 1) Login
-                    sendLine(loginMessage) {
-                        // 2) Receive #AL#1
-                        receiveLine { resp in
-                            guard resp.hasPrefix("#AL#1") else {
-                                fail(APIError.serverError(statusCode: -1))
+                    logger.debug("WialonIPS: connection ready")
+                    sendPacket("L", payload: loginPayload) {
+                        receiveLine { loginResponse in
+                            guard loginResponse.hasPrefix("#AL#1") else {
+                                fail(WialonUploadError.serverRejected)
                                 return
                             }
-                            // 3) Send data
-                            sendLine(dataMessage) {
-                                // 4) Receive #AD#1
-                                receiveLine { dataResp in
-                                    guard dataResp.hasPrefix("#AD#1") else {
-                                        fail(APIError.serverError(statusCode: -2))
+                            sendPacket("D", payload: dataPayload) {
+                                receiveLine { dataResponse in
+                                    guard dataResponse.hasPrefix("#AD#1") else {
+                                        fail(WialonUploadError.serverRejected)
                                         return
                                     }
                                     logger.notice("WialonIPS: upload OK (#AD#1)")
-                                    connection.cancel()
-                                    promise(.success(APIResponse(status: "success", message: dataResp)))
+                                    complete(.success(APIResponse(status: "success", message: dataResponse)))
                                 }
                             }
                         }
                     }
-                case .failed(let e):
-                    fail(e)
+                case .failed(let error):
+                    fail(error)
+                case .waiting(let error):
+                    fail(error)
                 case .cancelled:
                     break
                 default:
@@ -145,56 +212,106 @@ final class WialonIpsService: APIServiceProtocol {
                 }
             }
 
-            connection.start(queue: .global(qos: .utility))
+            connection.start(queue: queue)
         }
         .eraseToAnyPublisher()
     }
 
     // MARK: - Helpers
 
-    private func parseHostPort(from raw: String?) -> (String, UInt16) {
-        let s = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !s.isEmpty else { return (defaultHost, defaultPort) }
-        let parts = s.split(separator: ":", maxSplits: 1).map(String.init)
-        let host = parts.first?.isEmpty == false ? parts[0] : defaultHost
-        let port = parts.count > 1 ? (UInt16(parts[1]) ?? defaultPort) : defaultPort
-        return (host, port)
+    private static func mapUploadError(_ error: Error) -> WialonUploadError {
+        if let uploadError = error as? WialonUploadError {
+            return uploadError
+        }
+        if error is UploadEndpointError {
+            return .invalidConfiguration
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+                return .offline
+            case .timedOut:
+                return .timeout
+            default:
+                return .transport
+            }
+        }
+        if let nwError = error as? NWError {
+            switch nwError {
+            case .dns:
+                return .offline
+            case .posix(let posixError):
+                switch posixError {
+                case .ENETDOWN, .ENETUNREACH, .ENOTCONN, .ECONNABORTED, .ECONNRESET, .ECONNREFUSED, .EHOSTUNREACH:
+                    return .offline
+                case .ETIMEDOUT:
+                    return .timeout
+                default:
+                    return .transport
+                }
+            case .tls:
+                return .transport
+            case .wifiAware:
+                return .transport
+            @unknown default:
+                return .transport
+            }
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSPOSIXErrorDomain {
+            if nsError.code == ETIMEDOUT {
+                return .timeout
+            }
+            let offlineCodes = [ENETDOWN, ENETUNREACH, ENOTCONN, ECONNABORTED, ECONNRESET, ECONNREFUSED, EHOSTUNREACH].map(Int.init)
+            if offlineCodes.contains(nsError.code) {
+                return .offline
+            }
+        }
+
+        return .transport
     }
 
     private static func makeDateTimeUTC(_ date: Date) -> (String, String) {
-        let tz = TimeZone(secondsFromGMT: 0)!
-        let df = DateFormatter()
-        df.timeZone = tz
+        let timeZone = TimeZone(secondsFromGMT: 0)!
+        let formatter = DateFormatter()
+        formatter.timeZone = timeZone
 
-        df.dateFormat = "ddMMyy"
-        let d = df.string(from: date)
-        df.dateFormat = "HHmmss"
-        let t = df.string(from: date)
-        return (d, t)
+        formatter.dateFormat = "ddMMyy"
+        let dateString = formatter.string(from: date)
+        formatter.dateFormat = "HHmmss"
+        let timeString = formatter.string(from: date)
+        return (dateString, timeString)
     }
 
     private static func decimalToDmm(_ coordinate: Double, isLon: Bool) -> String {
-        let absVal = abs(coordinate)
-        let degrees = Int(absVal)
-        let minutes = (absVal - Double(degrees)) * 60.0
-        let dmm = Double(degrees) * 100.0 + minutes
-        let fmt = isLon ? "%09.5f" : "%08.5f"
-        return String(format: fmt, dmm)
+        let absValue = abs(coordinate)
+        var degrees = Int(floor(absValue))
+        var totalMinutes = Int(round((absValue - Double(degrees)) * 60.0 * 10_000.0))
+
+        if totalMinutes >= 600_000 {
+            degrees += 1
+            totalMinutes = 0
+        }
+
+        let wholeMinutes = totalMinutes / 10_000
+        let fractionalMinutes = totalMinutes % 10_000
+        let format = isLon ? "%03d%02d.%04d" : "%02d%02d.%04d"
+        return String(format: format, degrees, wholeMinutes, fractionalMinutes)
     }
 
-    private static func appendCRC(to message: String) -> String {
-        let bytes = Array(message.utf8)
+    private static func createPacket(type: String, payload: String) -> String {
+        let checksumSource = "\(payload);"
+        let bytes = Array(checksumSource.utf8)
         let crc = crc16(bytes)
-        let hi = (crc >> 8) & 0xFF
-        let lo = crc & 0xFF
-        let crcHex = String(format: "%02X%02X", hi, lo)
-        return message + ";\(crcHex)"
+        let crcHex = String(format: "%04X", crc)
+        return "#\(type)#\(checksumSource)\(crcHex)\r\n"
     }
 
     private static func crc16(_ data: [UInt8]) -> Int {
         var crc = 0
-        for b in data {
-            let index = (crc ^ Int(b)) & 0xFF
+        for byte in data {
+            let index = (crc ^ Int(byte)) & 0xFF
             crc = (crc >> 8) ^ table[index]
         }
         return crc & 0xFFFF

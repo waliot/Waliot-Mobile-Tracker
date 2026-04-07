@@ -64,16 +64,16 @@ class LocationRepository: LocationRepositoryProtocol {
     /// - Parameter parameters: The location data to upload
     /// - Returns: A publisher that emits the server response or an error
     func uploadLocation(parameters: LocationAPIRequestParameters) -> AnyPublisher<APIResponse, Error> {
-        log("Uploading location: \(parameters.latitude), \(parameters.longitude)", logger: logger)
+        log("Uploading buffered location record", logger: logger)
         
         return apiService.uploadLocation(parameters: parameters)
             .handleEvents(
-                receiveOutput: { [weak self] response in
-                    self?.logger.info("Upload successful: \(response.status)")
+                receiveOutput: { [weak self] _ in
+                    self?.logger.info("Upload successful")
                 },
                 receiveCompletion: { [weak self] completion in
                     if case let .failure(error) = completion {
-                        self?.logger.error("Upload failed: \(error.localizedDescription)")
+                        self?.logger.error("Upload failed: \(error.localizedDescription, privacy: .private)")
                     }
                 }
             )

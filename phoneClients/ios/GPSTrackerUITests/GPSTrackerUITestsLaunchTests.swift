@@ -20,6 +20,10 @@ final class GPSTrackerUITestsLaunchTests: XCTestCase {
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["UITEST_MODE", "UITEST_RESET_STATE"]
+        app.launchEnvironment["UITEST_MODE"] = "1"
+        app.launchEnvironment["UITEST_RESET_STATE"] = "1"
+        app.launchEnvironment["UITEST_UPLOAD_MODE"] = "success"
         app.launch()
 
         // Insert steps here to perform after app launch but before taking a screenshot,

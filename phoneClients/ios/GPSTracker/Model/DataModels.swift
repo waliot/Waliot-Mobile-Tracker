@@ -49,55 +49,6 @@ struct LocationData: Identifiable {
     let timestamp: Date
 }
 
-/// Represents the status of the location data upload process
-///
-/// This enum tracks the current state of communication with the server
-/// and provides information about successful or failed uploads.
-///
-/// ## Overview
-/// The upload status transitions between idle, uploading, success, and failure states.
-/// Success and failure states include timestamps for tracking the timing of events.
-///
-/// ## Topics
-/// ### States
-/// - ``idle``
-/// - ``uploading``
-/// - ``success(_:)``
-/// - ``failure(_:_:)``
-enum UploadStatus: Equatable {
-    /// No upload is currently in progress
-    case idle
-    
-    /// An upload is currently in progress
-    case uploading
-    
-    /// The last upload completed successfully
-    /// - Parameter Date: When the successful upload completed
-    case success(Date)
-    
-    /// The last upload failed
-    /// - Parameters:
-    ///   - String: The error message describing the failure
-    ///   - Date: When the failed upload occurred
-    case failure(String, Date)
-
-    /// A human-readable description of the upload status
-    var description: String {
-        switch self {
-        case .idle:
-            return String(localized: "upload.status.idle")
-        case .uploading:
-            return String(localized: "upload.status.uploading")
-        case .success(let date):
-            let dateStr = date.formatted(date: .numeric, time: .standard)
-            return String(localized: "upload.status.success.prefix") + " (\(dateStr))"
-        case .failure(let message, let date):
-            let dateStr = date.formatted(date: .numeric, time: .standard)
-            return String(localized: "upload.status.failure.prefix") + ": \(message) (\(dateStr))"
-        }
-    }
-}
-
 /// Response data structure from the tracking server API
 ///
 /// This struct represents the format of responses received from the

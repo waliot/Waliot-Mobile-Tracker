@@ -16,16 +16,17 @@ import os
 ///
 /// ## Topics
 /// ### User Identification
-/// - ``getUsername()``
-/// - ``saveUsername(_:)``
+/// - ``getTrackerIdentifier()``
+/// - ``saveTrackerIdentifier(_:)``
 ///
 /// ### Server Configuration
-/// - ``getServerUrl()``
-/// - ``saveServerUrl(_:)``
+/// - ``getUploadServer()``
+/// - ``saveUploadServer(_:)``
 ///
 /// ### Tracking Configuration
-/// - ``getTrackingInterval()``
-/// - ``getDistanceFilter()``
+/// - ``getUploadTimeInterval()``
+/// - ``getBufferTimeInterval()``
+/// - ``getBufferDistanceInterval()``
 class SettingsRepository: SettingsRepositoryProtocol {
     /// Logger for diagnostic information
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.waliot.tracker", category: "SettingsRepository")
@@ -35,21 +36,32 @@ class SettingsRepository: SettingsRepositoryProtocol {
     
     /// Setting keys to avoid string literals throughout the code
     private enum SettingKeys {
-        static let username = "username"
-        static let serverUrl = "server_url"
-        static let trackingInterval = "tracking_interval"
-        static let distanceFilter = "distance_filter"
+        static let trackerIdentifier = "tracker_identifier"
+        static let uploadServer = "upload_server"
+        static let uploadTimeInterval = "upload_time_interval"
+        static let bufferTimeInterval = "buffer_time_interval"
+        static let bufferDistanceInterval = "buffer_distance_interval"
         static let trackInBackground = "track_in_background"
+        static let trackingState = "tracking_state"
         static let appId = "app_id"
+        
+        static let legacyUsername = "username"
+        static let legacyServerUrl = "server_url"
+        static let legacyTrackingInterval = "tracking_interval"
+        static let legacyDistanceFilter = "distance_filter"
+        static let settingsMigrationVersion = "settings_migration_version"
     }
     
     /// Default values for settings
     private enum Defaults {
-        static let username = ""
-        static let serverUrl = "device.waliot.com:30032"
-        static let trackingInterval = 1 // minutes
-        static let distanceFilter = 10 // meters
+        static let trackerIdentifier = ""
+        static let uploadServer = "device.waliot.com:30032"
+        static let uploadTimeInterval = 5 // minutes
+        static let bufferTimeInterval = 1 // minute
+        static let bufferDistanceInterval = 100 // meters
         static let trackInBackground = true
+        static let trackingState = false
+        static let migrationVersion = 1
     }
     
     /// Initializes the settings repository with a persistence service
@@ -57,69 +69,85 @@ class SettingsRepository: SettingsRepositoryProtocol {
     /// - Parameter persistenceService: Service for storing and retrieving settings
     init(persistenceService: PersistenceServiceProtocol) {
         self.persistenceService = persistenceService
+        migrateLegacySettingsIfNeeded()
         log("SettingsRepository initialized", logger: logger)
     }
     
-    /// Retrieves the username for identifying this device
-    ///
-    /// - Returns: The stored username or a default value
-    func getUsername() -> String {
-        let username = persistenceService.getValue(forKey: SettingKeys.username, defaultValue: Defaults.username)
-        log("Retrieved username: \(username)", logger: logger)
-        return username
+    /// Retrieves the tracker identifier for identifying this device.
+    func getTrackerIdentifier() -> String {
+        let trackerIdentifier = sanitizeTrackerIdentifier(
+            persistenceService.getValue(forKey: SettingKeys.trackerIdentifier, defaultValue: Defaults.trackerIdentifier),
+            defaultValue: Defaults.trackerIdentifier
+        )
+        log("Retrieved tracker identifier from persistence", logger: logger)
+        return trackerIdentifier
     }
     
-    /// Stores a new username
-    ///
-    /// - Parameter username: The username to save
-    func saveUsername(_ username: String) {
-        persistenceService.setValue(username, forKey: SettingKeys.username)
-        log("Saved username: \(username)", logger: logger)
+    /// Stores a new tracker identifier.
+    func saveTrackerIdentifier(_ trackerIdentifier: String) {
+        let sanitized = sanitizeTrackerIdentifier(trackerIdentifier, defaultValue: Defaults.trackerIdentifier)
+        persistenceService.setValue(sanitized, forKey: SettingKeys.trackerIdentifier)
+        log("Saved tracker identifier", logger: logger)
     }
     
-    /// Retrieves the server URL for uploading tracking data
-    ///
-    /// - Returns: The stored server URL or a default value
-    func getServerUrl() -> String {
-        return persistenceService.getValue(forKey: SettingKeys.serverUrl, defaultValue: Defaults.serverUrl)
+    /// Retrieves the server URL for uploading tracking data.
+    func getUploadServer() -> String {
+        let stored = sanitizeSingleLineInput(
+            persistenceService.getValue(forKey: SettingKeys.uploadServer, defaultValue: Defaults.uploadServer)
+        )
+        return stored.isEmpty ? Defaults.uploadServer : stored
     }
     
-    /// Stores a new server URL
-    ///
-    /// - Parameter url: The server URL to save
-    func saveServerUrl(_ url: String) {
-        persistenceService.setValue(url, forKey: SettingKeys.serverUrl)
-        log("Saved server URL: \(url)", logger: logger)
+    /// Stores a new server URL.
+    func saveUploadServer(_ url: String) {
+        let sanitized = sanitizeSingleLineInput(url).isEmpty ? Defaults.uploadServer : sanitizeSingleLineInput(url)
+        persistenceService.setValue(sanitized, forKey: SettingKeys.uploadServer)
+        log("Saved upload server configuration", logger: logger)
     }
     
-    /// Retrieves the tracking interval in seconds
-    ///
-    /// - Returns: The stored tracking interval or a default value
-    func getTrackingInterval() -> Int {
-        return persistenceService.getValue(forKey: SettingKeys.trackingInterval, defaultValue: Defaults.trackingInterval)
+    /// Retrieves the upload interval in minutes.
+    func getUploadTimeInterval() -> Int {
+        sanitizePositiveInterval(
+            persistenceService.getValue(forKey: SettingKeys.uploadTimeInterval, defaultValue: Defaults.uploadTimeInterval),
+            defaultValue: Defaults.uploadTimeInterval
+        )
     }
     
-    /// Stores a new tracking interval
-    ///
-    /// - Parameter interval: The tracking interval in seconds
-    func saveTrackingInterval(_ interval: Int) {
-        persistenceService.setValue(interval, forKey: SettingKeys.trackingInterval)
-        log("Saved tracking interval: \(interval) minutes", logger: logger)
+    /// Stores a new upload interval in minutes.
+    func saveUploadTimeInterval(_ interval: Int) {
+        let sanitized = sanitizePositiveInterval(interval, defaultValue: Defaults.uploadTimeInterval)
+        persistenceService.setValue(sanitized, forKey: SettingKeys.uploadTimeInterval)
+        log("Saved upload time interval: \(sanitized) minutes", logger: logger)
     }
     
-    /// Retrieves the minimum distance between updates in meters
-    ///
-    /// - Returns: The stored distance filter or a default value
-    func getDistanceFilter() -> Int {
-        return persistenceService.getValue(forKey: SettingKeys.distanceFilter, defaultValue: Defaults.distanceFilter)
+    /// Retrieves the time-based buffer interval in minutes.
+    func getBufferTimeInterval() -> Int {
+        sanitizePositiveInterval(
+            persistenceService.getValue(forKey: SettingKeys.bufferTimeInterval, defaultValue: Defaults.bufferTimeInterval),
+            defaultValue: Defaults.bufferTimeInterval
+        )
     }
     
-    /// Stores a new distance filter
-    ///
-    /// - Parameter distance: The minimum distance between updates in meters
-    func saveDistanceFilter(_ distance: Int) {
-        persistenceService.setValue(distance, forKey: SettingKeys.distanceFilter)
-        log("Saved distance filter: \(distance) meters", logger: logger)
+    /// Stores a new time-based buffer interval in minutes.
+    func saveBufferTimeInterval(_ interval: Int) {
+        let sanitized = sanitizePositiveInterval(interval, defaultValue: Defaults.bufferTimeInterval)
+        persistenceService.setValue(sanitized, forKey: SettingKeys.bufferTimeInterval)
+        log("Saved buffer time interval: \(sanitized) minutes", logger: logger)
+    }
+    
+    /// Retrieves the distance-based buffer interval in meters.
+    func getBufferDistanceInterval() -> Int {
+        sanitizePositiveInterval(
+            persistenceService.getValue(forKey: SettingKeys.bufferDistanceInterval, defaultValue: Defaults.bufferDistanceInterval),
+            defaultValue: Defaults.bufferDistanceInterval
+        )
+    }
+    
+    /// Stores a new distance-based buffer interval in meters.
+    func saveBufferDistanceInterval(_ distance: Int) {
+        let sanitized = sanitizePositiveInterval(distance, defaultValue: Defaults.bufferDistanceInterval)
+        persistenceService.setValue(sanitized, forKey: SettingKeys.bufferDistanceInterval)
+        log("Saved buffer distance interval: \(sanitized) meters", logger: logger)
     }
     
     /// Retrieves the background tracking preference
@@ -135,6 +163,17 @@ class SettingsRepository: SettingsRepositoryProtocol {
     func saveTrackInBackground(_ enabled: Bool) {
         persistenceService.setValue(enabled, forKey: SettingKeys.trackInBackground)
         log("Saved track in background: \(enabled)", logger: logger)
+    }
+
+    /// Retrieves the persisted user intent for active tracking.
+    func getTrackingState() -> Bool {
+        persistenceService.getValue(forKey: SettingKeys.trackingState, defaultValue: Defaults.trackingState)
+    }
+
+    /// Stores the persisted user intent for active tracking.
+    func saveTrackingState(_ isTracking: Bool) {
+        persistenceService.setValue(isTracking, forKey: SettingKeys.trackingState)
+        log("Saved tracking state: \(isTracking)", logger: logger)
     }
     
     /// Retrieves the app installation identifier
@@ -156,6 +195,72 @@ class SettingsRepository: SettingsRepositoryProtocol {
     /// - Parameter appId: The app ID to save
     func saveAppId(_ appId: String) {
         persistenceService.setValue(appId, forKey: SettingKeys.appId)
-        log("Saved app ID: \(appId)", logger: logger)
+        log("Saved app installation identifier", logger: logger)
+    }
+    
+    private func migrateLegacySettingsIfNeeded() {
+        let currentVersion = persistenceService.getValue(
+            forKey: SettingKeys.settingsMigrationVersion,
+            defaultValue: 0
+        )
+        guard currentVersion < Defaults.migrationVersion else {
+            return
+        }
+        
+        if getTrackerIdentifier().isEmpty {
+            let legacyTracker = sanitizeTrackerIdentifier(
+                persistenceService.getValue(forKey: SettingKeys.legacyUsername, defaultValue: Defaults.trackerIdentifier),
+                defaultValue: Defaults.trackerIdentifier
+            )
+            if !legacyTracker.isEmpty {
+                saveTrackerIdentifier(legacyTracker)
+            }
+        }
+        
+        let uploadServer = persistenceService.getValue(
+            forKey: SettingKeys.uploadServer,
+            defaultValue: ""
+        ) as String
+        if sanitizeSingleLineInput(uploadServer).isEmpty {
+            let legacyServer = sanitizeSingleLineInput(
+                persistenceService.getValue(forKey: SettingKeys.legacyServerUrl, defaultValue: Defaults.uploadServer)
+            )
+            saveUploadServer(legacyServer)
+        }
+        
+        let storedUploadInterval = persistenceService.getValue(
+            forKey: SettingKeys.uploadTimeInterval,
+            defaultValue: 0
+        ) as Int
+        let storedBufferTimeInterval = persistenceService.getValue(
+            forKey: SettingKeys.bufferTimeInterval,
+            defaultValue: 0
+        ) as Int
+        let storedBufferDistanceInterval = persistenceService.getValue(
+            forKey: SettingKeys.bufferDistanceInterval,
+            defaultValue: 0
+        ) as Int
+        
+        let legacyTrackingInterval = sanitizePositiveInterval(
+            persistenceService.getValue(forKey: SettingKeys.legacyTrackingInterval, defaultValue: 0),
+            defaultValue: 0
+        )
+        let legacyDistanceFilter = sanitizePositiveInterval(
+            persistenceService.getValue(forKey: SettingKeys.legacyDistanceFilter, defaultValue: 0),
+            defaultValue: 0
+        )
+        
+        if storedUploadInterval <= 0 {
+            saveUploadTimeInterval(legacyTrackingInterval > 0 ? legacyTrackingInterval : Defaults.uploadTimeInterval)
+        }
+        if storedBufferTimeInterval <= 0 {
+            saveBufferTimeInterval(legacyTrackingInterval > 0 ? legacyTrackingInterval : Defaults.bufferTimeInterval)
+        }
+        if storedBufferDistanceInterval <= 0 {
+            saveBufferDistanceInterval(legacyDistanceFilter > 0 ? legacyDistanceFilter : Defaults.bufferDistanceInterval)
+        }
+        
+        persistenceService.setValue(Defaults.migrationVersion, forKey: SettingKeys.settingsMigrationVersion)
+        log("Legacy settings migration completed", logger: logger)
     }
 }

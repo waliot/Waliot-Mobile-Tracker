@@ -33,18 +33,18 @@ func log(
     let fileName = (file as NSString).lastPathComponent
     let logMessage = "\(timestamp) [\(fileName):\(line) \(function)] \(message())"
 
-    // Log the formatted message using the provided logger and level
-    // Note: OSLog interpolation privacy rules still apply here.
-    // For simplicity, we log the pre-formatted string. Be mindful of sensitive data.
+    // Log the formatted message using private OSLog interpolation so runtime
+    // diagnostics stay useful without exposing tracker identifiers, endpoints,
+    // coordinates, or other sensitive operational data in release logs.
     switch level {
     case .info:
-        logger.info("\(logMessage, privacy: .public)")
+        logger.info("\(logMessage, privacy: .private)")
     case .debug:
-        logger.debug("\(logMessage, privacy: .public)")
+        logger.debug("\(logMessage, privacy: .private)")
     case .error:
-        logger.error("\(logMessage, privacy: .public)")
+        logger.error("\(logMessage, privacy: .private)")
     case .fault:
-        logger.fault("\(logMessage, privacy: .public)")
+        logger.fault("\(logMessage, privacy: .private)")
     // Note: OSLogType.default maps to logger.log() or logger.info()
     // OSLogType.info maps to logger.info()
     // OSLogType.debug maps to logger.debug()
@@ -52,9 +52,9 @@ func log(
     // OSLogType.fault maps to logger.fault()
     // There isn't a direct OSLogType for logger.notice(), but we can map .default to it.
     case .default:
-        logger.notice("\(logMessage, privacy: .public)") // Map default to notice
+        logger.notice("\(logMessage, privacy: .private)") // Map default to notice
     default: // Catch any other levels like .info explicitly if needed, or handle future ones
         // Fallback to notice or info for unhandled cases
-        logger.notice("\(logMessage, privacy: .public)")
+        logger.notice("\(logMessage, privacy: .private)")
     }
 }
