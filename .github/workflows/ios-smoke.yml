@@ -13,6 +13,9 @@ on:
       - '.github/workflows/ios-smoke.yml'
       - 'phoneClients/ios/**'
 
+permissions:
+  contents: read
+
 jobs:
   smoke:
     runs-on: macos-15
