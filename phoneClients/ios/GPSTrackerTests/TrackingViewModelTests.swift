@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import UIKit
 import Testing
 @testable import GPSTracker
 
@@ -59,6 +60,100 @@ struct TrackingViewModelTests {
         #expect(viewModel.bufferCount == 1)
         #expect(viewModel.locationPresentation.state == .suspect)
         #expect(viewModel.locationPresentation.issue == .impossibleJump)
+    }
+
+    @Test
+    func backgroundResumeAcceptsFreshRecoveryFixWithoutManualRestart() async {
+        let repository = TestLocationRepository()
+        repository.nextError = URLError(.notConnectedToInternet)
+        let settings = TestSettingsRepository()
+        let locationService = TestLocationService()
+        let bufferStore = InMemoryTrackingBufferStore()
+        let viewModel = TrackingViewModel(
+            locationRepository: repository,
+            settingsRepository: settings,
+            locationService: locationService,
+            bufferStore: bufferStore
+        )
+
+        let start = Date()
+        viewModel.startTracking()
+        locationService.send(location: makeLocation(latitude: 55.751244, longitude: 37.618423, timestamp: start))
+        await flushMainQueue()
+
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        await flushMainQueue()
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        await flushMainQueue()
+
+        let resumedTime = Date()
+        locationService.send(
+            location: makeLocation(
+                latitude: 55.951244,
+                longitude: 37.618423,
+                accuracy: 21,
+                timestamp: resumedTime
+            )
+        )
+        await flushMainQueue()
+
+        #expect(viewModel.isTracking)
+        #expect(viewModel.bufferCount == 2)
+        #expect(viewModel.locationCount == 2)
+        #expect(viewModel.locationPresentation.state == .freshGps)
+        #expect(viewModel.locationPresentation.issue == nil)
+        #expect(viewModel.currentLocation?.timestamp == resumedTime)
+    }
+
+    @Test
+    func backgroundResumeKeepsRecoveryPendingUntilFreshFixArrives() async {
+        let repository = TestLocationRepository()
+        repository.nextError = URLError(.notConnectedToInternet)
+        let settings = TestSettingsRepository()
+        let locationService = TestLocationService()
+        let bufferStore = InMemoryTrackingBufferStore()
+        let viewModel = TrackingViewModel(
+            locationRepository: repository,
+            settingsRepository: settings,
+            locationService: locationService,
+            bufferStore: bufferStore
+        )
+
+        viewModel.startTracking()
+        locationService.send(location: makeLocation(latitude: 55.751244, longitude: 37.618423, timestamp: Date()))
+        await flushMainQueue()
+
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        await flushMainQueue()
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        await flushMainQueue()
+
+        locationService.send(
+            location: makeLocation(
+                latitude: 55.951244,
+                longitude: 37.618423,
+                timestamp: Date().addingTimeInterval(-(staleFixTimeout + 10))
+            )
+        )
+        await flushMainQueue()
+
+        #expect(viewModel.bufferCount == 1)
+        #expect(viewModel.locationCount == 1)
+
+        let freshRecoveryTimestamp = Date()
+        locationService.send(
+            location: makeLocation(
+                latitude: 55.951544,
+                longitude: 37.618723,
+                accuracy: 12,
+                timestamp: freshRecoveryTimestamp
+            )
+        )
+        await flushMainQueue()
+
+        #expect(viewModel.bufferCount == 2)
+        #expect(viewModel.locationPresentation.state == .freshGps)
+        #expect(viewModel.currentLocation?.timestamp == freshRecoveryTimestamp)
     }
 
     @Test

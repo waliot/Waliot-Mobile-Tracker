@@ -35,6 +35,29 @@ struct GPSTrackerApp: App {
         processInfo.environment["UITEST_RESET_STATE"] == "1"
     private static let uiTestDefaultsSuite = "com.waliot.tracker.uitests"
 
+    private static func applyUITestEnvironmentDefaults(to defaults: UserDefaults) {
+        let environment = processInfo.environment
+
+        if let trackerIdentifier = environment["UITEST_TRACKER_IDENTIFIER"] {
+            defaults.set(trackerIdentifier, forKey: "com.waliot.tracker.tracker_identifier")
+        }
+        if let uploadServer = environment["UITEST_UPLOAD_SERVER"] {
+            defaults.set(uploadServer, forKey: "com.waliot.tracker.upload_server")
+        }
+        if let uploadInterval = environment["UITEST_UPLOAD_INTERVAL"].flatMap(Int.init) {
+            defaults.set(uploadInterval, forKey: "com.waliot.tracker.upload_time_interval")
+        }
+        if let bufferTimeInterval = environment["UITEST_BUFFER_TIME_INTERVAL"].flatMap(Int.init) {
+            defaults.set(bufferTimeInterval, forKey: "com.waliot.tracker.buffer_time_interval")
+        }
+        if let bufferDistanceInterval = environment["UITEST_BUFFER_DISTANCE_INTERVAL"].flatMap(Int.init) {
+            defaults.set(bufferDistanceInterval, forKey: "com.waliot.tracker.buffer_distance_interval")
+        }
+        if let trackInBackground = environment["UITEST_TRACK_IN_BACKGROUND"].flatMap(Bool.init) {
+            defaults.set(trackInBackground, forKey: "com.waliot.tracker.track_in_background")
+        }
+    }
+
     // MARK: - Dependencies
     
     /// Persistence service for user settings and local data storage
@@ -46,6 +69,7 @@ struct GPSTrackerApp: App {
                 defaults.set("9876543210", forKey: "com.waliot.tracker.tracker_identifier")
                 defaults.set("device.waliot.com:30032", forKey: "com.waliot.tracker.upload_server")
             }
+            applyUITestEnvironmentDefaults(to: defaults)
             return PersistenceService(userDefaults: defaults)
         }
         return PersistenceService()

@@ -59,6 +59,10 @@ struct ContentView: View {
                     permissionOnboardingOverlay
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 }
+
+                if ContentView.isUITestMode {
+                    uiTestDiagnosticsOverlay
+                }
             }
             .onAppear {
                 mapViewportHeight = geometry.size.height
@@ -264,6 +268,19 @@ struct ContentView: View {
             .accessibilityLabel(Text(viewModel.isTracking ? "action.stopTracking" : "action.startTracking"))
             .accessibilityIdentifier("home.toggle.tracking")
         }
+    }
+
+    private var uiTestDiagnosticsOverlay: some View {
+        VStack(spacing: 2) {
+            Text("\(viewModel.bufferCount)")
+                .accessibilityIdentifier("uitest.buffer.count")
+            Text("\(viewModel.locationCount)")
+                .accessibilityIdentifier("uitest.location.count")
+        }
+        .font(.caption2.monospacedDigit())
+        .foregroundStyle(.clear)
+        .padding(1)
+        .accessibilityHidden(false)
     }
 
     private var mapPathCoordinates: [CLLocationCoordinate2D] {

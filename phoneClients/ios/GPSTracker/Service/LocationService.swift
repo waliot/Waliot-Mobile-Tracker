@@ -128,7 +128,7 @@ class LocationService: NSObject, LocationServiceProtocol, CLLocationManagerDeleg
         self.locationManager.delegate = self
         self.locationManager.desiredAccuracy = kCLLocationAccuracyBest // High accuracy needed for tracking
         self.locationManager.pausesLocationUpdatesAutomatically = false // Prevent system from pausing updates
-        self.locationManager.activityType = .other // General tracking
+        self.locationManager.activityType = .automotiveNavigation // Vehicle-centric tracking profile
         reconcileLocationDelivery()
 
         // Enable battery monitoring for reporting to server

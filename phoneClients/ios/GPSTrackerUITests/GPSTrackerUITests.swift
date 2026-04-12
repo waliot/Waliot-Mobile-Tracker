@@ -147,13 +147,85 @@ final class GPSTrackerUITests: XCTestCase {
         XCTAssertFalse(uploadStatus.label.contains("kCF"))
     }
 
+    @MainActor
+    func testTrackingKeepsBufferingAcrossBackgroundAndRecoversWithoutUnreliableState() throws {
+        let app = launchApp(
+            resetState: true,
+            uploadMode: "offline",
+            locationMode: "backgroundRoute",
+            environment: [
+                "UITEST_BUFFER_DISTANCE_INTERVAL": "20",
+                "UITEST_UPLOAD_INTERVAL": "60"
+            ]
+        )
+        let toggle = app.buttons["home.toggle.tracking"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+
+        toggle.tap()
+
+        let locationState = app.staticTexts["home.location.state"]
+        let locationProvider = app.staticTexts["home.location.provider"]
+        let locationAge = app.staticTexts["home.location.age"]
+        let rawLocationCount = app.staticTexts["uitest.location.count"]
+        let rawBufferCount = app.staticTexts["uitest.buffer.count"]
+
+        XCTAssertTrue(locationState.waitForExistence(timeout: 10))
+        XCTAssertTrue(rawLocationCount.waitForExistence(timeout: 10))
+        XCTAssertTrue(rawBufferCount.waitForExistence(timeout: 10))
+        XCTAssertEqual(locationState.label, "Актуальное местоположение")
+        XCTAssertEqual(locationProvider.label, "GPS")
+
+        sleep(30)
+
+        let foregroundLocationCount = waitForNumericLabelValue(
+            of: rawLocationCount,
+            predicate: { $0 >= 8 },
+            timeout: 10
+        )
+        XCTAssertGreaterThanOrEqual(foregroundLocationCount, 8)
+
+        let foregroundBufferCount = waitForNumericLabelValue(
+            of: rawBufferCount,
+            predicate: { $0 >= 8 },
+            timeout: 10
+        )
+        XCTAssertGreaterThanOrEqual(foregroundBufferCount, 8)
+
+        XCUIDevice.shared.press(.home)
+        sleep(30)
+
+        app.activate()
+
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        XCTAssertEqual(locationState.label, "Актуальное местоположение")
+        XCTAssertNotEqual(locationState.label, "Недостоверные данные")
+        XCTAssertEqual(locationProvider.label, "GPS")
+        XCTAssertNotEqual(locationAge.label, "Нет данных")
+
+        let resumedLocationCount = waitForNumericLabelValue(
+            of: rawLocationCount,
+            predicate: { $0 >= foregroundLocationCount + 5 },
+            timeout: 10
+        )
+        XCTAssertGreaterThanOrEqual(resumedLocationCount, foregroundLocationCount + 5)
+
+        let resumedBufferCount = waitForNumericLabelValue(
+            of: rawBufferCount,
+            predicate: { $0 >= foregroundBufferCount + 5 },
+            timeout: 10
+        )
+        XCTAssertGreaterThanOrEqual(resumedBufferCount, foregroundBufferCount + 5)
+    }
+
     // MARK: - Helpers
 
     @MainActor
     private func launchApp(
         resetState: Bool,
         uploadMode: String = "success",
-        locationAuth: String? = nil
+        locationAuth: String? = nil,
+        locationMode: String = "random",
+        environment: [String: String] = [:]
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["UITEST_MODE"]
@@ -168,8 +240,12 @@ final class GPSTrackerUITests: XCTestCase {
         }
         app.launchEnvironment["UITEST_UPLOAD_MODE"] = uploadMode
         app.launchEnvironment["UITEST_APP_LANG"] = "ru"
+        app.launchEnvironment["UITEST_LOCATION_MODE"] = locationMode
         if let locationAuth {
             app.launchEnvironment["UITEST_LOCATION_AUTH"] = locationAuth
+        }
+        for (key, value) in environment {
+            app.launchEnvironment[key] = value
         }
         app.launch()
         return app
@@ -250,5 +326,48 @@ final class GPSTrackerUITests: XCTestCase {
             object: element
         )
         return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    @MainActor
+    private func waitForBufferedPointCount(
+        in element: XCUIElement,
+        predicate: @escaping (Int) -> Bool,
+        timeout: TimeInterval
+    ) -> Int {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                guard element.exists else { return false }
+                let value = self.extractFirstInteger(from: element.label) ?? -1
+                return predicate(value)
+            },
+            object: element
+        )
+
+        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: timeout), .completed)
+        return extractFirstInteger(from: element.label) ?? -1
+    }
+
+    @MainActor
+    private func waitForNumericLabelValue(
+        of element: XCUIElement,
+        predicate: @escaping (Int) -> Bool,
+        timeout: TimeInterval
+    ) -> Int {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                guard element.exists else { return false }
+                let value = Int(element.label) ?? -1
+                return predicate(value)
+            },
+            object: element
+        )
+
+        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: timeout), .completed)
+        return Int(element.label) ?? -1
+    }
+
+    private func extractFirstInteger(from text: String) -> Int? {
+        let digits = text.split(whereSeparator: { !$0.isNumber })
+        return digits.compactMap { Int($0) }.first
     }
 }
