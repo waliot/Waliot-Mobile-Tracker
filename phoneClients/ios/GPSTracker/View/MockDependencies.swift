@@ -3,6 +3,7 @@
 import Foundation
 import Combine
 import CoreLocation
+import UIKit
 
 /// Provides mock dependencies for previews and testing
 ///
@@ -139,6 +140,11 @@ class MockSettingsRepository: SettingsRepositoryProtocol {
 
 /// A mock implementation of LocationServiceProtocol for testing and previews
 class MockLocationService: LocationServiceProtocol {
+    private enum SimulationMode: String {
+        case random
+        case backgroundRoute
+    }
+
     private static let initialAuthorizationStatus: CLAuthorizationStatus = {
         switch ProcessInfo.processInfo.environment["UITEST_LOCATION_AUTH"] {
         case "notDetermined":
@@ -170,14 +176,43 @@ class MockLocationService: LocationServiceProtocol {
     
     /// Mock authorization status
     private var authStatus: CLAuthorizationStatus = MockLocationService.initialAuthorizationStatus
-    
-    /// Timer for generating simulated location updates
-    private var timer: Timer?
+
+    private let simulationMode = SimulationMode(
+        rawValue: ProcessInfo.processInfo.environment["UITEST_LOCATION_MODE"] ?? "random"
+    ) ?? .random
+    private let routeQueue = DispatchQueue(label: "MockLocationService.route")
+    private var randomTimer: Timer?
+    private var routeTimer: DispatchSourceTimer?
+    private var lifecycleCancellables = Set<AnyCancellable>()
+    private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
+    private var isUpdatingLocation = false
+    private var isObservingNavigationStatus = false
+    private var routeStep = 0
+    private var backgroundEnteredAt: Date?
+    private var routeStepAtBackgroundEntry = 0
     
     /// Initializes the mock location service
     init() {
         // Emit initial authorization status
         authorizationSubject.send(authStatus)
+
+        if simulationMode == .backgroundRoute {
+            NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
+                .sink { [weak self] _ in
+                    self?.recordBackgroundEntry()
+                    self?.beginBackgroundTaskIfNeeded()
+                }
+                .store(in: &lifecycleCancellables)
+
+            NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+                .sink { [weak self] _ in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        self?.emitBackgroundCatchUpIfNeeded()
+                        self?.endBackgroundTask()
+                    }
+                }
+                .store(in: &lifecycleCancellables)
+        }
     }
     
     func requestWhenInUsePermissions() {
@@ -203,11 +238,13 @@ class MockLocationService: LocationServiceProtocol {
     }
 
     func startObservingNavigationStatus() {
-        startUpdatingLocation()
+        isObservingNavigationStatus = true
+        startLocationEmissionIfNeeded()
     }
 
     func stopObservingNavigationStatus() {
-        stopUpdatingLocation()
+        isObservingNavigationStatus = false
+        stopLocationEmissionIfPossible()
     }
     
     /// Simulates starting location updates
@@ -215,43 +252,16 @@ class MockLocationService: LocationServiceProtocol {
     /// Instead of using real device location, this method
     /// generates synthetic location data on a timer.
     func startUpdatingLocation() {
-        // Stop any existing timer
-        timer?.invalidate()
-        
-        // Start a new timer to simulate location updates
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            
-            let latitude = 45.040711 + Double.random(in: -0.01...0.01)
-            let longitude = 39.031912 + Double.random(in: -0.01...0.01)
-            let altitude = 10.0 + Double.random(in: 0...50)
-            let speed = Double.random(in: 0...5)
-            let course = Double.random(in: 0...360)
-            
-            // Create and publish the location
-            let location = CLLocation(
-                coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                altitude: altitude,
-                horizontalAccuracy: 10.0,
-                verticalAccuracy: 10.0,
-                course: course,
-                speed: speed,
-                timestamp: Date()
-            )
-            
-            self.locationSubject.send(location)
-        }
-        
-        // Fire immediately to get first location
-        timer?.fire()
+        isUpdatingLocation = true
+        startLocationEmissionIfNeeded()
     }
     
     /// Simulates stopping location updates
     ///
     /// Stops the timer that generates synthetic location data.
     func stopUpdatingLocation() {
-        timer?.invalidate()
-        timer = nil
+        isUpdatingLocation = false
+        stopLocationEmissionIfPossible()
     }
     
     /// Returns the mock authorization status
@@ -262,6 +272,187 @@ class MockLocationService: LocationServiceProtocol {
     
     func getCurrentAccuracyAuthorization() -> CLAccuracyAuthorization {
         .fullAccuracy
+    }
+
+    private func startLocationEmissionIfNeeded() {
+        guard authStatus == .authorizedAlways || authStatus == .authorizedWhenInUse else {
+            return
+        }
+
+        switch simulationMode {
+        case .random:
+            startRandomTimerIfNeeded()
+        case .backgroundRoute:
+            startBackgroundRouteIfNeeded()
+        }
+    }
+
+    private func stopLocationEmissionIfPossible() {
+        guard !isUpdatingLocation && !isObservingNavigationStatus else { return }
+
+        randomTimer?.invalidate()
+        randomTimer = nil
+
+        routeTimer?.cancel()
+        routeTimer = nil
+        endBackgroundTask()
+    }
+
+    private func startRandomTimerIfNeeded() {
+        guard randomTimer == nil else { return }
+
+        let timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            self?.emitRandomLocation()
+        }
+        timer.tolerance = 0.5
+        randomTimer = timer
+        timer.fire()
+    }
+
+    private func emitRandomLocation() {
+        let latitude = 45.040711 + Double.random(in: -0.01...0.01)
+        let longitude = 39.031912 + Double.random(in: -0.01...0.01)
+        let altitude = 10.0 + Double.random(in: 0...50)
+        let speed = Double.random(in: 0...5)
+        let course = Double.random(in: 0...360)
+
+        let location = CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+            altitude: altitude,
+            horizontalAccuracy: 10.0,
+            verticalAccuracy: 10.0,
+            course: course,
+            speed: speed,
+            timestamp: Date()
+        )
+
+        locationSubject.send(location)
+    }
+
+    private func startBackgroundRouteIfNeeded() {
+        guard routeTimer == nil else { return }
+
+        beginBackgroundTaskIfNeeded()
+
+        let timer = DispatchSource.makeTimerSource(queue: routeQueue)
+        timer.schedule(
+            deadline: .now(),
+            repeating: Self.backgroundRouteIntervalSeconds,
+            leeway: .milliseconds(100)
+        )
+        timer.setEventHandler { [weak self] in
+            self?.emitBackgroundRouteLocation()
+        }
+        routeTimer = timer
+        timer.resume()
+    }
+
+    private func emitBackgroundRouteLocation() {
+        emitBackgroundRouteLocation(at: Date())
+    }
+
+    private func emitBackgroundRouteLocation(at timestamp: Date) {
+        let stepIndex = routeStep
+        routeStep += 1
+
+        let coordinate = Self.coordinate(
+            from: Self.backgroundRouteStart,
+            distanceMeters: Double(stepIndex) * Self.backgroundRouteStepMeters,
+            bearingDegrees: Self.backgroundRouteBearingDegrees
+        )
+        let location = CLLocation(
+            coordinate: coordinate,
+            altitude: 12.0,
+            horizontalAccuracy: 5.0,
+            verticalAccuracy: 8.0,
+            course: Self.backgroundRouteBearingDegrees,
+            speed: Self.backgroundRouteSpeedMetersPerSecond,
+            timestamp: timestamp
+        )
+
+        locationSubject.send(location)
+    }
+
+    private func recordBackgroundEntry() {
+        guard simulationMode == .backgroundRoute else { return }
+        backgroundEnteredAt = Date()
+        routeStepAtBackgroundEntry = routeStep
+    }
+
+    private func emitBackgroundCatchUpIfNeeded() {
+        guard simulationMode == .backgroundRoute else { return }
+        guard let backgroundEnteredAt else { return }
+
+        defer {
+            self.backgroundEnteredAt = nil
+            self.routeStepAtBackgroundEntry = routeStep
+        }
+
+        let elapsed = max(0, Date().timeIntervalSince(backgroundEnteredAt))
+        let expectedAdditionalSteps = Int(elapsed / Self.backgroundRouteIntervalSeconds)
+        guard expectedAdditionalSteps > 0 else { return }
+
+        let expectedRouteStep = routeStepAtBackgroundEntry + expectedAdditionalSteps
+        guard routeStep < expectedRouteStep else { return }
+
+        let missingStepCount = expectedRouteStep - routeStep
+        for _ in 0..<missingStepCount {
+            let routeStepOffset = routeStep - routeStepAtBackgroundEntry + 1
+            let stepTimeOffset = TimeInterval(routeStepOffset) * Self.backgroundRouteIntervalSeconds
+            let timestamp = backgroundEnteredAt.addingTimeInterval(stepTimeOffset)
+            emitBackgroundRouteLocation(at: timestamp)
+        }
+    }
+
+    private func beginBackgroundTaskIfNeeded() {
+        guard simulationMode == .backgroundRoute else { return }
+        guard backgroundTaskIdentifier == .invalid else { return }
+        guard isUpdatingLocation || isObservingNavigationStatus else { return }
+
+        backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(withName: "UITestMockRoute") { [weak self] in
+            self?.endBackgroundTask()
+        }
+    }
+
+    private func endBackgroundTask() {
+        guard backgroundTaskIdentifier != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+        backgroundTaskIdentifier = .invalid
+    }
+
+    private static let backgroundRouteStart = CLLocationCoordinate2D(
+        latitude: 55.751244,
+        longitude: 37.618423
+    )
+    private static let backgroundRouteBearingDegrees: CLLocationDirection = 18
+    private static let backgroundRouteStepMeters: Double = 20
+    private static let backgroundRouteIntervalSeconds: TimeInterval = 2
+    private static let backgroundRouteSpeedMetersPerSecond: CLLocationSpeed = 10
+
+    private static func coordinate(
+        from start: CLLocationCoordinate2D,
+        distanceMeters: Double,
+        bearingDegrees: CLLocationDirection
+    ) -> CLLocationCoordinate2D {
+        let earthRadius = 6_378_137.0
+        let bearing = bearingDegrees * .pi / 180
+        let latitudeRadians = start.latitude * .pi / 180
+        let longitudeRadians = start.longitude * .pi / 180
+        let angularDistance = distanceMeters / earthRadius
+
+        let newLatitude = asin(
+            sin(latitudeRadians) * cos(angularDistance) +
+            cos(latitudeRadians) * sin(angularDistance) * cos(bearing)
+        )
+        let newLongitude = longitudeRadians + atan2(
+            sin(bearing) * sin(angularDistance) * cos(latitudeRadians),
+            cos(angularDistance) - sin(latitudeRadians) * sin(newLatitude)
+        )
+
+        return CLLocationCoordinate2D(
+            latitude: newLatitude * 180 / .pi,
+            longitude: newLongitude * 180 / .pi
+        )
     }
 }
 

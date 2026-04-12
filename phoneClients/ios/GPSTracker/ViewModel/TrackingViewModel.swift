@@ -69,6 +69,8 @@ final class TrackingViewModel: ObservableObject {
     private var lastObservedFixStatus: LocationFixStatus?
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
     private var isAppActive = true
+    private var didEnterBackgroundWhileTracking = false
+    private var pendingForegroundRecoveryFix = false
 
     // MARK: - Initialization
 
@@ -137,6 +139,8 @@ final class TrackingViewModel: ObservableObject {
         isTracking = false
         sessionStartTime = nil
         currentSpeed = 0
+        didEnterBackgroundWhileTracking = false
+        pendingForegroundRecoveryFix = false
         syncNavigationStatusMonitoring()
 
         restartUploadLoopIfNeeded(forceImmediate: false)
@@ -199,6 +203,9 @@ final class TrackingViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                if self?.isTracking == true && self?.didEnterBackgroundWhileTracking == true {
+                    self?.pendingForegroundRecoveryFix = true
+                }
                 self?.isAppActive = true
                 self?.syncNavigationStatusMonitoring()
                 self?.endBackgroundUploadTask()
@@ -212,6 +219,7 @@ final class TrackingViewModel: ObservableObject {
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.isAppActive = false
+                self.didEnterBackgroundWhileTracking = self.isTracking
                 self.syncNavigationStatusMonitoring()
                 if !self.isTracking && self.bufferCount > 0 {
                     self.beginBackgroundUploadTaskIfNeeded()
@@ -305,6 +313,8 @@ final class TrackingViewModel: ObservableObject {
         lastObservedFixStatus = nil
         currentLocation = nil
         locationPresentation = TrackingLocationPresentation()
+        didEnterBackgroundWhileTracking = false
+        pendingForegroundRecoveryFix = false
     }
 
     private func restoreTrackingIfNeeded() {
@@ -339,6 +349,8 @@ final class TrackingViewModel: ObservableObject {
             bufferStore.replaceLastBufferedLocation(nil)
         }
 
+        didEnterBackgroundWhileTracking = false
+        pendingForegroundRecoveryFix = false
         locationService.setBackgroundTrackingEnabled(trackInBackground)
         subscribeToLocationUpdatesIfNeeded()
         locationService.startUpdatingLocation()
@@ -360,6 +372,8 @@ final class TrackingViewModel: ObservableObject {
                 snapshot,
                 degraded: fixStatus.quality == .trustedDegraded
             )
+            pendingForegroundRecoveryFix = false
+            didEnterBackgroundWhileTracking = false
         }
 
         refreshLocationPresentation(using: fixStatus)
@@ -493,21 +507,28 @@ final class TrackingViewModel: ObservableObject {
             return status
         }
 
-        if let lastTrustedLocation, snapshot.timestamp < lastTrustedLocation.timestamp {
-            status.quality = .suspect
-            status.issue = .timestampRegression
-            return status
-        }
+        let shouldBypassTrustedAnchorChecks =
+            pendingForegroundRecoveryFix &&
+            isTracking &&
+            lastTrustedLocation != nil
 
-        if let lastTrustedLocation {
-            let timeDelta = snapshot.timestamp.timeIntervalSince(lastTrustedLocation.timestamp)
-            if timeDelta > 0 {
-                let distance = snapshot.asCLLocation.distance(from: lastTrustedLocation.asCLLocation)
-                let speedKmh = (distance / timeDelta) * 3.6
-                if speedKmh > suspectTravelSpeedThresholdKmh {
-                    status.quality = .suspect
-                    status.issue = .impossibleJump
-                    return status
+        if !shouldBypassTrustedAnchorChecks {
+            if let lastTrustedLocation, snapshot.timestamp < lastTrustedLocation.timestamp {
+                status.quality = .suspect
+                status.issue = .timestampRegression
+                return status
+            }
+
+            if let lastTrustedLocation {
+                let timeDelta = snapshot.timestamp.timeIntervalSince(lastTrustedLocation.timestamp)
+                if timeDelta > 0 {
+                    let distance = snapshot.asCLLocation.distance(from: lastTrustedLocation.asCLLocation)
+                    let speedKmh = (distance / timeDelta) * 3.6
+                    if speedKmh > suspectTravelSpeedThresholdKmh {
+                        status.quality = .suspect
+                        status.issue = .impossibleJump
+                        return status
+                    }
                 }
             }
         }
@@ -565,6 +586,8 @@ final class TrackingViewModel: ObservableObject {
         isTracking = false
         sessionStartTime = nil
         currentSpeed = 0
+        didEnterBackgroundWhileTracking = false
+        pendingForegroundRecoveryFix = false
         restartUploadLoopIfNeeded(forceImmediate: bufferCount > 0)
         log("Suspended tracking runtime because authorization no longer allows location updates", level: .error, logger: logger)
     }
