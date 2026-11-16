@@ -272,11 +272,7 @@ struct TrackingLocationPresentation {
         if fixAge < 10 {
             return String(localized: "location.age.justNow")
         }
-        let formatter = DateComponentsFormatter()
-        formatter.unitsStyle = .full
-        formatter.allowedUnits = fixAge >= 3600 ? [.hour, .minute] : [.minute, .second]
-        formatter.maximumUnitCount = fixAge >= 3600 ? 2 : 1
-        return formatter.string(from: fixAge) ?? String(localized: "location.age.justNow")
+        return TrackingDurationFormatter.fixAge(fixAge) ?? String(localized: "location.age.justNow")
     }
 }
 
