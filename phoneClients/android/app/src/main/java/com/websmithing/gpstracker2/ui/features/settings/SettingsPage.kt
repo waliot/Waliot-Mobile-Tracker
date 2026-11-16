@@ -20,6 +20,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -132,7 +134,36 @@ fun SettingsPage(
         )
     }
     var initialState by remember(persistedState) { mutableStateOf(persistedState) }
-    var state by remember(persistedState) { mutableStateOf(persistedState) }
+    val formSaver = remember(validationMessages) {
+        listSaver<SettingsFormState, String>(
+            save = {
+                listOf(
+                    it.trackerIdentifier,
+                    it.uploadServer,
+                    it.uploadTimeInterval,
+                    it.bufferTimeInterval,
+                    it.bufferDistanceInterval,
+                    it.languageCode,
+                )
+            },
+            restore = {
+                validateSettingsFormState(
+                    SettingsFormState(
+                        trackerIdentifier = it[0],
+                        uploadServer = it[1],
+                        uploadTimeInterval = it[2],
+                        bufferTimeInterval = it[3],
+                        bufferDistanceInterval = it[4],
+                        languageCode = it[5],
+                    ),
+                    validationMessages,
+                )
+            },
+        )
+    }
+    var state by rememberSaveable(persistedState, stateSaver = formSaver) {
+        mutableStateOf(persistedState)
+    }
     val canSave by remember(state, initialState) {
         derivedStateOf {
             !state.hasSameInputs(initialState) && state.isValid

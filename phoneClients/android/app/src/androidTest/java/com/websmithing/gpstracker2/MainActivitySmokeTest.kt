@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso.pressBack
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository
@@ -29,6 +31,8 @@ import org.junit.rules.TestRule
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.junit.runners.model.Statement
+
+private const val SMOKE_UPLOAD_SERVER = "127.0.0.1:33334"
 
 @RunWith(AndroidJUnit4::class)
 class MainActivitySmokeTest {
@@ -53,6 +57,51 @@ class MainActivitySmokeTest {
         .outerRule(resetRule)
         .around(permissionRule)
         .around(composeRule)
+
+    @Test
+    fun unsaved_settings_survive_activity_recreation_but_are_discarded_on_close() {
+        openSettings()
+        replaceField(0, "waliot-rotation-draft")
+        replaceField(1, "127.0.0.1:33333")
+        replaceField(2, "9")
+        replaceField(3, "4")
+        replaceField(4, "250")
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsEnabled()
+
+        composeRule.activityRule.scenario.recreate()
+        waitForTag(UiTestTags.SETTINGS_CLOSE_BUTTON)
+        waitForFieldCount(5)
+        assertFieldContains(0, "waliot-rotation-draft")
+        assertFieldContains(1, "127.0.0.1:33333")
+        assertFieldContains(2, "9")
+        assertFieldContains(3, "4")
+        assertFieldContains(4, "250")
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).assertIsSelected()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsEnabled()
+
+        replaceField(2, "")
+        composeRule.activityRule.scenario.recreate()
+        waitForTag(UiTestTags.SETTINGS_CLOSE_BUTTON)
+        waitForFieldCount(5)
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsNotEnabled()
+        waitForText(composeRule.activity.getString(R.string.interval_error))
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_CLOSE_BUTTON).performClick()
+        waitForHomeScreen()
+        openSettings()
+        assertFieldContains(0, SettingsRepository.DEFAULT_TRACKER_IDENTIFIER)
+        assertFieldContains(1, SMOKE_UPLOAD_SERVER)
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsNotEnabled()
+    }
+
+    @Test
+    fun system_back_returns_from_settings_to_home() {
+        openSettings()
+        pressBack()
+        waitForHomeScreen()
+        composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertIsDisplayed()
+    }
 
     @Test
     fun first_launch_renders_home_controls_without_blocking_dialogs() {
@@ -135,7 +184,7 @@ class MainActivitySmokeTest {
     fun settings_close_without_save_keeps_previous_values() {
         val russianSettingsTitle = composeRule.activity.getString(R.string.settings)
         val persistedTrackerId = "waliot-smoke-close"
-        val persistedServer = "device.waliot.com:30032"
+        val persistedServer = SMOKE_UPLOAD_SERVER
         val persistedTimeInterval = "7"
         val persistedBufferTimeInterval = "3"
         val persistedBufferDistanceInterval = "180"
@@ -209,7 +258,7 @@ class MainActivitySmokeTest {
         val activity = composeRule.activity
         val continueLabel = activity.getString(R.string.permission_button_continue)
         val refreshedTrackerId = "waliot-smoke-02"
-        val refreshedServer = "device.waliot.com:30032"
+        val refreshedServer = SMOKE_UPLOAD_SERVER
         val refreshedTimeInterval = "9"
         val refreshedBufferTimeInterval = "4"
         val refreshedBufferDistanceInterval = "250"
@@ -268,7 +317,7 @@ class MainActivitySmokeTest {
         val intervalError = activity.getString(R.string.interval_error)
 
         val persistedTrackerId = "waliot-smoke-valid"
-        val persistedServer = "device.waliot.com:30032"
+        val persistedServer = SMOKE_UPLOAD_SERVER
         val persistedTimeInterval = "7"
         val persistedBufferTimeInterval = "3"
         val persistedBufferDistanceInterval = "180"
@@ -458,6 +507,7 @@ private class AppStateResetRule : TestRule {
                 context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
                     .clear()
+                    .putString(SettingsRepository.KEY_UPLOAD_SERVER, SMOKE_UPLOAD_SERVER)
                     .commit()
                 context.deleteDatabase("tracking-buffer.db")
                 AppCompatDelegate.setApplicationLocales(
