@@ -103,11 +103,7 @@ struct StatsView: View {
     }
 
     private var durationText: String {
-        let formatter = DateComponentsFormatter()
-        formatter.unitsStyle = .short
-        formatter.allowedUnits = [.hour, .minute, .second]
-        formatter.zeroFormattingBehavior = [.dropLeading, .pad]
-        return formatter.string(from: viewModel.sessionDuration) ?? String(localized: "stats.duration.zero")
+        TrackingDurationFormatter.sessionDuration(viewModel.sessionDuration) ?? String(localized: "stats.duration.zero")
     }
 
     private var lastUploadText: String {

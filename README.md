@@ -173,9 +173,9 @@ GPS Tracker consists of three main components:
 ### iOS Client
 
 #### Requirements
-- Xcode 16.2+
-- iOS 15.0+
-- Swift 5.8+
+- Xcode 26.1.1 (the version used by CI), on a compatible macOS version
+- iOS 17.0+ on devices; an iPhone 16 simulator for the default test scripts
+- The Swift compiler bundled with Xcode; the project uses Swift 5 language mode
 
 #### Installation
 
@@ -183,16 +183,23 @@ GPS Tracker consists of three main components:
 
 2. Select "Open a project or file"
 
-3. Navigate to `GpsTracker/phoneClients/ios-swift/GPSTracker.xcodeproj`
+3. Open `phoneClients/ios/GpsTracker.xcodeproj` and select the `GPSTracker` scheme.
 
-4. Update the server URL in `APIService.swift`:
-   ```swift
-   private var baseURL: URL {
-       return URL(string: "http://your-server.com/gpstracker/api/location")!
-   }
-   ```
+4. Select a simulator or configure your development signing team for a physical device.
 
-5. Build and run the application on your device
+5. Build and run the application. Configure the tracker identifier and Wialon IPS server
+   in the app's settings. The default server is `device.waliot.com:30032`.
+
+#### Verification
+
+From `phoneClients/ios`, run `./scripts/run-ios-coverage.sh` for the unit tests,
+UI smoke tests and coverage gates used by CI. Override `DESTINATION` to use a
+different installed simulator. The project requires a recent Xcode that supports
+its synchronized groups and Swift Testing tests; Xcode 15 cannot run this suite.
+
+`GPSTracker/PrivacyInfo.xcprivacy` declares the use of `UserDefaults` for the app's
+own settings. Before an App Store release, review data collection disclosures
+against the app's actual location uploads and App Store Connect privacy answers.
 
 ## Legacy Components
 
