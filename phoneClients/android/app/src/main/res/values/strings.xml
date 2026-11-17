@@ -3,6 +3,11 @@
     <string name="app_name">WALIOT.Tracker</string>
     <string name="splash_logo_text">tracker</string>
 
+    <!-- Map -->
+    <string name="map_loading">Loading map…</string>
+    <string name="map_load_failed">The map could not load. Check your connection and try again.</string>
+    <string name="map_retry">Retry</string>
+
     <!-- Permissions -->
     <string name="permission_rationale_foreground_location_title">Location permission is needed</string>
     <string name="permission_rationale_foreground_location_message">This app needs access to your location to track your position</string>

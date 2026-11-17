@@ -3,6 +3,11 @@
     <string name="app_name">WALIOT.Трекер</string>
     <string name="splash_logo_text">трекер</string>
 
+    <!-- Map -->
+    <string name="map_loading">Загрузка карты…</string>
+    <string name="map_load_failed">Карта не загрузилась. Проверьте подключение и повторите.</string>
+    <string name="map_retry">Повторить</string>
+
     <!-- Permissions -->
     <string name="permission_rationale_foreground_location_title">Требуется разрешение на определение местоположения</string>
     <string name="permission_rationale_foreground_location_message">Приложению требуется доступ к местоположению для отслеживания</string>

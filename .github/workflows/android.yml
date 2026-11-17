@@ -124,7 +124,7 @@ jobs:
         profile: pixel_7
         disable-animations: true
         emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
-        script: cd phoneClients/android && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.websmithing.gpstracker2.MainActivitySmokeTest,com.websmithing.gpstracker2.service.TrackingBufferStoreContractTest,com.websmithing.gpstracker2.repository.upload.UploadRepositorySocketContractTest
+        script: cd phoneClients/android && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.websmithing.gpstracker2.MapLoadingTest,com.websmithing.gpstracker2.MainActivitySmokeTest,com.websmithing.gpstracker2.service.TrackingBufferStoreContractTest,com.websmithing.gpstracker2.repository.upload.UploadRepositorySocketContractTest
 
     - name: Upload connected test reports
       if: always()
