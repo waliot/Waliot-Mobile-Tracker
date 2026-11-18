@@ -5,11 +5,16 @@ internal enum class MapLoadStatus { Loading, Ready, Failed }
 internal data class MapLoadState(
     val attempt: Int = 0,
     val status: MapLoadStatus = MapLoadStatus.Loading,
+    private val hasResourceError: Boolean = false,
 ) {
     fun failed(): MapLoadState =
         if (status == MapLoadStatus.Loading) copy(status = MapLoadStatus.Failed) else this
 
-    fun finished(): MapLoadState = copy(status = MapLoadStatus.Ready)
+    fun resourceFailed(): MapLoadState =
+        if (status == MapLoadStatus.Ready) this else copy(status = MapLoadStatus.Failed, hasResourceError = true)
+
+    fun finished(): MapLoadState =
+        if (hasResourceError) this else copy(status = MapLoadStatus.Ready)
 
     fun retry(): MapLoadState = MapLoadState(attempt = attempt + 1)
 }

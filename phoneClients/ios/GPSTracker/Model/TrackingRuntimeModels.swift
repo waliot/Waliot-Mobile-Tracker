@@ -266,13 +266,18 @@ struct TrackingLocationPresentation {
     var fixAge: TimeInterval?
 
     var ageDescription: String {
+        ageDescription(locale: .current)
+    }
+
+    func ageDescription(locale: Locale) -> String {
         guard let fixAge else {
-            return String(localized: "location.age.none")
+            return String(localized: LocalizedStringResource("location.age.none", locale: locale))
         }
         if fixAge < 10 {
-            return String(localized: "location.age.justNow")
+            return String(localized: LocalizedStringResource("location.age.justNow", locale: locale))
         }
-        return TrackingDurationFormatter.fixAge(fixAge) ?? String(localized: "location.age.justNow")
+        return TrackingDurationFormatter.fixAge(fixAge, locale: locale)
+            ?? String(localized: LocalizedStringResource("location.age.justNow", locale: locale))
     }
 }
 

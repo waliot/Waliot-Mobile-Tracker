@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-DEFAULT_CLASSES="com.websmithing.gpstracker2.MainActivitySmokeTest,com.websmithing.gpstracker2.service.TrackingBufferStoreContractTest,com.websmithing.gpstracker2.repository.upload.UploadRepositorySocketContractTest"
+DEFAULT_CLASSES="com.websmithing.gpstracker2.MapLoadingTest,com.websmithing.gpstracker2.SettingsRestorationTest,com.websmithing.gpstracker2.MainActivitySmokeTest,com.websmithing.gpstracker2.service.TrackingBufferStoreContractTest,com.websmithing.gpstracker2.repository.upload.UploadRepositorySocketContractTest"
 TEST_CLASSES="${SMOKE_TEST_CLASSES:-$DEFAULT_CLASSES}"
 ADB_SERIAL="${ADB_SERIAL:-emulator-5554}"
 BOOT_TIMEOUT_SECONDS="${BOOT_TIMEOUT_SECONDS:-120}"
@@ -107,7 +107,7 @@ prepare_device() {
 
 run_gradle_smoke() {
   cd "${PROJECT_DIR}"
-  ./gradlew --no-daemon :app:connectedDebugAndroidTest \
+  ANDROID_SERIAL="${ADB_SERIAL}" ./gradlew --no-daemon :app:connectedDebugAndroidTest \
     "-Pandroid.testInstrumentationRunnerArguments.class=${TEST_CLASSES}"
 }
 

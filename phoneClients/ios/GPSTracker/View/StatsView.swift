@@ -4,6 +4,7 @@ import SwiftUI
 
 struct StatsView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.locale) private var locale
     @EnvironmentObject private var viewModel: TrackingViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -103,7 +104,8 @@ struct StatsView: View {
     }
 
     private var durationText: String {
-        TrackingDurationFormatter.sessionDuration(viewModel.sessionDuration) ?? String(localized: "stats.duration.zero")
+        TrackingDurationFormatter.sessionDuration(viewModel.sessionDuration, locale: locale)
+            ?? String(localized: LocalizedStringResource("stats.duration.zero", locale: locale))
     }
 
     private var lastUploadText: String {

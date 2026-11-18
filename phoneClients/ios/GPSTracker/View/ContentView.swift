@@ -17,6 +17,7 @@ struct ContentView: View {
     }()
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.locale) private var locale
     @EnvironmentObject private var viewModel: TrackingViewModel
 
     @AppStorage(
@@ -324,8 +325,8 @@ struct ContentView: View {
 
     private var displayedLocationAgeText: String {
         permissionStateOverride == nil
-            ? viewModel.locationPresentation.ageDescription
-            : String(localized: "location.age.none")
+            ? viewModel.locationPresentation.ageDescription(locale: locale)
+            : TrackingLocationPresentation().ageDescription(locale: locale)
     }
 
     private var displayedAccuracyText: String {

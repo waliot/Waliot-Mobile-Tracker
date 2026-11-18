@@ -1,6 +1,7 @@
 package com.websmithing.gpstracker2
 
 import android.graphics.Color
+import android.util.Base64
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
@@ -36,12 +37,16 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.math.abs
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.maplibre.compose.camera.rememberCameraState
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView as NativeMapView
 
 @RunWith(AndroidJUnit4::class)
@@ -65,7 +70,7 @@ class MapLoadingTest {
             assertTrue(server.requests.any { it == "/style?_waliot_retry=1" })
             composeRule.onNodeWithTag(UiTestTags.MAP_LOAD_ERROR).assertDoesNotExist()
             composeRule.onNodeWithTag(UiTestTags.MAP_LOADING).assertDoesNotExist()
-            assertBackgroundRendered(originalMap)
+            assertTestColorRendered(originalMap)
 
             composeRule.mainClock.advanceTimeBy(30_000)
             composeRule.onNodeWithTag(UiTestTags.MAP_READY).assertIsDisplayed()
@@ -83,7 +88,7 @@ class MapLoadingTest {
             waitForTag(UiTestTags.MAP_LOAD_ERROR)
             composeRule.onNodeWithTag(UiTestTags.MAP_RETRY_BUTTON).performClick()
             waitForTag(UiTestTags.MAP_READY)
-            assertBackgroundRendered(nativeMap())
+            assertTestColorRendered(nativeMap())
         }
     }
 
@@ -133,15 +138,34 @@ class MapLoadingTest {
 
     @Test
     fun successful_style_with_unavailable_tiles_does_not_claim_ready() {
-        LocalStyleServer(StyleResponse.UnavailableTiles).use { server ->
+        assertTileRecovery(StyleResponse.RasterTiles)
+    }
+
+    @Test
+    fun unavailable_vector_tiles_recover_in_the_same_map() {
+        assertTileRecovery(StyleResponse.VectorTiles)
+    }
+
+    private fun assertTileRecovery(response: StyleResponse) {
+        LocalStyleServer(response).use { server ->
             showMap(server)
             composeRule.waitUntil(15_000) { server.requests.any { it.startsWith("/tile/") } }
             composeRule.mainClock.advanceTimeBy(30_000)
             waitForTag(UiTestTags.MAP_LOAD_ERROR)
             composeRule.onNodeWithTag(UiTestTags.MAP_READY).assertDoesNotExist()
+            val originalView = nativeMap()
+            lateinit var map: MapLibreMap
+            composeRule.runOnIdle {
+                originalView.getMapAsync { map = it }
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(10.0, 15.0), 3.5))
+            }
+            val camera = composeRule.runOnIdle { map.cameraPosition }
             composeRule.onNodeWithTag(UiTestTags.MAP_RETRY_BUTTON).performClick()
             waitForTag(UiTestTags.MAP_READY)
-            assertBackgroundRendered(nativeMap())
+            assertSame(originalView, nativeMap())
+            assertTrue(server.requests.contains("/style?_waliot_retry=1"))
+            composeRule.runOnIdle { assertEquals(camera, map.cameraPosition) }
+            assertTestColorRendered(originalView)
         }
     }
 
@@ -179,7 +203,7 @@ class MapLoadingTest {
         checkNotNull(find(composeRule.activity.window.decorView))
     }
 
-    private fun assertBackgroundRendered(map: NativeMapView) {
+    private fun assertTestColorRendered(map: NativeMapView) {
         val center = composeRule.runOnIdle {
             assertTrue(map.width > 0 && map.height > 0)
             IntArray(2).also {
@@ -203,7 +227,7 @@ class MapLoadingTest {
     }
 }
 
-private enum class StyleResponse { Invalid, Stall, InvalidThenStall, UnavailableTiles }
+private enum class StyleResponse { Invalid, Stall, InvalidThenStall, RasterTiles, VectorTiles }
 
 private class LocalStyleServer(private val response: StyleResponse) : Closeable {
     private val socket = ServerSocket(0, 20, InetAddress.getByName("127.0.0.1"))
@@ -236,36 +260,32 @@ private class LocalStyleServer(private val response: StyleResponse) : Closeable 
                 while (!reader.readLine().isNullOrEmpty()) { /* Consume HTTP headers. */ }
                 requests.add(target)
                 val isRetry = target.startsWith("/style?")
-                val body: String
-                val status: String
-                when {
-                    target.startsWith("/tile/") -> {
-                        status = "503 Service Unavailable"
-                        body = "tiles unavailable"
+                val isTile = target.startsWith("/tile/")
+                val serveTile = isTile && requests.contains("/style?_waliot_retry=1")
+                val status = if (isTile && !serveTile) "503 Service Unavailable" else "200 OK"
+                val contentType: String
+                val bytes: ByteArray
+                if (isTile) {
+                    val raster = response == StyleResponse.RasterTiles
+                    contentType = if (raster) "image/png" else "application/vnd.mapbox-vector-tile"
+                    bytes = if (serveTile) Base64.decode(if (raster) RASTER_TILE else VECTOR_TILE, Base64.DEFAULT)
+                        else ByteArray(0)
+                } else {
+                    contentType = "application/json"
+                    val body = when {
+                        response == StyleResponse.RasterTiles -> tileStyle("raster")
+                        response == StyleResponse.VectorTiles -> tileStyle("vector")
+                        response == StyleResponse.InvalidThenStall && target == "/style?_waliot_retry=1" ||
+                            response == StyleResponse.Stall && !isRetry -> {
+                            releaseStalledRequests.await(60, TimeUnit.SECONDS)
+                            return
+                        }
+                        isRetry -> BACKGROUND_STYLE
+                        else -> "invalid style JSON"
                     }
-                    response == StyleResponse.InvalidThenStall && target == "/style?_waliot_retry=1" -> {
-                        releaseStalledRequests.await(60, TimeUnit.SECONDS)
-                        return
-                    }
-                    isRetry -> {
-                        status = "200 OK"
-                        body = BACKGROUND_STYLE
-                    }
-                    response == StyleResponse.Stall -> {
-                        releaseStalledRequests.await(60, TimeUnit.SECONDS)
-                        return
-                    }
-                    response == StyleResponse.Invalid || response == StyleResponse.InvalidThenStall -> {
-                        status = "200 OK"
-                        body = "invalid style JSON"
-                    }
-                    else -> {
-                        status = "200 OK"
-                        body = """{"version":8,"sources":{"tiles":{"type":"raster","tiles":["$origin/tile/{z}/{x}/{y}.png"],"tileSize":256,"minzoom":0,"maxzoom":0}},"layers":[{"id":"tiles","type":"raster","source":"tiles"}]}"""
-                    }
+                    bytes = body.toByteArray(Charsets.UTF_8)
                 }
-                val bytes = body.toByteArray(Charsets.UTF_8)
-                val headers = "HTTP/1.1 $status\r\nContent-Type: application/json\r\nContent-Length: ${bytes.size}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n"
+                val headers = "HTTP/1.1 $status\r\nContent-Type: $contentType\r\nContent-Length: ${bytes.size}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n"
                 it.getOutputStream().apply {
                     write(headers.toByteArray(Charsets.US_ASCII))
                     write(bytes)
@@ -281,6 +301,13 @@ private class LocalStyleServer(private val response: StyleResponse) : Closeable 
         }
     }
 
+    private fun tileStyle(type: String): String {
+        val source = """{"type":"$type","tiles":["$origin/tile/{z}/{x}/{y}"],"minzoom":0,"maxzoom":0}"""
+        val layer = if (type == "raster") """{"id":"tile","type":"raster","source":"tiles"}"""
+            else """{"id":"tile","type":"fill","source":"tiles","source-layer":"ground","paint":{"fill-color":"#2468ac"}}"""
+        return """{"version":8,"sources":{"tiles":$source},"layers":[$layer]}"""
+    }
+
     override fun close() {
         closed.set(true)
         socket.close()
@@ -292,6 +319,9 @@ private class LocalStyleServer(private val response: StyleResponse) : Closeable 
     }
 
     private companion object {
+        // One opaque #2468ac pixel, and a z0 vector tile with a full-tile polygon in layer "ground".
+        const val RASTER_TILE = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNQyVgDAAHsATleaPIZAAAAAElFTkSuQmCC"
+        const val VECTOR_TILE = "GiEKBmdyb3VuZBISGAMiDgkAABqAQAAAgED/PwAPKIAgeAI="
         const val BACKGROUND_STYLE = """{"version":8,"sources":{},"layers":[{"id":"background","type":"background","paint":{"background-color":"#2468ac"}}]}"""
     }
 }

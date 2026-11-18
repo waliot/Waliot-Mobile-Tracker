@@ -1,13 +1,17 @@
 package com.websmithing.gpstracker2.ui.features.settings
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -104,6 +109,17 @@ fun SettingsPage(
     val bufferTimeInterval by viewModel.bufferTimeInterval.observeAsState()
     val bufferDistanceInterval by viewModel.bufferDistanceInterval.observeAsState()
     val language by viewModel.language.observeAsState()
+
+    // Restore the saved draft only after the new ViewModel has loaded its full baseline.
+    // Otherwise each asynchronously loaded setting invalidates rememberSaveable's inputs.
+    if (trackerIdentifier == null || uploadServer == null || uploadTimeInterval == null ||
+        bufferTimeInterval == null || bufferDistanceInterval == null || language == null
+    ) {
+        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     val validationMessages = remember(context) {
         SettingsValidationMessages(
@@ -257,7 +273,7 @@ private fun Page(
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
-        modifier = modifier.unfocus(LocalFocusManager.current)
+        modifier = modifier.imePadding().unfocus(LocalFocusManager.current)
     ) { paddingValues ->
         SettingsForm(
             state = state,

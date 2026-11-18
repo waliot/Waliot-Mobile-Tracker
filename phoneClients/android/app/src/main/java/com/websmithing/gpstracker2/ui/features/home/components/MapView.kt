@@ -18,7 +18,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,10 +34,6 @@ import com.websmithing.gpstracker2.R
 import com.websmithing.gpstracker2.ui.UiTestTags
 import kotlinx.coroutines.delay
 import org.maplibre.compose.camera.CameraState
-import org.maplibre.compose.map.MapOptions
-import org.maplibre.compose.map.MaplibreMap
-import org.maplibre.compose.map.OrnamentOptions
-import org.maplibre.compose.style.BaseStyle
 
 const val MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
 const val DEFAULT_MAP_ZOOM = 15.0
@@ -51,16 +46,13 @@ fun MapView(
     styleUrl: String = MAP_STYLE_URL,
 ) {
     var loadState by remember(styleUrl) { mutableStateOf(MapLoadState()) }
-    // MapLibre Compose 0.12.1 remembers its callbacks independently of these lambdas.
-    val onLoadFailed by rememberUpdatedState { loadState = loadState.failed() }
-    val onLoadFinished by rememberUpdatedState { loadState = loadState.finished() }
-
+    val attempt = loadState.attempt
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner, styleUrl, loadState.attempt, loadState.status) {
         if (loadState.status == MapLoadStatus.Loading) {
             lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 delay(MAP_LOAD_TIMEOUT_MS)
-                loadState = loadState.failed()
+                if (loadState.attempt == attempt) loadState = loadState.failed()
             }
         }
     }
@@ -71,17 +63,11 @@ fun MapView(
             else Modifier
         ),
     ) {
-        MaplibreMap(
-            baseStyle = BaseStyle.Uri(mapStyleUrlForAttempt(styleUrl, loadState.attempt)),
+        ObservedMap(
             cameraState = cameraState,
-            options = MapOptions(
-                ornamentOptions = OrnamentOptions.AllDisabled.copy(
-                    isAttributionEnabled = true,
-                    attributionAlignment = Alignment.BottomStart,
-                ),
-            ),
-            onMapLoadFailed = { onLoadFailed() },
-            onMapLoadFinished = { onLoadFinished() },
+            styleUri = mapStyleUrlForAttempt(styleUrl, attempt),
+            onError = { if (loadState.attempt == attempt) loadState = loadState.resourceFailed() },
+            onFinished = { if (loadState.attempt == attempt) loadState = loadState.finished() },
         )
 
         if (loadState.status != MapLoadStatus.Ready) {

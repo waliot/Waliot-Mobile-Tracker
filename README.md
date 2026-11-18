@@ -152,23 +152,32 @@ GPS Tracker consists of three main components:
 ### Android Client
 
 #### Requirements
-- Android Studio 4.0+
-- Android SDK 21+
+- JDK 17 and Android SDK 36 (the versions used by CI)
+- Android 8.0 / API 26 or newer on devices; the app targets API 36
+- Android Studio compatible with the project's Gradle wrapper and Android Gradle Plugin
 
-#### Installation (Android app coming soon to Google Play)
+#### Installation
 
 1. Open Android Studio
 
 2. Select "Open an existing project"
 
-3. Navigate to `GpsTracker/phoneClients/android-kotlin`
+3. Open `phoneClients/android`.
 
-4. Update the server URL in `Constants.kt`:
-   ```kotlin
-   const val SERVER_URL = "http://your-server.com/gpstracker"
-   ```
+4. Build and run the application. Configure the tracker identifier and Wialon IPS server
+   in the app's settings. The default server is `device.waliot.com:30032`.
 
-5. Build and run the application on your device
+#### Verification
+
+From `phoneClients/android`, run `./gradlew verifyQualityGates` for unit tests,
+coverage gates, lint, debug/release APKs and the instrumentation test APK.
+Start a dedicated emulator, then run `./scripts/run-smoke-local.sh`; set `ADB_SERIAL`
+to select its serial. The same script runs in CI on an API 36 phone and tablet.
+It includes map loading/retry, settings restoration, tracking,
+persistent queue and local Wialon socket contract tests.
+
+Release APKs are unsigned. `./gradlew :app:bundleRelease` produces an unsigned AAB
+for the separate signing and store upload process.
 
 ### iOS Client
 
@@ -200,6 +209,25 @@ its synchronized groups and Swift Testing tests; Xcode 15 cannot run this suite.
 `GPSTracker/PrivacyInfo.xcprivacy` declares the use of `UserDefaults` for the app's
 own settings. Before an App Store release, review data collection disclosures
 against the app's actual location uploads and App Store Connect privacy answers.
+
+### Release verification
+
+The next release versions are Android **2.1.1 (9)** and iOS **2.1.2 (212)**.
+After the automated gates, verify an update over the previous store build on
+real Android and iOS devices: preserved settings/queued points, location permission
+changes, foreground/background tracking, offline buffering and replay after reconnect.
+Check map recovery after a network outage without interrupting tracking. Simulator
+tests use controlled location/transport fixtures and do not replace these checks.
+
+For an unsigned iOS device build, run from `phoneClients/ios`:
+
+```sh
+xcodebuild -project GpsTracker.xcodeproj -scheme GPSTracker \
+  -configuration Release -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO build
+```
+
+Final signing, store privacy declarations and uploads are separate from these
+repository checks. No store publication is performed by the CI workflows.
 
 ## Legacy Components
 

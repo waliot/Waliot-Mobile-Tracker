@@ -94,7 +94,11 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        api-level: [35, 36]
+        include:
+          - api-level: 36
+            profile: pixel_7
+          - api-level: 36
+            profile: pixel_tablet
     steps:
     - uses: actions/checkout@v4
 
@@ -121,14 +125,14 @@ jobs:
         api-level: ${{ matrix.api-level }}
         target: google_apis
         arch: x86_64
-        profile: pixel_7
+        profile: ${{ matrix.profile }}
         disable-animations: true
         emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
-        script: cd phoneClients/android && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.websmithing.gpstracker2.MapLoadingTest,com.websmithing.gpstracker2.MainActivitySmokeTest,com.websmithing.gpstracker2.service.TrackingBufferStoreContractTest,com.websmithing.gpstracker2.repository.upload.UploadRepositorySocketContractTest
+        script: cd phoneClients/android && ./scripts/run-smoke-local.sh
 
     - name: Upload connected test reports
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: waliot-tracker-connected-test-reports-api-${{ matrix.api-level }}
+        name: waliot-tracker-connected-test-reports-api-${{ matrix.api-level }}-${{ matrix.profile }}
         path: phoneClients/android/app/build/reports/androidTests/connected

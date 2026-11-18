@@ -30,6 +30,13 @@ class MapLoadingTest {
     }
 
     @Test
+    fun `finished map with a failed resource still needs a retry`() {
+        val failed = MapLoadState().resourceFailed()
+        assertEquals(MapLoadStatus.Failed, failed.finished().status)
+        assertEquals(MapLoadStatus.Ready, failed.retry().finished().status)
+    }
+
+    @Test
     fun `each retry changes style URI again`() {
         val secondRetry = MapLoadState().failed().retry().failed().retry()
         assertEquals(MapLoadStatus.Loading, secondRetry.status)

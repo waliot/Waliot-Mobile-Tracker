@@ -6,6 +6,17 @@ final class GPSTrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testDurationUsesSelectedAppLanguageInsteadOfSystemLanguage() throws {
+        let app = launchApp(resetState: true, environment: ["UITEST_APP_LANG": "en"])
+        let stats = app.buttons["home.open.stats"]
+        XCTAssertTrue(stats.waitForExistence(timeout: 5))
+        stats.tap()
+        let duration = app.staticTexts["stats.value.totalDuration"]
+        XCTAssertTrue(duration.waitForExistence(timeout: 5))
+        XCTAssertEqual(duration.label, "0 sec")
+    }
+
+    @MainActor
     func testHomeTrackingAndStatsFlowSmoke() throws {
         let app = launchApp(resetState: true)
 

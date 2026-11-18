@@ -2,6 +2,9 @@ package com.websmithing.gpstracker2
 
 import android.Manifest
 import android.content.Context
+import android.os.Build
+import android.os.ParcelFileDescriptor
+import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.SemanticsNodeInteractionCollection
@@ -17,16 +20,19 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.pressBack
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository
 import com.websmithing.gpstracker2.ui.UiTestTags
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assume.assumeTrue
 import org.junit.rules.TestRule
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
@@ -59,6 +65,72 @@ class MainActivitySmokeTest {
         .around(composeRule)
 
     @Test
+    fun tablet_rotation_keeps_home_controls_and_unsaved_settings_accessible() {
+        assumeTrue(Build.VERSION.SDK_INT >= 36)
+        assumeTrue(composeRule.activity.resources.configuration.smallestScreenWidthDp >= 600)
+
+        val activity = composeRule.activity
+        val resolver = activity.contentResolver
+        val originalAutoRotation = Settings.System.getString(resolver, Settings.System.ACCELEROMETER_ROTATION)
+        val originalUserRotation = Settings.System.getString(resolver, Settings.System.USER_ROTATION)
+        val originalRotation = checkNotNull(activity.display).rotation
+        val originalOrientation = activity.resources.configuration.orientation
+        val originalWidth = activity.resources.configuration.screenWidthDp
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+
+        fun setSystemSetting(name: String, value: String?) {
+            val command = if (value == null) "settings delete system $name"
+                else "settings put system $name $value"
+            ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use {
+                it.readBytes()
+            }
+        }
+
+        try {
+            waitForHomeScreen()
+            setSystemSetting(Settings.System.ACCELEROMETER_ROTATION, "0")
+            setSystemSetting(Settings.System.USER_ROTATION, ((originalRotation + 1) % 4).toString())
+            // Wait for an actual configuration/size change, not merely an activity recreation.
+            composeRule.waitUntil(timeoutMillis = UI_TIMEOUT_MS) {
+                val configuration = composeRule.activity.resources.configuration
+                configuration.orientation != originalOrientation && configuration.screenWidthDp != originalWidth
+            }
+            waitForHomeScreen()
+            composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertIsDisplayed().assertIsEnabled()
+            composeRule.onNodeWithTag(UiTestTags.TRACKING_BUTTON_STOP).assertIsDisplayed()
+
+            openSettings()
+            replaceField(0, "waliot-tablet-rotation-draft")
+            replaceField(1, "127.0.0.1:33333")
+            replaceField(2, "9")
+            replaceField(3, "4")
+            replaceField(4, "250")
+            composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsDisplayed().assertIsEnabled()
+
+            setSystemSetting(Settings.System.USER_ROTATION, originalRotation.toString())
+            composeRule.waitUntil(timeoutMillis = UI_TIMEOUT_MS) {
+                val configuration = composeRule.activity.resources.configuration
+                configuration.orientation == originalOrientation && configuration.screenWidthDp == originalWidth
+            }
+            waitForTag(UiTestTags.SETTINGS_CLOSE_BUTTON)
+            waitForFieldCount(5)
+            assertFieldContains(0, "waliot-tablet-rotation-draft")
+            assertFieldContains(1, "127.0.0.1:33333")
+            assertFieldContains(2, "9")
+            assertFieldContains(3, "4")
+            assertFieldContains(4, "250")
+            composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsDisplayed().assertIsEnabled()
+            composeRule.onNodeWithTag(UiTestTags.SETTINGS_CLOSE_BUTTON).assertIsDisplayed().performClick()
+            waitForHomeScreen()
+            composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertIsDisplayed().assertIsEnabled()
+            composeRule.onNodeWithTag(UiTestTags.TRACKING_BUTTON_STOP).assertIsDisplayed()
+        } finally {
+            setSystemSetting(Settings.System.USER_ROTATION, originalUserRotation)
+            setSystemSetting(Settings.System.ACCELEROMETER_ROTATION, originalAutoRotation)
+        }
+    }
+
+    @Test
     fun unsaved_settings_survive_activity_recreation_but_are_discarded_on_close() {
         openSettings()
         replaceField(0, "waliot-rotation-draft")
@@ -66,7 +138,7 @@ class MainActivitySmokeTest {
         replaceField(2, "9")
         replaceField(3, "4")
         replaceField(4, "250")
-        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).performScrollTo().assertIsDisplayed().performClick()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsEnabled()
 
         composeRule.activityRule.scenario.recreate()
@@ -155,7 +227,7 @@ class MainActivitySmokeTest {
         waitForTag(UiTestTags.HOME_SETTINGS_BUTTON)
         openSettings()
         replaceField(0, "waliot-language-smoke")
-        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).performScrollTo().assertIsDisplayed().performClick()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsEnabled().performClick()
 
         waitForHomeScreen()
@@ -208,7 +280,7 @@ class MainActivitySmokeTest {
         replaceField(2, "9")
         replaceField(3, "4")
         replaceField(4, "250")
-        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).performScrollTo().assertIsDisplayed().performClick()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_CLOSE_BUTTON).assertIsDisplayed().performClick()
 
         waitForHomeScreen()

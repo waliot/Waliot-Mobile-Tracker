@@ -56,4 +56,24 @@ final class TrackingDurationFormatterTests: XCTestCase {
         XCTAssertEqual(TrackingDurationFormatter.fixAge(3600000, locale: russian), "1\u{00a0}000 часов")
         XCTAssertEqual(TrackingDurationFormatter.fixAge(3600000, locale: english), "1,000 hours")
     }
+
+    func testLocationAgePresentationUsesProvidedLanguage() {
+        let presentation = TrackingLocationPresentation(fixAge: 3932)
+        XCTAssertEqual(presentation.ageDescription(locale: english), "1 hour 5 minutes")
+        XCTAssertEqual(presentation.ageDescription(locale: russian), "1 час 5 минут")
+    }
+
+    func testMissingLocationAgeUsesProvidedLanguage() {
+        let presentation = TrackingLocationPresentation(fixAge: nil)
+        XCTAssertEqual(presentation.ageDescription(locale: english), "No data")
+        XCTAssertEqual(presentation.ageDescription(locale: russian), "Нет данных")
+    }
+
+    func testFreshLocationAgeUsesProvidedLanguage() {
+        for age in [0.0, 9.999] {
+            let presentation = TrackingLocationPresentation(fixAge: age)
+            XCTAssertEqual(presentation.ageDescription(locale: english), "Just now")
+            XCTAssertEqual(presentation.ageDescription(locale: russian), "Только что")
+        }
+    }
 }
