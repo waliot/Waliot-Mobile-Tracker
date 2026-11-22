@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.mutableStateOf
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.websmithing.gpstracker2.ui.UiTestTags
@@ -25,6 +26,7 @@ import com.websmithing.gpstracker2.ui.features.home.components.MapView
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButton
 import com.websmithing.gpstracker2.ui.features.home.components.TrackingButtonState
 import com.websmithing.gpstracker2.ui.theme.WaliotTheme
+import com.websmithing.gpstracker2.util.mapHttpClient
 import java.io.Closeable
 import java.io.IOException
 import java.net.InetAddress
@@ -40,6 +42,7 @@ import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,12 +50,94 @@ import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.module.http.HttpRequestUtil
+import org.maplibre.android.offline.OfflineManager
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.Protocol
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.maplibre.android.maps.MapView as NativeMapView
 
 @RunWith(AndroidJUnit4::class)
 class MapLoadingTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun bundled_osm_style_retries_renders_and_reuses_cached_tiles() {
+        val requests = ConcurrentLinkedQueue<Request>()
+        val available = AtomicBoolean()
+        val visible = mutableStateOf(true)
+        clearMapCache()
+        // Replace only transport: exercise the bundled style, production HTTP headers,
+        // native rendering and disk cache without calling the public OSM service.
+        HttpRequestUtil.setOkHttpClient(mapHttpClient().newBuilder().addInterceptor { chain ->
+            val request = chain.request()
+            requests.add(request)
+            val success = available.get()
+            Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                .code(if (success) 200 else 503).message(if (success) "OK" else "Unavailable")
+                .header("Cache-Control", if (success) "public, max-age=604800" else "no-store")
+                .body(
+                    (if (success) Base64.decode(LocalStyleServer.RASTER_TILE, Base64.DEFAULT) else ByteArray(0))
+                        .toResponseBody("image/png".toMediaType()),
+                ).build()
+        }.build())
+        try {
+            composeRule.setContent {
+                WaliotTheme {
+                    if (visible.value) MapView(cameraState = rememberCameraState())
+                }
+            }
+            waitForTag(UiTestTags.MAP_LOAD_ERROR)
+            val original = nativeMap()
+            available.set(true)
+            composeRule.onNodeWithTag(UiTestTags.MAP_RETRY_BUTTON).performClick()
+            waitForTag(UiTestTags.MAP_READY)
+            assertSame(original, nativeMap())
+            assertTestColorRendered(original)
+            composeRule.runOnIdle {
+                original.getMapAsync { assertEquals(0, it.prefetchZoomDelta) }
+            }
+            assertTrue(requests.isNotEmpty())
+            requests.forEach {
+                assertEquals("tile.openstreetmap.org", it.url.host)
+                assertEquals("https", it.url.scheme)
+                assertTrue(it.url.encodedPath.endsWith(".png"))
+                assertNull(it.url.query)
+                assertTrue(it.header("User-Agent")!!.startsWith("WaliotTracker/"))
+                assertNull(it.header("Cache-Control"))
+                assertNull(it.header("Pragma"))
+            }
+
+            val requestCount = requests.size
+            composeRule.runOnIdle { visible.value = false }
+            composeRule.waitForIdle()
+            composeRule.runOnIdle { visible.value = true }
+            waitForTag(UiTestTags.MAP_READY)
+            assertTestColorRendered(nativeMap())
+            assertEquals("Reopening the map must reuse fresh tiles", requestCount, requests.size)
+        } finally {
+            composeRule.runOnIdle { visible.value = false }
+            composeRule.waitForIdle()
+            clearMapCache()
+            HttpRequestUtil.setOkHttpClient(mapHttpClient())
+        }
+    }
+
+    private fun clearMapCache() {
+        val complete = CountDownLatch(1)
+        val errors = ConcurrentLinkedQueue<String>()
+        composeRule.runOnIdle {
+            OfflineManager.getInstance(composeRule.activity).clearAmbientCache(object : OfflineManager.FileSourceCallback {
+                override fun onSuccess() { complete.countDown() }
+                override fun onError(message: String) { errors.add(message); complete.countDown() }
+            })
+        }
+        assertTrue("Map cache operation timed out", complete.await(10, TimeUnit.SECONDS))
+        assertTrue(errors.toString(), errors.isEmpty())
+    }
 
     @Test
     fun failed_style_retries_in_same_native_view_and_renders_successful_style() {
@@ -318,7 +403,7 @@ private class LocalStyleServer(private val response: StyleResponse) : Closeable 
         workers.awaitTermination(1, TimeUnit.SECONDS)
     }
 
-    private companion object {
+    companion object {
         // One opaque #2468ac pixel, and a z0 vector tile with a full-tile polygon in layer "ground".
         const val RASTER_TILE = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNQyVgDAAHsATleaPIZAAAAAElFTkSuQmCC"
         const val VECTOR_TILE = "GiEKBmdyb3VuZBISGAMiDgkAABqAQAAAgED/PwAPKIAgeAI="

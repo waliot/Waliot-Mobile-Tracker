@@ -44,6 +44,12 @@ class MapLoadingTest {
     }
 
     @Test
+    fun `retry keeps asset paths loadable`() {
+        assertEquals("asset://map_osm.json", mapStyleUrlForAttempt("asset://map_osm.json", 1))
+        assertEquals("asset://map_osm.json", mapStyleUrlForAttempt("asset://map_osm.json", 2))
+    }
+
+    @Test
     fun `initial load preserves original URI including query and fragment`() {
         val original = "https://example.org/a%20b?key=a%2Fb#view"
         assertEquals(original, mapStyleUrlForAttempt(original, 0))

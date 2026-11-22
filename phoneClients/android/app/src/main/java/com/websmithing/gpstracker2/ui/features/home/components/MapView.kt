@@ -35,7 +35,7 @@ import com.websmithing.gpstracker2.ui.UiTestTags
 import kotlinx.coroutines.delay
 import org.maplibre.compose.camera.CameraState
 
-const val MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+const val MAP_STYLE_URL = "asset://map_osm.json"
 const val DEFAULT_MAP_ZOOM = 15.0
 private const val MAP_LOAD_TIMEOUT_MS = 25_000L
 
@@ -66,6 +66,7 @@ fun MapView(
         ObservedMap(
             cameraState = cameraState,
             styleUri = mapStyleUrlForAttempt(styleUrl, attempt),
+            attempt = attempt,
             onError = { if (loadState.attempt == attempt) loadState = loadState.resourceFailed() },
             onFinished = { if (loadState.attempt == attempt) loadState = loadState.finished() },
         )

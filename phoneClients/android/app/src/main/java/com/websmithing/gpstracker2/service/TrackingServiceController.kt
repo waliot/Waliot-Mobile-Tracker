@@ -15,10 +15,15 @@ interface TrackingServiceController {
 
 @Singleton
 class DefaultTrackingServiceController @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val trackingPermissionChecker: TrackingPermissionChecker,
 ) : TrackingServiceController {
 
     override fun startTracking() {
+        // Refuse before requesting an FGS: stopping it from onStartCommand is too late
+        // on devices that enforce the foreground-promotion timeout after permission loss.
+        if (!trackingPermissionChecker.canStartTrackingService()) return
+
         Intent(context, TrackingService::class.java).also { intent ->
             intent.action = TrackingService.ACTION_START_SERVICE
             context.startForegroundService(intent)

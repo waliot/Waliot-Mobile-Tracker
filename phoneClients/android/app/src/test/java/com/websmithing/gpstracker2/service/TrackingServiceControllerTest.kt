@@ -10,10 +10,23 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoMoreInteractions
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import kotlin.test.assertSame
 
 class TrackingServiceControllerTest {
+
+    @Test
+    fun `restoring tracking after permission revoke never requests a foreground service`() {
+        val context = mock<Context>()
+        val permissions = TrackingPermissionChecker(36, { false }, { false })
+        val controller = DefaultTrackingServiceController(context, permissions)
+
+        mockConstruction(Intent::class.java).use {
+            controller.ensureTrackingRunning()
+            verifyNoInteractions(context)
+        }
+    }
 
     @Test
     fun `startTracking dispatches foreground start intent with start action`() {
@@ -72,7 +85,10 @@ class TrackingServiceControllerTest {
         action: DefaultTrackingServiceController.() -> Unit,
         assertions: (constructedIntent: Intent, constructorArgs: List<Any?>) -> Unit
     ) {
-        val controller = DefaultTrackingServiceController(context)
+        val controller = DefaultTrackingServiceController(
+            context,
+            TrackingPermissionChecker(36, { true }, { true }),
+        )
         val constructorArgs = mutableListOf<List<Any?>>()
 
         mockConstruction(Intent::class.java) { _, constructionContext ->

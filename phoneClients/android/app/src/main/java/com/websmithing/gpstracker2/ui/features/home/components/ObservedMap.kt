@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +29,7 @@ private val resetStyle = BaseStyle.Uri("asset://map_load_reset.json")
 internal fun ObservedMap(
     cameraState: CameraState,
     styleUri: String,
+    attempt: Int,
     onError: () -> Unit,
     onFinished: () -> Unit,
 ) {
@@ -51,16 +51,13 @@ internal fun ObservedMap(
             baseStyle = baseStyle,
             cameraState = cameraState,
             options = MapOptions(
-                ornamentOptions = OrnamentOptions.AllDisabled.copy(
-                    isAttributionEnabled = true,
-                    attributionAlignment = Alignment.BottomStart,
-                ),
+                ornamentOptions = OrnamentOptions.AllDisabled,
             ),
         )
     }
 
     val view = nativeView ?: return
-    DisposableEffect(view, styleUri) {
+    DisposableEffect(view, styleUri, attempt) {
         var disposed = false
         var map: MapLibreMap? = null
         var resetting = true
@@ -115,6 +112,7 @@ internal fun ObservedMap(
         view.getMapAsync {
             if (!disposed) {
                 map = it
+                it.setPrefetchZoomDelta(0)
                 // Loading an asset URI cancels the previous style request. Rendering
                 // it without sources also retires failed tiles before their URLs are retried.
                 baseStyle = resetStyle

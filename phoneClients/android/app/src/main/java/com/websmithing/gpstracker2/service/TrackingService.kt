@@ -69,6 +69,7 @@ class TrackingService : Service() {
         const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
         const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
         const val ACTION_REFRESH_SERVICE = "ACTION_REFRESH_SERVICE"
+        const val ACTION_RESTORE_SERVICE = "ACTION_RESTORE_SERVICE"
 
         private val _bufferCount = MutableStateFlow(0)
         val bufferCount: StateFlow<Int> = _bufferCount
@@ -124,7 +125,7 @@ class TrackingService : Service() {
             ACTION_START_SERVICE -> handleStartService()
             ACTION_STOP_SERVICE -> handleStopService()
             ACTION_REFRESH_SERVICE -> handleRefreshService()
-            else -> handleDefaultAction()
+            else -> handleRestoreService()
         }
         return START_STICKY
     }
@@ -164,8 +165,21 @@ class TrackingService : Service() {
         syncServiceLifecycleWithRuntime()
     }
 
-    private fun handleDefaultAction() {
-        handleStartService()
+    private fun handleRestoreService() {
+        if (settingsRepository.peekTrackingState()) {
+            handleStartService()
+            return
+        }
+
+        // An alarm/sticky restart is not a new user Start. Resume only the pending
+        // uploads after Stop, including when the old service is still alive.
+        trackingRuntime.stop()
+        if (!trackingPermissionChecker.canStartTrackingService()) {
+            stopSelf()
+            return
+        }
+        trackingRuntime.refresh()
+        syncServiceLifecycleWithRuntime()
     }
 
     //endregion onStartCommand
@@ -205,7 +219,7 @@ class TrackingService : Service() {
 
     private fun createRestartPendingIntent(): PendingIntent {
         val restartServiceIntent = Intent(applicationContext, TrackingService::class.java).apply {
-            action = ACTION_START_SERVICE
+            action = ACTION_RESTORE_SERVICE
         }
         return PendingIntent.getService(
             applicationContext,

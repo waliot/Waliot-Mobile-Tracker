@@ -1,8 +1,14 @@
 package com.websmithing.gpstracker2
 
 import android.Manifest
+import android.app.Notification
+import android.app.NotificationManager
+import android.app.LocaleManager
 import android.content.Context
+import android.content.Intent
+import android.location.Location
 import android.os.Build
+import android.os.LocaleList
 import android.os.ParcelFileDescriptor
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
@@ -29,9 +35,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.websmithing.gpstracker2.repository.settings.SettingsRepository
+import com.websmithing.gpstracker2.service.SQLiteTrackingBufferStore
+import com.websmithing.gpstracker2.service.TrackingService
 import com.websmithing.gpstracker2.ui.UiTestTags
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assume.assumeTrue
 import org.junit.rules.TestRule
 import org.junit.rules.RuleChain
@@ -63,6 +73,51 @@ class MainActivitySmokeTest {
         .outerRule(resetRule)
         .around(permissionRule)
         .around(composeRule)
+
+    @Test
+    fun automatic_service_restart_keeps_stopped_backlog_upload_only() {
+        assertStoppedBacklogStaysUploadOnly(action = null)
+    }
+
+    @Test
+    fun task_removal_restart_keeps_stopped_backlog_upload_only() {
+        assertStoppedBacklogStaysUploadOnly(action = TrackingService.ACTION_RESTORE_SERVICE)
+    }
+
+    private fun assertStoppedBacklogStaysUploadOnly(action: String?) {
+        waitForHomeScreen()
+        val context = composeRule.activity
+        val prefs = context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+        val store = SQLiteTrackingBufferStore(context, prefs)
+        val notifications = context.getSystemService(NotificationManager::class.java)
+        val serviceIntent = Intent(context, TrackingService::class.java).setAction(action)
+        val buffered = Location("gps").apply {
+            latitude = 55.75
+            longitude = 37.61
+            time = System.currentTimeMillis()
+        }
+        store.saveState(listOf(buffered), null)
+        try {
+            // A sticky restart has no explicit user start action. Persisted Stop must win.
+            context.startService(serviceIntent)
+            composeRule.waitUntil(timeoutMillis = UI_TIMEOUT_MS) {
+                notifications.activeNotifications.any { it.id == 1 }
+            }
+            val notification = notifications.activeNotifications.single { it.id == 1 }.notification
+            assertEquals(
+                context.getString(R.string.notification_text_upload_buffer),
+                notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString(),
+            )
+            assertFalse(prefs.getBoolean(SettingsRepository.KEY_TRACKING_STATE, false))
+            assertEquals(1, store.loadState().bufferedLocations.size)
+        } finally {
+            context.stopService(serviceIntent)
+            composeRule.waitUntil(timeoutMillis = UI_TIMEOUT_MS) {
+                notifications.activeNotifications.none { it.id == 1 }
+            }
+            store.clear()
+        }
+    }
 
     @Test
     fun tablet_rotation_keeps_home_controls_and_unsaved_settings_accessible() {
@@ -228,9 +283,15 @@ class MainActivitySmokeTest {
         openSettings()
         replaceField(0, "waliot-language-smoke")
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).performScrollTo().assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_EN).assertIsSelected()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_SAVE_BUTTON).assertIsEnabled().performClick()
 
         waitForHomeScreen()
+        assertEquals(
+            "en",
+            activity.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(SettingsRepository.KEY_LANGUAGE, null),
+        )
         openSettings()
         waitForText(englishSettingsTitle)
         waitForText(englishSaveLabel)
@@ -576,15 +637,27 @@ private class AppStateResetRule : TestRule {
         return object : Statement() {
             override fun evaluate() {
                 val context = ApplicationProvider.getApplicationContext<Context>()
-                context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+                context.stopService(Intent(context, TrackingService::class.java))
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+                val preferences = context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+                preferences
                     .edit()
                     .clear()
                     .putString(SettingsRepository.KEY_UPLOAD_SERVER, SMOKE_UPLOAD_SERVER)
                     .commit()
-                context.deleteDatabase("tracking-buffer.db")
-                AppCompatDelegate.setApplicationLocales(
-                    LocaleListCompat.forLanguageTags(SettingsRepository.DEFAULT_LANGUAGE)
-                )
+                // Hilt's singleton store may still hold this SQLite file open from a
+                // previous test. Clear rows instead of unlinking its live database.
+                SQLiteTrackingBufferStore(context, preferences).clear()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Before activity launch AppCompat has no delegate from which to
+                    // obtain LocaleManager, so its API 33+ setter may silently do nothing.
+                    context.getSystemService(LocaleManager::class.java).applicationLocales =
+                        LocaleList.forLanguageTags(SettingsRepository.DEFAULT_LANGUAGE)
+                } else {
+                    AppCompatDelegate.setApplicationLocales(
+                        LocaleListCompat.forLanguageTags(SettingsRepository.DEFAULT_LANGUAGE)
+                    )
+                }
                 base.evaluate()
             }
         }

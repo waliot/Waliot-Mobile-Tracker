@@ -20,7 +20,9 @@ internal data class MapLoadState(
 }
 
 internal fun mapStyleUrlForAttempt(styleUrl: String, attempt: Int): String {
-    if (attempt == 0) return styleUrl
+    // Asset URLs are file names, so a retry query would make the file unreadable.
+    // ObservedMap uses the attempt itself to reload even when this URI is unchanged.
+    if (attempt == 0 || styleUrl.startsWith("asset://")) return styleUrl
     val base = styleUrl.substringBefore('#')
     val fragment = styleUrl.substringAfter('#', missingDelimiterValue = "")
     val separator = when {
