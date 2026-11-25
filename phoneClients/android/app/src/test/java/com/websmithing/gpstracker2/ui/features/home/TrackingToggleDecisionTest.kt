@@ -12,6 +12,7 @@ class TrackingToggleDecisionTest {
         val decision = decideTrackingToggle(
             isTracking = true,
             canRunTracking = true,
+            hasForegroundLocationPermission = false,
             requiresBackgroundLocationPermission = true,
             hasBackgroundLocationPermission = false,
             isIgnoringBatteryOptimizations = false,
@@ -28,6 +29,7 @@ class TrackingToggleDecisionTest {
         val decision = decideTrackingToggle(
             isTracking = false,
             canRunTracking = false,
+            hasForegroundLocationPermission = true,
             requiresBackgroundLocationPermission = true,
             hasBackgroundLocationPermission = true,
             isIgnoringBatteryOptimizations = true,
@@ -39,10 +41,28 @@ class TrackingToggleDecisionTest {
     }
 
     @Test
+    fun `starting tracking below Android Q still requires foreground permission`() {
+        val decision = decideTrackingToggle(
+            isTracking = false,
+            canRunTracking = true,
+            hasForegroundLocationPermission = false,
+            requiresBackgroundLocationPermission = false,
+            hasBackgroundLocationPermission = false,
+            isIgnoringBatteryOptimizations = false,
+            hasShownBatteryOptimizationWarning = false,
+        )
+
+        assertFalse(decision.shouldProceed)
+        assertEquals(TrackingToggleBlocker.MissingForegroundLocationPermission, decision.blocker)
+        assertFalse(decision.showBatteryOptimizationWarning)
+    }
+
+    @Test
     fun `starting tracking is blocked when background permission is missing`() {
         val decision = decideTrackingToggle(
             isTracking = false,
             canRunTracking = true,
+            hasForegroundLocationPermission = true,
             requiresBackgroundLocationPermission = true,
             hasBackgroundLocationPermission = false,
             isIgnoringBatteryOptimizations = true,
@@ -58,6 +78,7 @@ class TrackingToggleDecisionTest {
         val decision = decideTrackingToggle(
             isTracking = false,
             canRunTracking = true,
+            hasForegroundLocationPermission = true,
             requiresBackgroundLocationPermission = true,
             hasBackgroundLocationPermission = true,
             isIgnoringBatteryOptimizations = false,
@@ -73,6 +94,7 @@ class TrackingToggleDecisionTest {
         val decision = decideTrackingToggle(
             isTracking = false,
             canRunTracking = true,
+            hasForegroundLocationPermission = true,
             requiresBackgroundLocationPermission = false,
             hasBackgroundLocationPermission = false,
             isIgnoringBatteryOptimizations = true,
@@ -88,6 +110,7 @@ class TrackingToggleDecisionTest {
         val decision = decideTrackingToggle(
             isTracking = false,
             canRunTracking = true,
+            hasForegroundLocationPermission = true,
             requiresBackgroundLocationPermission = true,
             hasBackgroundLocationPermission = true,
             isIgnoringBatteryOptimizations = false,

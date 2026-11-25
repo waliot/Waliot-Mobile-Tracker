@@ -1,8 +1,13 @@
 package com.websmithing.gpstracker2.ui.features.home
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,18 +42,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import com.websmithing.gpstracker2.R
+import com.websmithing.gpstracker2.repository.settings.SettingsRepository
 import com.websmithing.gpstracker2.repository.settings.canRunTrackingConfiguration
 import com.websmithing.gpstracker2.repository.upload.UploadStatus
 import com.websmithing.gpstracker2.ui.TrackingViewModel
 import com.websmithing.gpstracker2.ui.activityHiltViewModel
 import com.websmithing.gpstracker2.ui.components.CustomFloatingButton
-import com.websmithing.gpstracker2.ui.components.CustomPermissionDeniedDialog
 import com.websmithing.gpstracker2.ui.components.CustomSnackbar
 import com.websmithing.gpstracker2.ui.components.CustomSnackbarType
 import com.websmithing.gpstracker2.ui.isIgnoringBatteryOptimizations
@@ -56,7 +62,7 @@ import com.websmithing.gpstracker2.ui.isForegroundLocationPermissionGranted
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarker
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerSize
 import com.websmithing.gpstracker2.ui.features.home.components.LocationMarkerState
-import com.websmithing.gpstracker2.ui.features.home.components.LocationPermissionFlow
+import com.websmithing.gpstracker2.ui.features.home.components.locationPermissionFlow
 import com.websmithing.gpstracker2.ui.features.home.components.MapView
 import com.websmithing.gpstracker2.ui.features.home.components.INITIAL_TRACKING_MAP_ZOOM
 import com.websmithing.gpstracker2.ui.features.home.components.buildTrackingCameraPosition
@@ -75,6 +81,8 @@ import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.spatialk.geojson.Position
 import kotlin.time.Duration.Companion.milliseconds
 
+private const val TRACKING_NOTIFICATION_PERMISSION_REQUESTED = "tracking_notification_permission_requested"
+
 private fun Location.toPosition() = Position(longitude = longitude, latitude = latitude, altitude = altitude)
 
 @Composable
@@ -86,7 +94,6 @@ fun HomePage(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
-    var showBackgroundDeniedDialog by remember { mutableStateOf(false) }
     var showBatteryOptimizationDialog by remember { mutableStateOf(false) }
     var hasCenteredInitialCamera by remember { mutableStateOf(false) }
 
@@ -121,10 +128,32 @@ fun HomePage(
         }
     }
 
-    LocationPermissionFlow(
-        onAllow = { viewModel.startForegroundLocation() },
-        onDeny = { viewModel.stopForegroundLocation() }
+    val requestMissingLocationPermission = locationPermissionFlow(
+        onForegroundAllowed = { viewModel.startForegroundLocation() },
+        onForegroundDenied = { viewModel.stopForegroundLocation() }
     )
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        if (isForegroundLocationPermissionGranted(context) && isBackgroundLocationPermissionGranted(context)) {
+            viewModel.startTracking()
+        } else {
+            requestMissingLocationPermission()
+        }
+    }
+
+    fun requestTrackingNotifications(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+
+        val preferences = context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+        if (preferences.getBoolean(TRACKING_NOTIFICATION_PERMISSION_REQUESTED, false)) return false
+
+        preferences.edit().putBoolean(TRACKING_NOTIFICATION_PERMISSION_REQUESTED, true).apply()
+        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        return true
+    }
 
     androidx.compose.runtime.DisposableEffect(lifecycleOwner, context, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -214,6 +243,7 @@ fun HomePage(
         val decision = decideTrackingToggle(
             isTracking = isTracking,
             canRunTracking = canRunTracking,
+            hasForegroundLocationPermission = isForegroundLocationPermissionGranted(context),
             requiresBackgroundLocationPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
             hasBackgroundLocationPermission = isBackgroundLocationPermissionGranted(context),
             isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(context),
@@ -221,8 +251,10 @@ fun HomePage(
         )
 
         if (!decision.shouldProceed) {
-            if (decision.blocker == TrackingToggleBlocker.MissingBackgroundLocationPermission) {
-                showBackgroundDeniedDialog = true
+            if (decision.blocker == TrackingToggleBlocker.MissingForegroundLocationPermission ||
+                decision.blocker == TrackingToggleBlocker.MissingBackgroundLocationPermission
+            ) {
+                requestMissingLocationPermission()
             }
             return
         }
@@ -234,7 +266,7 @@ fun HomePage(
         }
 
         try {
-            viewModel.switchTrackingState()
+            if (isTracking || !requestTrackingNotifications()) viewModel.switchTrackingState()
         } catch (e: Exception) {
             scope.launch {
                 snackbarHostState.showSnackbar(
@@ -320,13 +352,6 @@ fun HomePage(
         )
     }
 
-    if (showBackgroundDeniedDialog) {
-        CustomPermissionDeniedDialog(
-            text = context.getString(R.string.permission_denied_background_location),
-            onDismissRequest = { showBackgroundDeniedDialog = false }
-        )
-    }
-
     if (showBatteryOptimizationDialog) {
         AlertDialog(
             onDismissRequest = { showBatteryOptimizationDialog = false },
@@ -346,7 +371,7 @@ fun HomePage(
                 TextButton(
                     onClick = {
                         showBatteryOptimizationDialog = false
-                        viewModel.startTracking()
+                        switchTracking()
                     }
                 ) {
                     Text(context.getString(R.string.permission_button_continue))

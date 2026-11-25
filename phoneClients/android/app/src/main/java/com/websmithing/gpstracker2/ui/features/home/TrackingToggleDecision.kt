@@ -2,6 +2,7 @@ package com.websmithing.gpstracker2.ui.features.home
 
 internal enum class TrackingToggleBlocker {
     MissingConfiguration,
+    MissingForegroundLocationPermission,
     MissingBackgroundLocationPermission,
 }
 
@@ -14,6 +15,7 @@ internal data class TrackingToggleDecision(
 internal fun decideTrackingToggle(
     isTracking: Boolean,
     canRunTracking: Boolean,
+    hasForegroundLocationPermission: Boolean,
     requiresBackgroundLocationPermission: Boolean,
     hasBackgroundLocationPermission: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
@@ -27,6 +29,13 @@ internal fun decideTrackingToggle(
         return TrackingToggleDecision(
             shouldProceed = false,
             blocker = TrackingToggleBlocker.MissingConfiguration
+        )
+    }
+
+    if (!hasForegroundLocationPermission) {
+        return TrackingToggleDecision(
+            shouldProceed = false,
+            blocker = TrackingToggleBlocker.MissingForegroundLocationPermission
         )
     }
 
